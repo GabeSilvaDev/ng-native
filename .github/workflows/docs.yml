@@ -1,0 +1,75 @@
+name: Docs
+
+# The documentation site on Cloudflare Pages: main is production, and every pull request gets a
+# preview of its own, linked from a comment on the pull request that each push updates.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # A pull request from a fork has no secrets to deploy with; a draft is not ready to look at.
+    if: >-
+      github.event.pull_request.draft != true &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup
+
+      # The site reads the compiler's own sources for its live previews, so it is built in the
+      # workspace rather than from published packages.
+      - run: pnpm nx build documentation
+
+      # Once, on the first run: the project is made with main as its production branch. Every
+      # later run finds it there, and this step fails harmlessly.
+      - name: Create the Pages project if there is none
+        continue-on-error: true
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create ng-native --production-branch=main
+
+      # The branch decides the kind of deployment: the production branch (main, set on the
+      # project) is the site itself, and any other is a preview at <branch>.<project>.pages.dev.
+      - id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy apps/documentation/dist --project-name=ng-native
+            --branch=${{ github.head_ref || github.ref_name }}
+            --commit-hash=${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Link the preview from the pull request
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+          ALIAS: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          body="**Docs preview:** ${ALIAS:-$URL}"$'\n\n'"This commit: $URL ($SHA)"$'\n\n'"<!-- docs-preview -->"
+          existing=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --jq '[.[] | select(.body | contains("<!-- docs-preview -->"))][0].id // empty')
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/$existing" -f body="$body" > /dev/null
+          else
+            gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body "$body"
+          fi
