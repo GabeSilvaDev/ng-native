@@ -207,13 +207,18 @@ export function dialogSource(
   return {
     platform: native.Platform.OS,
     alert: (title, message, buttons) => native.Alert.alert(title, message, [...buttons]),
+    // Buttons rather than a callback: given a callback, `Alert.prompt` answers OK alone, and the
+    // Cancel the native alert adds calls nothing, so a cancelled `ask` never settled.
     ...(ios && native.Alert.prompt
       ? {
           prompt: (title, message, onResult, defaultValue) =>
             native.Alert.prompt!(
               title,
               message,
-              (value) => onResult(value),
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => onResult(null) },
+                { text: 'OK', onPress: (value) => onResult(value ?? '') },
+              ],
               undefined,
               defaultValue,
             ),

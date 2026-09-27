@@ -292,4 +292,53 @@ describe('reading the platform off React Native', () => {
   it('is nothing at all off a device', () => {
     assert.equal(dialogSource(null), null);
   });
+
+  describe("Alert.prompt's buttons", () => {
+    type Button = { text?: string; onPress?: (value?: string) => void };
+    /**
+     * What React Native's `Alert.prompt` does with its third argument: a function is the callback
+     * of button 0, and with no buttons the native alert shows OK as 0 and Cancel as 1.
+     */
+    const prompting = () => {
+      const shown: { press?: (label: string, value?: string) => void } = {};
+      const native = {
+        ...modules('ios'),
+        Alert: {
+          alert: () => {},
+          prompt: (_t: string, _m: unknown, answer: ((text: string) => void) | Button[]) => {
+            const buttons: Button[] =
+              typeof answer === 'function'
+                ? [{ text: 'OK', onPress: answer as Button['onPress'] }, { text: 'Cancel' }]
+                : answer;
+            shown.press = (label, value) =>
+              buttons.find((button) => button.text === label)?.onPress?.(value);
+          },
+        },
+      };
+      const dialogs = serviceWith(
+        Dialogs.SOURCE,
+        dialogSource(native as never),
+        () => new Dialogs(),
+      );
+      return { dialogs, shown };
+    };
+
+    it('resolves what was typed on OK', async () => {
+      const { dialogs, shown } = prompting();
+      const asked = dialogs.ask('Name');
+      shown.press!('OK', 'Ada');
+      assert.equal(await asked, 'Ada');
+    });
+
+    it('resolves null on Cancel, rather than never', async () => {
+      const { dialogs, shown } = prompting();
+      const asked = dialogs.ask('Name');
+      shown.press!('Cancel');
+      const outcome = await Promise.race([
+        asked,
+        new Promise((resolve) => setTimeout(() => resolve('unresolved'), 20)),
+      ]);
+      assert.equal(outcome, null);
+    });
+  });
 });

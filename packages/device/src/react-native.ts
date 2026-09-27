@@ -93,7 +93,9 @@ export interface ReactNative {
     prompt?(
       title: string,
       message?: string,
-      callback?: (value: string) => void,
+      callbackOrButtons?:
+        | ((value: string) => void)
+        | { text?: string; style?: string; onPress?: (value?: string) => void }[],
       type?: string,
       defaultValue?: string,
     ): void;
