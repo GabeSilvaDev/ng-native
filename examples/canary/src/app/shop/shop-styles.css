@@ -1,0 +1,56 @@
+/* What every shop screen shares: its palette, the star rating, and prices with a sale beside them. */
+:host {
+  --ink: light-dark(oklch(0.2 0.02 60), oklch(0.96 0.01 60));
+  --soft: light-dark(oklch(0.52 0.02 60), oklch(0.72 0.02 60));
+  --ground: light-dark(oklch(0.975 0.008 80), oklch(0.15 0.01 60));
+  --surface: light-dark(white, oklch(0.22 0.01 60));
+  --sale: oklch(0.6 0.22 25);
+  --gold: oklch(0.82 0.16 85);
+}
+.stars {
+  /* Positioned, so the fill's percentage is of the stars and not of whatever is positioned above. */
+  position: relative;
+  flex-direction: row;
+  width: 80px;
+}
+/* Each star in a box of its own, so a share of the row is that share of the stars. */
+.star-row {
+  flex-direction: row;
+  width: 80px;
+}
+.star {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: light-dark(oklch(0.88 0.01 60), oklch(0.35 0.01 60));
+}
+.gold .star {
+  color: var(--gold);
+}
+/* The filled stars over the empty ones, cut to the rating by the width of the box that holds them. */
+.stars-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+.price-row {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+.price {
+  color: var(--ink);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.on-sale {
+  color: var(--sale);
+}
+.was {
+  color: var(--soft);
+  text-decoration-line: line-through;
+  text-decoration-color: var(--sale);
+  font-variant-numeric: tabular-nums;
+}

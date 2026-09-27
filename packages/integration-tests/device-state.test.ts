@@ -1,0 +1,239 @@
+/**
+ * Device state that changes while the app is open, as signals.
+ *
+ * Every one of these modules is the same three things: a getter, a listener, and a React hook
+ * that is those two plus state. The hook is the only surface some of them offer for reading a
+ * value *over time*, and it is the one thing that cannot come across - so it is what is rebuilt
+ * here, once, and the modules are thin bindings onto it.
+ */
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import { Injector, runInInjectionContext, type DestroyableInjector } from '@angular/core';
+import { observed, type Observed } from '@ng-native/expo';
+import { Battery } from '@ng-native/expo/battery';
+import { Brightness } from '@ng-native/expo/brightness';
+import { Network, type NetworkStatus } from '@ng-native/expo/network';
+import { DeviceOrientation } from '@ng-native/expo/orientation';
+import { serviceWith } from './injected.ts';
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/** A platform that answers once and can then be made to change its mind. */
+function source<T>(first: T) {
+  let listener: ((value: T) => void) | null = null;
+  const api: Observed<T> & { emit(value: T): void; subscribed: boolean } = {
+    subscribed: false,
+    current: async () => first,
+    subscribe: (next) => {
+      listener = next;
+      api.subscribed = true;
+      return () => {
+        listener = null;
+        api.subscribed = false;
+      };
+    },
+    emit: (value) => listener?.(value),
+  };
+  return api;
+}
+
+/** Made in an injector of its own, as a service's field would be, so it can be destroyed. */
+function inInjector<T>(make: () => T): { value: T; injector: DestroyableInjector } {
+  const injector = Injector.create({ providers: [] });
+  return { value: runInInjectionContext(injector, make), injector };
+}
+
+describe('a value the platform keeps telling us about', () => {
+  it('starts at the stated default, because every getter here is asynchronous', () => {
+    // Even when the platform already knows, the answer is a turn away. A signal that started
+    // undefined would make every consumer handle a state that lasts one tick.
+    const { value } = inInjector(() => observed(source(0.5), 1));
+    assert.equal(value(), 1);
+  });
+
+  it('keeps a change the listener heard before the first answer came back', async () => {
+    // The first answer was asked for first and can arrive last: a network that dropped while the
+    // app was starting reported "offline" through the listener, then the first read's older
+    // "online" landed on top of it and stayed.
+    let answer: (value: number) => void = () => {};
+    let listener: (value: number) => void = () => {};
+    const platform: Observed<number> = {
+      current: () => new Promise((resolve) => (answer = resolve)),
+      subscribe: (next) => ((listener = next), () => {}),
+    };
+    const { value } = inInjector(() => observed(platform, 1));
+    listener(0.2);
+    answer(0.9);
+    await settle();
+    assert.equal(value(), 0.2);
+  });
+
+  it('takes the first answer, then follows the listener', async () => {
+    const platform = source(0.5);
+    const { value } = inInjector(() => observed(platform, 1));
+    await settle();
+    assert.equal(value(), 0.5);
+
+    platform.emit(0.2);
+    assert.equal(value(), 0.2);
+  });
+
+  it('stops listening when the injector it was made in is destroyed', () => {
+    // A root service's injector is the app's, so this is the listener going with the app.
+    const platform = source(0.5);
+    const { injector } = inInjector(() => observed(platform, 1));
+    assert.equal(platform.subscribed, true);
+    injector.destroy();
+    assert.equal(platform.subscribed, false);
+  });
+
+  it('is the default forever when the module is not installed', async () => {
+    const value = observed<number>(null, 1);
+    await settle();
+    assert.equal(value(), 1);
+  });
+});
+
+describe('the network', () => {
+  it('separates having a connection from being able to reach anything', async () => {
+    // A captive-portal wifi is connected and reachable by nothing, which is the case an offline
+    // banner exists for and the one a boolean would get wrong.
+    const platform = source<NetworkStatus>({ connected: true, type: 'wifi', reachable: null });
+    const network = serviceWith(Network.SOURCE, platform, () => new Network());
+    await settle();
+
+    assert.equal(network.connected(), true);
+    assert.equal(network.reachable(), null, 'not yet established, which is not offline');
+
+    platform.emit({ connected: true, type: 'wifi', reachable: false });
+    assert.equal(network.reachable(), false);
+  });
+});
+
+describe('the battery', () => {
+  const build = (level: number, state: 'charging' | 'unplugged') =>
+    serviceWith(
+      Battery.SOURCE,
+      { level: source(level), state: source(state), saving: source(false) },
+      () => new Battery(),
+    );
+
+  it('calls it low only when it is not going up', async () => {
+    const draining = build(0.15, 'unplugged');
+    const charging = build(0.15, 'charging');
+    await settle();
+
+    assert.equal(draining.low(), true);
+    assert.equal(charging.low(), false, 'plugged in at 15% is not a reason to do less');
+  });
+
+  /**
+   * iOS answers `-1` where the battery level is unavailable - every simulator, and a device that
+   * will not say - and Expo passes it through. Taken at face value it is below every threshold an
+   * app has, so `low` fires and the app starts shedding work on the one device with no battery to
+   * save. Seen on a simulator reading "-100%", which is what sent anyone looking.
+   */
+  it('does not read the platform\'s "I cannot tell" as an empty battery', async () => {
+    const battery = serviceWith(
+      Battery.SOURCE,
+      { level: source(-1), state: source('unknown' as const), saving: source(false) },
+      () => new Battery(),
+    );
+    await settle();
+
+    assert.equal(battery.known(), false, 'the platform has not said');
+    assert.equal(battery.level(), 1, 'and the default stands rather than a negative level');
+    assert.equal(battery.low(), false, 'so nothing degrades itself over it');
+  });
+
+  it('still reports a genuinely low battery', async () => {
+    const battery = serviceWith(
+      Battery.SOURCE,
+      { level: source(0.08), state: source('unplugged' as const), saving: source(false) },
+      () => new Battery(),
+    );
+    await settle();
+
+    assert.equal(battery.known(), true);
+    assert.equal(battery.low(), true);
+  });
+
+  it('starts full, because an app should not open in its degraded mode', async () => {
+    assert.equal(build(0.05, 'unplugged').low(), false);
+  });
+});
+
+describe('orientation', () => {
+  it('hands back the way to undo a lock', async () => {
+    const calls: string[] = [];
+    const orientation = serviceWith(
+      DeviceOrientation.SOURCE,
+      {
+        reported: source('portrait' as const),
+        lock: async (lock: string) => void calls.push(`lock:${lock}`),
+        unlock: async () => void calls.push('unlock'),
+      },
+      () => new DeviceOrientation(),
+    );
+
+    const release = orientation.lock('landscape');
+    await settle();
+    release();
+    await settle();
+
+    assert.deepEqual(calls, ['lock:landscape', 'unlock']);
+  });
+
+  it('is about the device, not the window', async () => {
+    // A screen pinned to portrait still has a phone that is sideways, which is what a camera
+    // preview needs to know.
+    const orientation = serviceWith(
+      DeviceOrientation.SOURCE,
+      { reported: source('landscape-left' as const), lock: async () => {}, unlock: async () => {} },
+      () => new DeviceOrientation(),
+    );
+    await settle();
+    assert.equal(orientation.landscape(), true);
+  });
+});
+
+describe('brightness', () => {
+  it('hands back the way to put it back', async () => {
+    // An app that leaves the screen at full brightness after showing a boarding pass is an app
+    // the user experiences as a battery fault.
+    const calls: string[] = [];
+    const brightness = serviceWith(
+      Brightness.SOURCE,
+      {
+        get: async () => 0.4,
+        set: async (level) => void calls.push(`set:${level}`),
+        restore: async () => void calls.push('restore'),
+      },
+      () => new Brightness(),
+    );
+    await settle();
+    assert.equal(brightness.level(), 0.4);
+
+    const restore = brightness.set(1);
+    assert.equal(brightness.level(), 1, 'immediately, without waiting for the platform');
+    restore();
+    await settle();
+
+    assert.deepEqual(calls, ['set:1', 'restore']);
+  });
+
+  it('refuses to ask for a level outside the range the platform has', () => {
+    const calls: number[] = [];
+    const brightness = serviceWith(
+      Brightness.SOURCE,
+      {
+        get: async () => 1,
+        set: async (level) => void calls.push(level),
+        restore: async () => {},
+      },
+      () => new Brightness(),
+    );
+    brightness.set(4);
+    assert.deepEqual(calls, [1]);
+  });
+});

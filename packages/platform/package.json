@@ -1,0 +1,63 @@
+{
+  "name": "@ng-native/platform",
+  "version": "0.0.0",
+  "description": "Angular Native's Renderer2 and bootstrap: mounts an Angular application onto React Native's Fabric.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./http": "./src/http.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./http": {
+        "types": "./dist/http.d.ts",
+        "default": "./dist/http.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@ng-native/fabric": "workspace:*"
+  },
+  "peerDependencies": {
+    "@angular/core": "^22.0.0",
+    "@angular/common": "^22.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@angular/common": {
+      "optional": true
+    }
+  },
+  "nx": {
+    "tags": [
+      "scope:platform",
+      "layer:angular"
+    ]
+  },
+  "scripts": {
+    "build": "ngc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/platform"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@angular/common": "22.2.0",
+    "@angular/core": "22.2.0"
+  }
+}

@@ -1,0 +1,105 @@
+/**
+ * `Updates`, bound to `expo-updates`.
+ *
+ * ```ts
+ * private readonly updates = inject(Updates);
+ *
+ * // On foreground, where a restart costs the user nothing.
+ * async refresh() {
+ *   if (await this.updates.check()) await this.updates.apply();
+ * }
+ * ```
+ *
+ * The awkward part is not checking or downloading - both are plain promises - it is that applying
+ * one *restarts the app*. So the shape that matters is: know one is ready, and let the app choose
+ * a moment the user will not lose anything at. Nothing here does it on its own.
+ */
+import { InjectionToken, Service, computed, inject, signal, type Signal } from '@angular/core';
+import { optional } from './native.ts';
+
+export interface NativeUpdates {
+  readonly enabled: boolean;
+  check(): Promise<{ isAvailable: boolean }>;
+  fetch(): Promise<{ isNew: boolean }>;
+  reload(): Promise<void>;
+}
+
+export type UpdateState = 'idle' | 'checking' | 'downloading' | 'ready' | 'error';
+
+@Service()
+export class Updates {
+  /** Overridden in a test to offer an update without a server. */
+  static readonly SOURCE = new InjectionToken<NativeUpdates | null>(
+    'angular-native.updatesSource',
+    {
+      factory: () => {
+        const expo = optional(() => require('expo-updates') as typeof import('expo-updates'));
+        if (!expo) return null;
+        return {
+          // False in development and in Expo Go, where the bundle comes from Metro. A banner shown
+          // there is one that can never resolve.
+          enabled: expo.isEnabled,
+          check: async () => ({ isAvailable: (await expo.checkForUpdateAsync()).isAvailable }),
+          fetch: async () => ({ isNew: (await expo.fetchUpdateAsync()).isNew }),
+          reload: () => expo.reloadAsync(),
+        };
+      },
+    },
+  );
+
+  private readonly native = inject(Updates.SOURCE);
+  private readonly current = signal<UpdateState>('idle');
+  private readonly failure = signal<unknown>(null);
+
+  readonly state: Signal<UpdateState> = this.current.asReadonly();
+  readonly error: Signal<unknown> = this.failure.asReadonly();
+
+  /** Downloaded and waiting. The only state in which `apply()` does anything. */
+  readonly ready: Signal<boolean> = computed(() => this.current() === 'ready');
+
+  /**
+   * Disabled in development and in Expo Go, where the bundle comes from Metro. An app that shows
+   * an "update available" banner should hide it here rather than show one that can never resolve.
+   */
+  get enabled(): boolean {
+    return this.native?.enabled ?? false;
+  }
+
+  /**
+   * Check, and download if there is one. Resolves to whether an update is now waiting.
+   *
+   * One method rather than two because there is nothing useful to do between them: an app that
+   * checks and does not download has learnt something it cannot act on.
+   */
+  async check(): Promise<boolean> {
+    if (!this.native?.enabled) return false;
+
+    try {
+      this.current.set('checking');
+      const { isAvailable } = await this.native.check();
+      if (!isAvailable) {
+        this.current.set('idle');
+        return false;
+      }
+
+      this.current.set('downloading');
+      const { isNew } = await this.native.fetch();
+      this.current.set(isNew ? 'ready' : 'idle');
+      return isNew;
+    } catch (error) {
+      this.failure.set(error);
+      this.current.set('error');
+      return false;
+    }
+  }
+
+  /**
+   * Restart into the downloaded update.
+   *
+   * **This restarts the app**, which is why it is never automatic: the moment to do it is one the
+   * app knows and this does not - not mid-form, not mid-upload, usually on next foreground.
+   */
+  async apply(): Promise<void> {
+    if (this.current() === 'ready') await this.native?.reload();
+  }
+}

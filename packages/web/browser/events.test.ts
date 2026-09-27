@@ -1,0 +1,115 @@
+/**
+ * Every control's events, from real input in a real Chromium: keys typed through Playwright, a
+ * real focus moving, a real scroll. jsdom dispatches whatever event a test builds, so it can say
+ * a handler runs and never whether the browser would have sent the event in the first place.
+ */
+import { describe, expect, it } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
+import { boot, settle, waitFor } from './boot.ts';
+import { EventsApp } from '../src/events-app.ts';
+
+async function scene() {
+  await page.viewport(1200, 800);
+  const booted = boot(EventsApp);
+  await settle();
+  const app = booted.componentRef.instance as EventsApp;
+  const events = (): readonly string[] => app.events();
+  const clear = (): void => app.events.set([]);
+  return { ...booted, app, events, clear };
+}
+
+describe('a pressable, from a mouse', () => {
+  it('presses on the primary button and not on a right click', async () => {
+    const { byId, events, clear } = await scene();
+    await userEvent.click(byId('button'), { button: 'right' });
+    await settle();
+    expect(events()).toEqual([]);
+    clear();
+    await userEvent.click(byId('button'));
+    await waitFor(() => events().includes('pressOut'), 'the press to end');
+    expect(events()).toEqual(['pressIn', 'press', 'pressOut']);
+  });
+});
+
+describe('a pressable, from the keyboard', () => {
+  it('presses on Enter, the way a focused button does', async () => {
+    const { byId, events } = await scene();
+    byId('button').focus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => events().includes('pressOut'), 'the press to end');
+    expect(events()).toEqual(['pressIn', 'press', 'pressOut']);
+  });
+
+  it('presses on Space when the key comes up, and holds the press while it is down', async () => {
+    const { byId, events } = await scene();
+    byId('button').focus();
+    await userEvent.keyboard('[Space>]');
+    await settle();
+    expect(events()).toEqual(['pressIn']);
+    await userEvent.keyboard('[/Space]');
+    await waitFor(() => events().includes('pressOut'), 'the press to end');
+    expect(events()).toEqual(['pressIn', 'press', 'pressOut']);
+  });
+});
+
+describe('a text field, on Enter', () => {
+  it('submits a single line and lets go of it, as blurAndSubmit does on a device', async () => {
+    const { byId, events } = await scene();
+    const field = byId('line');
+    await userEvent.click(field);
+    await userEvent.keyboard('hi{Enter}');
+    await waitFor(() => events().includes('blur'), 'the field to blur');
+    expect(events()).toEqual(['focus', 'submitEditing', 'endEditing', 'blur']);
+    expect(document.activeElement).not.toBe(field);
+  });
+
+  it('submits a multiline field whose submitBehavior says so, keeping focus', async () => {
+    const { byId, app, events } = await scene();
+    const field = byId('chat');
+    await userEvent.click(field);
+    await userEvent.keyboard('a{Enter}');
+    await settle();
+    expect(events()).toEqual(['submitEditing']);
+    expect(app.chat()).toBe('a');
+    expect(document.activeElement).toBe(field);
+  });
+
+  it('adds a line to a multiline field by default', async () => {
+    const { byId, app } = await scene();
+    await userEvent.click(byId('notes'));
+    await userEvent.keyboard('a{Enter}b');
+    await settle();
+    expect(app.notes()).toBe('a\nb');
+  });
+});
+
+describe('a horizontal scroll view', () => {
+  it('lays its content out in a row as wide as the content, and reports that size', async () => {
+    const { byId, app } = await scene();
+    const strip = byId('strip');
+    expect(getComputedStyle(strip).flexDirection).toBe('row');
+    expect((strip.firstElementChild as HTMLElement).getBoundingClientRect().width).toBe(160);
+    await waitFor(() => app.contentSize(), 'the content size');
+    expect(app.contentSize()?.width).toBe(160);
+  });
+
+  it('reports where it came to rest once a scroll ends, as momentumScrollEnd', async () => {
+    const { byId, app } = await scene();
+    byId('strip').scrollTo({ left: 30, behavior: 'smooth' });
+    await waitFor(() => app.restedAt() !== null, 'the scroll to come to rest');
+    expect(app.restedAt()).toBe(30);
+  });
+});
+
+describe('a scroll view with scrollEnabled off', () => {
+  it('ignores the wheel, and still moves for scrollTo', async () => {
+    const { byId } = await scene();
+    const frozen = byId('frozen');
+    await userEvent.hover(frozen);
+    await userEvent.wheel(frozen, { delta: { y: 40 } });
+    await settle();
+    expect(frozen.scrollTop).toBe(0);
+    frozen.scrollTo({ top: 25 });
+    expect(frozen.scrollTop).toBe(25);
+  });
+});

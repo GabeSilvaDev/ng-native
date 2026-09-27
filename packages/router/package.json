@@ -1,0 +1,57 @@
+{
+  "name": "@ng-native/router",
+  "version": "0.0.0",
+  "description": "@angular/router over native navigation for Angular Native: stack and tab outlets, native headers and links.",
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@ng-native/device": "workspace:*",
+    "@ng-native/fabric": "workspace:*"
+  },
+  "peerDependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/router": "^22.0.0",
+    "react-native-screens": "^4.26.0"
+  },
+  "nx": {
+    "tags": [
+      "scope:router",
+      "layer:angular"
+    ]
+  },
+  "scripts": {
+    "build": "ngc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/router"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@angular/common": "22.2.0",
+    "@angular/core": "22.2.0",
+    "@angular/router": "22.2.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  }
+}

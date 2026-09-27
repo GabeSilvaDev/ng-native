@@ -1,0 +1,50 @@
+# @ng-native/icons
+
+Renders `@ng-icons` icon sets as real native shapes, through `NgIcon` and react-native-svg, instead
+of the `innerHTML` a web app uses.
+
+Alpha: APIs may change before 1.0.
+
+## Install
+
+```sh
+npm install @ng-native/icons @ng-icons/core react-native-svg
+npm install @ng-icons/heroicons   # or whichever @ng-icons/* set you use
+```
+
+## Example
+
+```ts
+import { Component } from '@angular/core';
+import { NgIcon } from '@ng-native/icons';
+import { provideIcons } from '@ng-icons/core';
+import { heroBookOpen, heroAcademicCap } from '@ng-icons/heroicons/outline';
+
+@Component({
+  selector: 'app-root',
+  imports: [NgIcon],
+  providers: [provideIcons({ heroBookOpen, heroAcademicCap })],
+  template: `<ng-icon name="heroBookOpen" [size]="28" color="#ff9f0a" />`,
+})
+export class App {}
+```
+
+`provideIcons` works exactly as it does with `@ng-icons/core` on the web - only the rendering
+underneath `NgIcon` changes.
+
+## What's in the package
+
+- `NgIcon` - the component, taking `name` or `svg`, plus `size`, `color`, `strokeWidth` and
+  `accessibilityLabel`.
+- A narrow SVG parser (`svg`, `g`, `path`, `circle`, `ellipse`, `rect`, `line`, `polyline`,
+  `polygon`) that covers every set ng-icons ships.
+
+## Docs
+
+- [Icons](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/icons.md)
+- [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
+  [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)
+
+## License
+
+MIT

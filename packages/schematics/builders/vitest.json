@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "NgNativeVitestBuilder",
+  "title": "Vitest",
+  "type": "object",
+  "properties": {
+    "watch": {
+      "type": "boolean",
+      "description": "Keep running and re-run on change.",
+      "default": false
+    },
+    "filter": {
+      "type": "string",
+      "description": "Only test files whose path contains this."
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "//": "The published build: each package compiled to JavaScript and declarations in its dist, partial-compiled so an app links it the way it links every other Angular library. A package compiles against the declarations of the ones it depends on, which Nx builds first.",
+  "extends": "./tsconfig.published.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "rewriteRelativeImportExtensions": true,
+    "paths": {
+      "@ng-native/fabric": ["./packages/fabric/dist/index.d.ts"],
+      "@ng-native/fabric/*": ["./packages/fabric/dist/*.d.ts"],
+      "@ng-native/platform": ["./packages/platform/dist/index.d.ts"],
+      "@ng-native/platform/*": ["./packages/platform/dist/*.d.ts"],
+      "@ng-native/device": ["./packages/device/dist/index.d.ts"],
+      "@ng-native/device/*": ["./packages/device/dist/*.d.ts"],
+      "@ng-native/router": ["./packages/router/dist/index.d.ts"],
+      "@ng-native/router/*": ["./packages/router/dist/*.d.ts"],
+      "@ng-native/icons": ["./packages/icons/dist/index.d.ts"],
+      "@ng-native/icons/*": ["./packages/icons/dist/*.d.ts"],
+      "@ng-native/components": ["./packages/components/dist/index.d.ts"],
+      "@ng-native/components/*": ["./packages/components/dist/*.d.ts"],
+      "@ng-native/expo": ["./packages/expo/dist/index.d.ts"],
+      "@ng-native/expo/*": ["./packages/expo/dist/*.d.ts"],
+      "@ng-native/web": ["./packages/web/dist/index.d.ts"],
+      "@ng-native/web/*": ["./packages/web/dist/*.d.ts"],
+      "@ng-native/testing": ["./packages/testing/dist/index.d.ts"],
+      "@ng-native/testing/*": ["./packages/testing/dist/*.d.ts"]
+    }
+  },
+  "angularCompilerOptions": {
+    "compilationMode": "partial",
+    "typeCheckHostBindings": false
+  }
+}

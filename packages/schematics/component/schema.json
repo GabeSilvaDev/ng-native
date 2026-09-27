@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "NgNativeComponent",
+  "title": "Angular Native component",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The component's name, optionally with a path: settings/profile-card.",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What should the component be called?"
+    },
+    "project": {
+      "type": "string",
+      "description": "The Angular Native project it belongs to.",
+      "$default": { "$source": "projectName" }
+    },
+    "path": {
+      "type": "string",
+      "format": "path",
+      "description": "The directory to create it in, relative to the workspace root.",
+      "$default": { "$source": "workingDirectory" },
+      "visible": false
+    },
+    "flat": {
+      "type": "boolean",
+      "description": "Create the files in the directory itself rather than in a folder of their own.",
+      "default": false
+    },
+    "skipTests": {
+      "type": "boolean",
+      "description": "Leave out the .test.ts file.",
+      "default": false
+    }
+  },
+  "required": ["name", "project"]
+}

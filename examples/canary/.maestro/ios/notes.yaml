@@ -1,0 +1,19 @@
+# Notes: a new note, a shortcut that makes a checklist, return carrying it on, and reading mode.
+appId: dev.angularnative.canary
+---
+- runFlow:
+    file: subflows/open.yaml
+    env:
+      SCREEN: Notes
+- tapOn: 'New note'
+- tapOn: 'Title'
+- inputText: 'Groceries'
+- tapOn: 'Paragraph 1.*'
+- inputText: '[] Milk'
+- assertVisible: 'Milk'
+- pressKey: Enter
+- inputText: 'Eggs'
+- tapOn: 'Done'
+- assertVisible: 'Milk'
+- assertVisible: 'Eggs'
+- takeScreenshot: notes-read

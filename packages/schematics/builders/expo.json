@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "NgNativeExpoBuilder",
+  "title": "Expo command",
+  "type": "object",
+  "properties": {
+    "command": {
+      "type": "string",
+      "description": "The Expo CLI command: start, export, run:ios, run:android, prebuild."
+    },
+    "args": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Arguments passed to the command as they are.",
+      "default": []
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["ios", "android", "web", "all"],
+      "description": "Passed as --platform, for export."
+    },
+    "port": {
+      "type": "number",
+      "description": "Passed as --port: the port Metro listens on."
+    },
+    "clear": {
+      "type": "boolean",
+      "description": "Passed as --clear: start Metro with an empty transform cache."
+    }
+  },
+  "required": ["command"]
+}

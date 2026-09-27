@@ -1,0 +1,174 @@
+---
+title: Expo UI
+summary: Real SwiftUI and Jetpack Compose controls as elements, inside a <ui-host>.
+---
+
+# Expo UI
+
+`@expo/ui` is the closest thing in the ecosystem to what this project is for: every one of its
+views is a real platform control - a real `Picker`, a real `BottomSheet`, a real `Gauge` - rather
+than something drawn to look like one. It reaches them through `requireNativeView('ExpoUI', ...)`,
+the same derivation `registerExpoView` already mirrors, so the whole surface is available here for
+the price of a table of names.
+
+## Install
+
+```sh
+npx expo install @expo/ui
+```
+
+```ts
+import { registerExpoUiViews } from '@ng-native/expo';
+import { UiHost, UiMenu, UiButton } from '@ng-native/expo/expo-ui-components';
+```
+
+## The smallest thing that works
+
+```ts
+import { Platform } from 'react-native';
+import { registerExpoUiViews } from '@ng-native/expo';
+
+registerExpoUiViews(Platform.OS); // once, before the app mounts
+```
+
+```html
+<ui-host style="height: 44">
+  <ui-slider [value]="volume()" (valueChanged)="volume.set($event.nativeEvent.value)" />
+</ui-host>
+```
+
+## Registering the views
+
+**`registerExpoUiViews(platform)`** registers every `@expo/ui` view the current platform has, all
+at once - unlike the other `register*` functions in this package, because these are all one
+module: an app with `@expo/ui` installed has all of them, and an app without it has none. Call it
+once at startup with `Platform.OS`.
+
+Element names are platform-neutral where both platforms have the control, so a template writes
+`<ui-vstack>` once and gets Compose's `Column` on Android. Where only one platform has a control - a
+`Gauge` is SwiftUI's, a `SearchBar` is Compose's - the element exists only there; registering for
+the wrong platform is an element that commits as nothing, which `registerExpoUiViews` avoids by
+reading the platform you pass it.
+
+## `<ui-host>` is required
+
+**SwiftUI and Compose lay out their own subtrees.** `<ui-host>` is the bridge from Yoga's layout to
+theirs; every other `ui-*` element must sit inside one, or the control has no size and does not
+appear - which looks exactly like a module that failed to install. `UiHost`'s `matchContents` input
+sizes the host to the SwiftUI content instead of the other way round; `ignoreSafeArea` and
+`useViewportSizeMeasurement` are the other two host-level controls.
+
+## Names, and the typed components
+
+Most `@expo/ui` views are, deliberately, names rather than components: there are ninety-odd of
+them, each with its own props and its own modifier system, and a component per view, prop for
+prop, would be a second place for every one of them to be wrong. The element plus the module's own
+documentation covers the common case:
+
+```html
+<ui-gauge [value]="0.4" [modifiers]="[{ $type: 'frame', width: 80, height: 80 }]" />
+```
+
+The exception is strict templates, where an unknown element - and every prop on it - is a type
+error. `expo-ui-components.ts` has thin typed components for the views an app reaches for most:
+
+- **`UiHost`** - the bridge above.
+- **`UiMenu`** - a SwiftUI `Menu`. Its trigger is the `label` input or a `<ui-slot name="label">`;
+  its items are children.
+- **`UiButton`** - a SwiftUI `Button`, as a menu item or on its own. `role` is `'default'`,
+  `'cancel'` or `'destructive'`.
+- **`UiDivider`** - a separator between groups of menu items.
+- **`UiSlot`** - content for a named slot of its parent view, such as a menu's `label`.
+  `extraProps` is what the slot tells its parent about itself, such as a swipe group's `edge`.
+- **`UiList`** - a SwiftUI `List`.
+- **`UiSwipeActions`** - the system's swipe actions on a list row, iOS only. The first child is
+  the row, and each edge's actions are `ui-button`s in a
+  `<ui-slot name="actions" [extraProps]="{ edge: 'trailing', allowsFullSwipe: true }">`. A row in
+  a scroll view that also scrolls sideways loses its swipes to that scroll view.
+- **`UiVStack`** and **`UiHStack`** - SwiftUI's stacks, with `alignment` and `spacing`, and
+  **`UiSpacer`** for the room left over in one.
+- **`UiSlider`**, **`UiStepper`** and **`UiToggle`** - with `valueChanged`, `valueChange` and
+  `isOnChange` for what the user did.
+- **`UiTextField`** - its `text` is a `nativeState('')`, which the field writes to on the UI
+  thread; `textChange` reports each change.
+- **`UiColorPicker`**, **`UiGauge`** and **`UiProgress`**.
+- **`UiForm`**, **`UiSection`** and **`UiLabeledContent`** - settings-style grouped rows.
+- **`UiImage`** - an SF Symbol by `systemName`, or a picture by `uiImage` URL.
+- **`UiText`** - a SwiftUI `Text`.
+- **`UiDatePicker`** - a SwiftUI `DatePicker`. `selection` is an ISO string; `dateChange` reports
+  the new one, also as an ISO string.
+
+Each input goes straight through to the node as a prop, `modifiers` included -
+`UiModifier` is one SwiftUI modifier, shaped exactly as `@expo/ui`'s own modifier functions build
+them (`{ $type: 'frame', ... }`). Events are declared as outputs purely for their type: `$event` in
+a template binding is typed as the native payload, but the output itself is never emitted. Angular
+binds a template's `(dateChange)` to the element's own native event directly, so that is the only
+place it arrives - a programmatic subscription to the output from code never receives anything.
+Subscribe in the template, not to the output in code.
+
+Still call `registerExpoUiViews` alongside importing these. The component supplies the types; the
+registration is what makes the element commit as the SwiftUI or Compose view. Add a component here
+when a template wants one of the other views typed, from `@expo/ui`'s own props for it - the rest
+stay names.
+
+## Text field state: `nativeState`
+
+`TextFieldView` and `SecureFieldView` declare their `text` prop as an `ObservableState` rather
+than a plain string, and what actually travels over the prop is the shared object's id, a number.
+Binding the string itself is the obvious thing to write, and it fails silently as
+`FieldInvalidTypeException`, logged rather than thrown - the field renders and simply ignores
+everything the app sets, which looks like it works because both fields manage their own text when
+the prop is absent, and only _setting_ the value from Angular does nothing.
+
+**`nativeState(initial)`** builds one of these shared objects and returns a `NativeState<T>`:
+
+```ts
+protected readonly name = nativeState('');
+```
+
+```html
+<ui-text-field [text]="name?.id" (textChange)="typed.set($event.nativeEvent.value)" />
+```
+
+Bind `name?.id`, not `name`. The state lives on the native side and both sides hold a reference,
+so writing to it moves the caret in a field that is already on screen, where a signal and a
+re-render would not - that is the whole reason the prop is shaped this way. `get()` reads the
+current value (a write is scheduled onto the UI thread, so it is not readable back until that has
+run - `@expo/ui`'s own accessors behave the same way), `set()` writes it, and `release()` detaches
+from the native object; worth calling from `DestroyRef` for a field inside a list that comes and
+goes, since a state that lives as long as the app does not need one.
+
+`nativeState()` returns **null** off a device, where there is no native module to hold the state -
+bind `name?.id` and the prop is simply absent, which is the field's own unmanaged behaviour rather
+than a crash.
+
+## Without the module
+
+An element registered for `@expo/ui` when it is not installed commits as nothing
+(`UnimplementedNativeView`). `nativeState()` returns null.
+
+## Reference
+
+<!-- api: UiHost -->
+<!-- api: UiMenu -->
+<!-- api: UiButton -->
+<!-- api: UiDivider -->
+<!-- api: UiSlot -->
+<!-- api: UiList -->
+<!-- api: UiSwipeActions -->
+<!-- api: UiVStack -->
+<!-- api: UiHStack -->
+<!-- api: UiSpacer -->
+<!-- api: UiSlider -->
+<!-- api: UiStepper -->
+<!-- api: UiToggle -->
+<!-- api: UiTextField -->
+<!-- api: UiColorPicker -->
+<!-- api: UiGauge -->
+<!-- api: UiProgress -->
+<!-- api: UiForm -->
+<!-- api: UiSection -->
+<!-- api: UiLabeledContent -->
+<!-- api: UiImage -->
+<!-- api: UiText -->
+<!-- api: UiDatePicker -->

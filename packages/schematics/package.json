@@ -1,0 +1,48 @@
+{
+  "name": "@ng-native/schematics",
+  "version": "0.0.0",
+  "description": "ng add and ng generate for Angular Native: an Expo app in an Angular CLI workspace, with builders that run it.",
+  "type": "module",
+  "schematics": "./collection.json",
+  "builders": "./builders.json",
+  "ng-add": {
+    "save": "devDependencies"
+  },
+  "dependencies": {
+    "@angular-devkit/architect": ">=0.2200.0 <0.2300.0",
+    "@angular-devkit/core": "^22.0.0",
+    "@angular-devkit/schematics": "^22.0.0",
+    "semver": "^7.7.0"
+  },
+  "devDependencies": {
+    "@schematics/angular": "22.1.9",
+    "@types/semver": "^7.7.0"
+  },
+  "nx": {
+    "tags": [
+      "scope:schematics",
+      "layer:build"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"*.test.ts\" \"{application,component,builders}/*.test.ts\""
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/schematics"
+  },
+  "files": [
+    "*.cjs",
+    "collection.json",
+    "builders.json",
+    "*/*.cjs",
+    "*/*.json",
+    "files"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

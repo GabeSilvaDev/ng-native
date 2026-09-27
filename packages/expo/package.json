@@ -1,0 +1,343 @@
+{
+  "name": "@ng-native/expo",
+  "version": "0.0.0",
+  "description": "Expo modules as Angular services for Angular Native, plus registerExpoView for a module's native view.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./app-info": "./src/app-info.ts",
+    "./assets": "./src/assets.ts",
+    "./battery": "./src/battery.ts",
+    "./biometrics": "./src/biometrics.ts",
+    "./brightness": "./src/brightness.ts",
+    "./browser": "./src/browser.ts",
+    "./camera": "./src/camera.ts",
+    "./clipboard": "./src/clipboard.ts",
+    "./database": "./src/database.ts",
+    "./dom-component": "./src/dom-component.ts",
+    "./expo-ui-components": "./src/expo-ui-components.ts",
+    "./file-system": "./src/file-system.ts",
+    "./fonts": "./src/fonts.ts",
+    "./haptics": "./src/haptics.ts",
+    "./image-picker": "./src/image-picker.ts",
+    "./keep-awake": "./src/keep-awake.ts",
+    "./language-model": "./src/language-model.ts",
+    "./locale": "./src/locale.ts",
+    "./location": "./src/location.ts",
+    "./map-view": "./src/map-view.ts",
+    "./network": "./src/network.ts",
+    "./notifications": "./src/notifications.ts",
+    "./orientation": "./src/orientation.ts",
+    "./player": "./src/player.ts",
+    "./sensors": "./src/sensors.ts",
+    "./splash-screen": "./src/splash-screen.ts",
+    "./store": "./src/store.ts",
+    "./updates": "./src/updates.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./app-info": {
+        "types": "./dist/app-info.d.ts",
+        "default": "./dist/app-info.js"
+      },
+      "./assets": {
+        "types": "./dist/assets.d.ts",
+        "default": "./dist/assets.js"
+      },
+      "./battery": {
+        "types": "./dist/battery.d.ts",
+        "default": "./dist/battery.js"
+      },
+      "./biometrics": {
+        "types": "./dist/biometrics.d.ts",
+        "default": "./dist/biometrics.js"
+      },
+      "./brightness": {
+        "types": "./dist/brightness.d.ts",
+        "default": "./dist/brightness.js"
+      },
+      "./browser": {
+        "types": "./dist/browser.d.ts",
+        "default": "./dist/browser.js"
+      },
+      "./camera": {
+        "types": "./dist/camera.d.ts",
+        "default": "./dist/camera.js"
+      },
+      "./clipboard": {
+        "types": "./dist/clipboard.d.ts",
+        "default": "./dist/clipboard.js"
+      },
+      "./database": {
+        "types": "./dist/database.d.ts",
+        "default": "./dist/database.js"
+      },
+      "./dom-component": {
+        "types": "./dist/dom-component.d.ts",
+        "default": "./dist/dom-component.js"
+      },
+      "./expo-ui-components": {
+        "types": "./dist/expo-ui-components.d.ts",
+        "default": "./dist/expo-ui-components.js"
+      },
+      "./file-system": {
+        "types": "./dist/file-system.d.ts",
+        "default": "./dist/file-system.js"
+      },
+      "./fonts": {
+        "types": "./dist/fonts.d.ts",
+        "default": "./dist/fonts.js"
+      },
+      "./haptics": {
+        "types": "./dist/haptics.d.ts",
+        "default": "./dist/haptics.js"
+      },
+      "./image-picker": {
+        "types": "./dist/image-picker.d.ts",
+        "default": "./dist/image-picker.js"
+      },
+      "./keep-awake": {
+        "types": "./dist/keep-awake.d.ts",
+        "default": "./dist/keep-awake.js"
+      },
+      "./language-model": {
+        "types": "./dist/language-model.d.ts",
+        "default": "./dist/language-model.js"
+      },
+      "./locale": {
+        "types": "./dist/locale.d.ts",
+        "default": "./dist/locale.js"
+      },
+      "./location": {
+        "types": "./dist/location.d.ts",
+        "default": "./dist/location.js"
+      },
+      "./map-view": {
+        "types": "./dist/map-view.d.ts",
+        "default": "./dist/map-view.js"
+      },
+      "./network": {
+        "types": "./dist/network.d.ts",
+        "default": "./dist/network.js"
+      },
+      "./notifications": {
+        "types": "./dist/notifications.d.ts",
+        "default": "./dist/notifications.js"
+      },
+      "./orientation": {
+        "types": "./dist/orientation.d.ts",
+        "default": "./dist/orientation.js"
+      },
+      "./player": {
+        "types": "./dist/player.d.ts",
+        "default": "./dist/player.js"
+      },
+      "./sensors": {
+        "types": "./dist/sensors.d.ts",
+        "default": "./dist/sensors.js"
+      },
+      "./splash-screen": {
+        "types": "./dist/splash-screen.d.ts",
+        "default": "./dist/splash-screen.js"
+      },
+      "./store": {
+        "types": "./dist/store.d.ts",
+        "default": "./dist/store.js"
+      },
+      "./updates": {
+        "types": "./dist/updates.d.ts",
+        "default": "./dist/updates.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@ng-native/fabric": "workspace:*"
+  },
+  "nx": {
+    "tags": [
+      "scope:expo",
+      "layer:angular"
+    ]
+  },
+  "scripts": {
+    "build": "ngc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "license": "MIT",
+  "peerDependencies": {
+    "@angular/core": "^22.0.0",
+    "@expo/ui": "^57.0.0",
+    "@react-native-async-storage/async-storage": "^2.2.0 || ^3.0.0",
+    "expo": "^57.0.0",
+    "expo-application": "^57.0.0",
+    "expo-asset": "^57.0.0",
+    "expo-audio": "^57.0.0",
+    "expo-battery": "^57.0.0",
+    "expo-brightness": "^57.0.0",
+    "expo-camera": "^57.0.0",
+    "expo-clipboard": "^57.0.0",
+    "expo-device": "^57.0.0",
+    "expo-file-system": "^57.0.0",
+    "expo-font": "^57.0.0",
+    "expo-haptics": "^57.0.0",
+    "expo-image-picker": "^57.0.0",
+    "expo-keep-awake": "^57.0.0",
+    "expo-local-authentication": "^57.0.0",
+    "expo-local-llm": "^0.6.0",
+    "expo-localization": "^57.0.0",
+    "expo-location": "^57.0.0",
+    "expo-maps": "^57.0.0",
+    "expo-modules-core": "^57.0.0",
+    "expo-network": "^57.0.0",
+    "expo-notifications": "^57.0.0",
+    "expo-screen-orientation": "^57.0.0",
+    "expo-secure-store": "^57.0.0",
+    "expo-sensors": "^57.0.0",
+    "expo-splash-screen": "^57.0.0",
+    "expo-sqlite": "^57.0.0",
+    "expo-updates": "^57.0.0",
+    "expo-video": "^57.0.0",
+    "expo-web-browser": "^57.0.0",
+    "react-native": ">=0.86.0"
+  },
+  "devDependencies": {
+    "@angular/core": "22.2.0",
+    "@expo/ui": "^57.0.16",
+    "@react-native-async-storage/async-storage": "^3.1.1",
+    "expo": "^57.0.20",
+    "expo-application": "^57.0.2",
+    "expo-asset": "^57.0.16",
+    "expo-audio": "^57.0.4",
+    "expo-battery": "^57.0.2",
+    "expo-brightness": "^57.0.1",
+    "expo-camera": "^57.0.5",
+    "expo-device": "^57.0.2",
+    "expo-image-picker": "^57.0.20",
+    "expo-keep-awake": "^57.0.1",
+    "expo-local-authentication": "^57.0.3",
+    "expo-local-llm": "^0.6.0",
+    "expo-localization": "^57.0.1",
+    "expo-location": "^57.0.20",
+    "expo-maps": "^57.0.3",
+    "expo-network": "^57.0.1",
+    "expo-notifications": "^57.0.17",
+    "expo-screen-orientation": "^57.0.2",
+    "expo-secure-store": "^57.0.3",
+    "expo-sensors": "^57.0.2",
+    "expo-splash-screen": "^57.0.8",
+    "expo-sqlite": "^57.0.2",
+    "expo-updates": "^57.0.21",
+    "expo-video": "^57.0.3",
+    "expo-web-browser": "^57.0.3"
+  },
+  "peerDependenciesMeta": {
+    "@expo/ui": {
+      "optional": true
+    },
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    },
+    "expo-application": {
+      "optional": true
+    },
+    "expo-asset": {
+      "optional": true
+    },
+    "expo-audio": {
+      "optional": true
+    },
+    "expo-battery": {
+      "optional": true
+    },
+    "expo-brightness": {
+      "optional": true
+    },
+    "expo-camera": {
+      "optional": true
+    },
+    "expo-clipboard": {
+      "optional": true
+    },
+    "expo-device": {
+      "optional": true
+    },
+    "expo-file-system": {
+      "optional": true
+    },
+    "expo-font": {
+      "optional": true
+    },
+    "expo-haptics": {
+      "optional": true
+    },
+    "expo-image-picker": {
+      "optional": true
+    },
+    "expo-keep-awake": {
+      "optional": true
+    },
+    "expo-local-authentication": {
+      "optional": true
+    },
+    "expo-local-llm": {
+      "optional": true
+    },
+    "expo-localization": {
+      "optional": true
+    },
+    "expo-location": {
+      "optional": true
+    },
+    "expo-maps": {
+      "optional": true
+    },
+    "expo-network": {
+      "optional": true
+    },
+    "expo-notifications": {
+      "optional": true
+    },
+    "expo-screen-orientation": {
+      "optional": true
+    },
+    "expo-secure-store": {
+      "optional": true
+    },
+    "expo-sensors": {
+      "optional": true
+    },
+    "expo-splash-screen": {
+      "optional": true
+    },
+    "expo-sqlite": {
+      "optional": true
+    },
+    "expo-updates": {
+      "optional": true
+    },
+    "expo-video": {
+      "optional": true
+    },
+    "expo-web-browser": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/expo"
+  },
+  "files": [
+    "dist"
+  ]
+}

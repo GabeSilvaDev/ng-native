@@ -1,0 +1,34 @@
+import { Component, signal, viewChild } from '@angular/core';
+import { NativeSearchBar } from '../../router/src/native-search-bar.ts';
+
+@Component({
+  selector: 'x-search-host',
+  imports: [NativeSearchBar],
+  template: `
+    <native-search-bar
+      placeholder="Search"
+      [(query)]="query"
+      (search)="submitted.push($event)"
+      (cancel)="cancelled = cancelled + 1"
+      (searchFocus)="focused = true"
+      (searchBlur)="focused = false"
+    />
+  `,
+})
+export class SearchHost {
+  readonly query = signal('');
+  readonly bar = viewChild.required(NativeSearchBar);
+  readonly submitted: string[] = [];
+  cancelled = 0;
+  focused = false;
+}
+
+/** A search restored with its query, as a screen coming back to life would be. */
+@Component({
+  selector: 'x-search-restored',
+  imports: [NativeSearchBar],
+  template: `<native-search-bar placeholder="Search" [(query)]="query" />`,
+})
+export class SearchRestored {
+  readonly query = signal('oak');
+}

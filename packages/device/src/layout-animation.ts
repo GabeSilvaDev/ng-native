@@ -1,0 +1,101 @@
+/**
+ * Animating a layout *change*, which CSS cannot express.
+ *
+ * A transition animates a property from one value to another, and the engine already does that. It
+ * cannot animate a layout: when a row is removed and the rows below move up, nothing about those
+ * rows changed - their `top` was never set, Yoga computed it, and there is no old value to
+ * transition from. The web solves this with FLIP, measuring before and after in JavaScript; native
+ * solves it in the shadow tree, which is where the two layouts both exist.
+ *
+ * So this is not a nicer `LayoutAnimation` - it is the only way to say the thing at all. What it
+ * adds is the promise, and the scope: `configureNext` applies to the next commit *whenever that
+ * happens*, so a call that is not immediately followed by a change animates whatever change comes
+ * next, which may be an unrelated screen appearing.
+ */
+
+import { InjectionToken, Service, inject } from '@angular/core';
+import { reactNative } from './react-native.ts';
+
+/**
+ * How a change is eased. `spring` is the platform's own, and is what a native list uses.
+ * `keyboard` is the curve iOS moves its keyboard on, which a keyboard event reports by that name.
+ */
+export type LayoutEasing =
+  'spring' | 'linear' | 'easeInEaseOut' | 'easeIn' | 'easeOut' | 'keyboard';
+
+export interface LayoutChange {
+  readonly duration?: number;
+  readonly easing?: LayoutEasing;
+  /** What a view appearing does. `opacity` fades it in; the default is to scale it up. */
+  readonly appear?: 'opacity' | 'scaleXY' | 'none';
+  /** What a view leaving does. */
+  readonly leave?: 'opacity' | 'scaleXY' | 'none';
+}
+
+export interface NativeLayoutAnimation {
+  configureNext(config: object, onDone?: () => void): void;
+}
+
+const DEFAULTS = { duration: 300, easing: 'easeInEaseOut' as LayoutEasing };
+
+/**
+ * `inject(LayoutAnimation).animate(() => this.rows.update(...))`.
+ *
+ * The only way to say "animate the layout this change produces": a transition needs a value to
+ * animate from, and a row that moves up because the one above it left never had one.
+ */
+@Service()
+export class LayoutAnimation {
+  /** Overridden in a test to watch a configuration without one being applied. */
+  static readonly SOURCE = new InjectionToken<NativeLayoutAnimation | null>(
+    'angular-native.layoutAnimationSource',
+    { factory: () => reactNative()?.LayoutAnimation ?? null },
+  );
+
+  private readonly native = inject(LayoutAnimation.SOURCE);
+
+  /**
+   * Animate the layout the next commit produces, and run `change` to cause it.
+   *
+   * The change is taken rather than left to the caller because the two have to be adjacent: a
+   * `configureNext` with nothing after it animates whatever commit happens next, which may be a
+   * different screen entirely. Resolves when the animation ends, or immediately where the platform
+   * does not report that.
+   */
+  async animate(change: () => void, options: LayoutChange = {}): Promise<void> {
+    if (!this.native) {
+      change();
+      return;
+    }
+
+    const done = new Promise<void>((resolve) => {
+      this.native!.configureNext(config(options), resolve);
+      // Android does not call the completion, so nothing should wait on it forever.
+      setTimeout(resolve, (options.duration ?? DEFAULTS.duration) + 50);
+    });
+
+    change();
+    await done;
+  }
+}
+
+/**
+ * The config React Native takes, from the three things worth naming.
+ *
+ * `create` and `delete` need a `property` as well as a type, because a view appearing has no
+ * previous size to animate from - it has to be told what to animate *of*. Leaving that out is the
+ * most common way one of these does nothing.
+ */
+function config(options: LayoutChange): object {
+  const duration = options.duration ?? DEFAULTS.duration;
+  const easing = options.easing ?? DEFAULTS.easing;
+  const appear = options.appear ?? 'opacity';
+  const leave = options.leave ?? 'opacity';
+
+  return {
+    duration,
+    update: { type: easing, ...(easing === 'spring' ? { springDamping: 0.7 } : {}) },
+    ...(appear === 'none' ? {} : { create: { type: easing, property: appear } }),
+    ...(leave === 'none' ? {} : { delete: { type: easing, property: leave } }),
+  };
+}

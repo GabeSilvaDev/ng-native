@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "canary",
+    "slug": "canary",
+    "scheme": "canary",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "dev.angularnative.canary",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "dev.angularnative.canary"
+    },
+    "userInterfaceStyle": "automatic",
+    "plugins": ["expo-localization", "expo-secure-store"]
+  }
+}

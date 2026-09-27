@@ -1,0 +1,89 @@
+{
+  "name": "@ng-native/testing",
+  "version": "0.0.0",
+  "description": "Test Angular Native components in Node with no simulator: a fake Fabric, Testing Library queries and events, and Vitest and node:test integration.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vitest": {
+      "types": "./runner/vitest.d.mts",
+      "default": "./runner/vitest.mjs"
+    },
+    "./register": "./runner/register.mjs",
+    "./loader": "./runner/loader.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./vitest": {
+        "types": "./runner/vitest.d.mts",
+        "default": "./runner/vitest.mjs"
+      },
+      "./register": "./runner/register.mjs",
+      "./loader": "./runner/loader.mjs",
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@ng-native/fabric": "workspace:*",
+    "@ng-native/metro": "workspace:*",
+    "@ng-native/platform": "workspace:*"
+  },
+  "peerDependencies": {
+    "@angular/compiler": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0",
+    "vitest": "^4.0.8 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@angular/compiler": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@angular/common": "22.2.0",
+    "@angular/compiler": "22.2.0",
+    "@angular/core": "22.2.0",
+    "@angular/forms": "22.2.0",
+    "@angular/router": "22.2.0",
+    "@ng-native/components": "workspace:*",
+    "@ng-native/router": "workspace:*",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  },
+  "nx": {
+    "tags": [
+      "scope:testing",
+      "layer:testing"
+    ]
+  },
+  "scripts": {
+    "build": "ngc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import ./runner/register.mjs --test \"src/**/*.node.test.ts\" && vitest run"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/testing"
+  },
+  "files": [
+    "dist",
+    "runner"
+  ]
+}

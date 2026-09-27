@@ -1,0 +1,80 @@
+{
+  "name": "documentation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5201",
+    "build": "vite build && node build/prerender.ts",
+    "preview": "vite preview --port 5201",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prerender": "node build/prerender.ts",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@angular/common": "22.2.0",
+    "@angular/compiler": "22.2.0",
+    "@angular/core": "22.2.0",
+    "@angular/forms": "22.2.0",
+    "@angular/platform-browser": "22.2.0",
+    "@angular/router": "22.2.0",
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-angular": "^0.1.4",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@lezer/common": "^1.5.3",
+    "@lezer/highlight": "^1.2.4",
+    "@ng-icons/core": "^36.0.0",
+    "@ng-icons/lucide": "^36.0.0",
+    "@ng-native/components": "workspace:*",
+    "@ng-native/device": "workspace:*",
+    "@ng-native/fabric": "workspace:*",
+    "@ng-native/icons": "workspace:*",
+    "@ng-native/metro": "workspace:*",
+    "@ng-native/platform": "workspace:*",
+    "@ng-native/tailwind": "workspace:*",
+    "@ng-native/testing": "workspace:*",
+    "@ng-native/web": "workspace:*",
+    "front-matter": "^4.0.2",
+    "lightningcss-wasm": "1.33.0",
+    "marked": "^18.0.14",
+    "marked-gfm-heading-id": "^4.1.3",
+    "marked-highlight": "^2.2.3",
+    "rxjs": "^7.8.2",
+    "shiki": "^1.29.2",
+    "sucrase": "3.35.1",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@ng-native/router": "workspace:*",
+    "@ng-native/template": "workspace:*",
+    "@oxc-angular/vite": "0.0.38",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "playwright": "^1.63.0",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  },
+  "nx": {
+    "tags": [
+      "scope:documentation",
+      "layer:app"
+    ],
+    "targets": {
+      "build": {
+        "inputs": [
+          "production",
+          "^production",
+          "{workspaceRoot}/template/AGENTS.md"
+        ]
+      }
+    }
+  },
+  "license": "MIT"
+}

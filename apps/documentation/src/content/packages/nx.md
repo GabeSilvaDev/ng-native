@@ -1,0 +1,93 @@
+---
+title: Nx
+summary: nx add and an app generator for an Nx workspace, with Expo's targets inferred by @nx/expo's plugin.
+---
+
+# Nx
+
+`@ng-native/nx` adds an Angular Native app to an Nx workspace, as a project like any other:
+
+```sh
+nx add @ng-native/nx
+nx g @ng-native/nx:app apps/mobile
+nx start mobile
+```
+
+`nx start` runs Metro, the same as `npx expo start` in an app made from the template. The app can
+import the workspace's Angular libraries, and they are compiled ahead of time into its bundle with
+the rest of its code. In a workspace whose root package is scoped, as the TypeScript preset's is,
+the project is named for the scope the way Nx names its own: `nx start @org/mobile`.
+
+## What nx add does
+
+It adds `@nx/expo`, at the workspace's own Nx version, and registers `@nx/expo`'s plugin in
+`nx.json`. An Angular Native app is an Expo app, and that plugin already infers an Expo project's
+targets from its `app.json`, `metro.config.js` and `package.json`, so there is nothing to
+reimplement.
+
+It does not run `@nx/expo:init`, which installs Expo itself at the SDK `@nx/expo` was released
+against. On Nx 23.2 that is SDK 56, with a `react-dom` that asks for React 19.3; an Angular Native
+app needs SDK 57 and React 19.2.3, and npm refuses to install the two side by side. It adds the
+two things `init` would have that the app does need, at the app's versions: `react-dom` at the
+app's React, because `@nx/expo` depends on `@nx/react` and npm would otherwise take its
+`react-dom` peer at 19.3 and refuse every later install, and `@expo/cli`, which `nx prebuild` loads
+from the workspace root.
+
+## The targets
+
+| Command                 | From           | What runs                                                       |
+| ----------------------- | -------------- | --------------------------------------------------------------- |
+| `nx start mobile`       | `@nx/expo`     | `expo start`                                                    |
+| `nx run mobile:run-ios` | `@nx/expo`     | `expo run:ios`, and `run-android` likewise                      |
+| `nx export mobile`      | `@nx/expo`     | `expo export`; `--platform ios` for one platform                |
+| `nx prebuild mobile`    | `@nx/expo`     | `expo prebuild`                                                 |
+| `nx build mobile`       | `@nx/expo`     | an EAS build, on Expo's machines                                |
+| `nx test mobile`        | `project.json` | `vitest run`, through [`@ng-native/testing`](/packages/testing) |
+| `nx typecheck mobile`   | `project.json` | `ngc --noEmit`, which checks the templates as well as the code  |
+
+`typecheck` and `test` are the two `@nx/expo` does not provide. Expo's `tsconfig` sets `noEmit`, and
+`@nx/js` disables its own inferred `typecheck` for a project that does, so the generator writes one.
+`test` runs Vitest once, where the target `@nx/vitest` would infer watches.
+
+## The files
+
+The app is the template's: `src/app/app.ts`, `src/main.ts` and `src/app/app.test.ts` as they are, and an `app.json`
+named for the project. Its `app.json` names `ios` and `android` as the platforms, because Expo
+adds `web` whenever `react-dom` resolves, and Nx always installs one. Three files differ, each
+because of something Nx does:
+
+- **`metro.config.js`** applies the preset around `withNxMetro`, from `@nx/expo`, which resolves
+  the workspace's libraries and watches them. Without it, Metro cannot follow a tsconfig path alias
+  and reports `Cannot resolve @org/ui`. The preset goes on the outside so its resolver can wrap
+  Nx's: a library written for TypeScript's module resolution imports `./lib/ui.js` for a `ui.ts`,
+  and the preset resolves that to the `.ts` file, as TypeScript does.
+- **`tsconfig.json`**, in a workspace with a `tsconfig.base.json`, extends it after Expo's, which
+  is where the path aliases are, and puts back the Expo settings the workspace's base overrides.
+- **`vitest.config.mts`** adds `nxViteTsPaths()` in a workspace with path aliases, since Vitest
+  does not read them from tsconfig either, and adds `@nx/vite` for it if the workspace has none.
+  The `angular-monorepo` preset does not, and a library generated after the app is the usual case.
+
+## Where the dependencies go
+
+In a workspace with package-manager workspaces, which is Nx's default since 20, the app is a
+workspace package and lists its own dependencies, so pnpm links them. If no workspace glob covers
+its directory, the generator adds one: Nx's TypeScript preset starts with `packages/*` only. In an
+integrated workspace, with one root `package.json` and path aliases, which is what the `@nx/angular`
+preset makes, they go in the root `package.json`. A version already there is left alone. The
+app's own `package.json` still names them all, at the root's ranges, though nothing installs from
+it: Expo links the native modules that file names and no others.
+
+## An @nx/angular workspace
+
+A workspace from the `angular-monorepo` preset works as it is, web app included. Its Angular and
+its Vitest 4 are both in the ranges Angular Native accepts, so there is nothing to move first.
+
+The TypeScript preset (`--preset=ts`) works too, with one difference: `@nx/angular` cannot be added
+to it, because Angular does not support TypeScript project references, so there is no Angular
+library generator there. Generate a library with `@nx/js:library` and write its components as
+usual; the app imports it like any other.
+
+## Options
+
+`nx g @ng-native/nx:app <directory>` takes `--name` (the directory's last segment by default),
+`--tags` and `--skipInstall`.

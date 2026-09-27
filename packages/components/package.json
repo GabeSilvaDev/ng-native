@@ -1,0 +1,93 @@
+{
+  "name": "@ng-native/components",
+  "version": "0.0.0",
+  "description": "Angular Native's core components: view, text, image, pressable, scroll-view, virtual-list, text-input and the rest of React Native's set.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./animations": {
+      "browser": "./src/animations-web.ts",
+      "default": "./src/animations.ts"
+    },
+    "./gestures": "./src/gestures.ts",
+    "./reanimated": "./src/reanimated.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./animations": {
+        "types": "./dist/animations.d.ts",
+        "browser": "./dist/animations-web.js",
+        "default": "./dist/animations.js"
+      },
+      "./gestures": {
+        "types": "./dist/gestures.d.ts",
+        "default": "./dist/gestures.js"
+      },
+      "./reanimated": {
+        "types": "./dist/reanimated.d.ts",
+        "default": "./dist/reanimated.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@ng-native/device": "workspace:*",
+    "@ng-native/fabric": "workspace:*"
+  },
+  "peerDependencies": {
+    "@angular/core": "^22.0.0",
+    "react-native": ">=0.86.0",
+    "react-native-gesture-handler": "^2.32.0",
+    "react-native-reanimated": "^4.5.1",
+    "react-native-safe-area-context": "^5.7.0",
+    "react-native-keyboard-controller": "^1.21.9"
+  },
+  "nx": {
+    "tags": [
+      "scope:components",
+      "layer:angular"
+    ]
+  },
+  "scripts": {
+    "build": "ngc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "license": "MIT",
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    },
+    "react-native-gesture-handler": {
+      "optional": true
+    },
+    "react-native-reanimated": {
+      "optional": true
+    },
+    "react-native-safe-area-context": {
+      "optional": true
+    },
+    "react-native-keyboard-controller": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/components"
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@angular/core": "22.2.0"
+  }
+}

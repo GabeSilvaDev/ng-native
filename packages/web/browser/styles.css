@@ -1,0 +1,18 @@
+/*
+ * The stylesheet the browser suite runs against: theme and utilities rather than `tailwindcss`
+ * itself, the platform preset, and `reset.css` imported into `base` rather than injected
+ * unlayered by `mount` - the same cascade-layer reasoning `boot.ts`'s own doc comment gives for
+ * calling `mount` with `injectReset: false` here.
+ */
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/utilities.css';
+@import '@ng-native/tailwind/web.css';
+@import '@ng-native/web/reset.css' layer(base);
+
+/*
+ * Where the classes actually used live, for Tailwind's scanner: this package's own fixtures, which
+ * sit beside the jsdom tests that own them rather than beside this file - a fixture's own `class`
+ * strings (`w-full`, `md:flex-row`, `disabled:opacity-50`, ...) are what `browser/*.test.ts`
+ * resolves a real cascade against.
+ */
+@source '../src';

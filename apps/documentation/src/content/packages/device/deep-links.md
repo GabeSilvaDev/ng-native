@@ -1,0 +1,59 @@
+---
+title: Deep links
+summary: The url an app was launched with, and every link that arrives while it runs, as paths.
+---
+
+# Deep links
+
+`DeepLinks` delivers the URL an app was launched with (`initialUrl()`, once it is known) and every
+link that arrives while it is running (`subscribe()`), both normalised to a path your router can
+navigate to.
+
+```ts
+import { Component, DestroyRef, inject } from '@angular/core';
+import { DeepLinks } from '@ng-native/device';
+
+@Component({ selector: 'app-root', template: `<view />` })
+export class Root {
+  constructor() {
+    const links = inject(DeepLinks);
+    const path = links.initialUrl();
+    if (path) this.navigate(path);
+
+    const stop = links.subscribe((next) => this.navigate(next));
+    inject(DestroyRef).onDestroy(stop);
+  }
+
+  private navigate(path: string): void {}
+}
+```
+
+`myapp://settings` and `https://example.com/settings` both mean `/settings` to a
+router, which takes noticing that only the second one has a host to strip - a scheme's own prefix is
+app configuration and every app's is different, but stripping one down to a path is not.
+
+It also strips Expo Go's own `/--/` launch prefix and ignores the development client's internal
+launch url (`<scheme>://expo-development-client/?url=...`), which is Expo telling its own launcher
+which bundle to load and means nothing to the app - left alone it would reach the router as a path,
+match no route, and show a blank screen on every launch during development, which looks exactly like
+a bug in the app.
+
+The launch url is delivered whichever way is true at the time: as `initialUrl()` if it is known
+before anything asks, and through `subscribe()` if the app is already up. Both happen - the promise
+that resolves `initialUrl()` races the first navigation and neither order is guaranteed - so call
+`initialUrl()` and `subscribe()` both, as above, rather than picking one.
+
+`open(url)` hands a url to whatever else on the device handles it: a browser, Maps, another app.
+
+`@ng-native/router`'s `provideNativeRouter(routes)` wires this into `PlatformLocation` for you, so
+most apps never call `DeepLinks` directly.
+
+## Off a device and on the web
+
+Off a device `initialUrl()` stays `null` and `subscribe()` never fires, because there is no
+`Linking` module underneath it. On the web, urls and paths are already the same idea, so `DeepLinks`
+is a native-only concern - a web build reads the address bar instead.
+
+## Reference
+
+<!-- api: DeepLinks -->

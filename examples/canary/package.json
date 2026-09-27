@@ -1,0 +1,87 @@
+{
+  "name": "canary",
+  "private": true,
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "release:ios": "expo run:ios --configuration Release",
+    "release:android": "expo run:android --variant release",
+    "check-bundle": "node scripts/check-release-bundle.mjs",
+    "typecheck": "ngc -p tsconfig.json --noEmit",
+    "export": "expo export --platform ios --platform android --output-dir dist",
+    "test": "vitest run",
+    "e2e:ios": "xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 && JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@21} maestro test .maestro/ios",
+    "e2e:ios:record": "xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 && node .maestro/ios/record-baselines.mjs"
+  },
+  "dependencies": {
+    "@angular/common": "22.2.0",
+    "@angular/core": "22.2.0",
+    "@angular/forms": "22.2.0",
+    "@angular/platform-browser": "22.2.0",
+    "@angular/router": "22.2.0",
+    "@expo/ui": "~57.0.16",
+    "@ng-icons/core": "^36.0.0",
+    "@ng-icons/heroicons": "^36.0.0",
+    "@ng-icons/lucide": "^36.0.0",
+    "@ng-native/components": "workspace:*",
+    "@ng-native/device": "workspace:*",
+    "@ng-native/expo": "workspace:*",
+    "@ng-native/fabric": "workspace:*",
+    "@ng-native/icons": "workspace:*",
+    "@ng-native/platform": "workspace:*",
+    "@ng-native/router": "workspace:*",
+    "@ng-native/web": "workspace:*",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~57.0.20",
+    "expo-audio": "^57.0.4",
+    "expo-battery": "~57.0.2",
+    "expo-brightness": "~57.0.1",
+    "expo-clipboard": "~57.0.1",
+    "expo-file-system": "~57.0.6",
+    "expo-haptics": "~57.0.2",
+    "expo-image": "~57.0.4",
+    "expo-keep-awake": "~57.0.1",
+    "expo-local-llm": "^0.6.0",
+    "expo-localization": "~57.0.1",
+    "expo-maps": "~57.0.3",
+    "expo-modules-core": "~57.0.15",
+    "expo-network": "~57.0.1",
+    "expo-screen-orientation": "~57.0.2",
+    "expo-secure-store": "~57.0.3",
+    "expo-sensors": "~57.0.2",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "^2.32.0",
+    "react-native-keyboard-controller": "1.21.9",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "react-native-worklets": "0.10.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@ng-native/metro": "workspace:*",
+    "@ng-native/testing": "workspace:*",
+    "@types/react": "~19.2.4",
+    "vitest": "^5.0.2"
+  },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "expo-local-llm"
+        ]
+      }
+    }
+  },
+  "nx": {
+    "tags": [
+      "scope:canary",
+      "layer:app"
+    ]
+  },
+  "version": "1.0.0"
+}

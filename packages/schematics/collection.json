@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/@angular-devkit/schematics/collection-schema.json",
+  "schematics": {
+    "ng-add": {
+      "description": "Adds an Angular Native app to this workspace, with its dependencies installed.",
+      "factory": "./ng-add/index.cjs#ngAdd",
+      "schema": "./ng-add/schema.json"
+    },
+    "application": {
+      "aliases": ["app"],
+      "description": "An Angular Native app: an Expo project in the workspace, registered in angular.json.",
+      "factory": "./application/index.cjs#application",
+      "schema": "./application/schema.json"
+    },
+    "component": {
+      "aliases": ["c"],
+      "description": "A component for an Angular Native app, with native elements and a test that runs in Node.",
+      "factory": "./component/index.cjs#component",
+      "schema": "./component/schema.json"
+    }
+  }
+}

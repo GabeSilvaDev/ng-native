@@ -1,0 +1,41 @@
+# Does the built app start, and reach a second screen? CI runs this against the release build it
+# has just compiled, so a crash at launch fails the pull request rather than reaching a user.
+#
+# It launches the installed app itself, not Expo Go: Expo Go carries its own native modules, so a
+# module the app forgot to depend on works there and nowhere else. Run it against a release build
+# (`pnpm --filter canary release:android`), which needs no Metro:
+#
+#     maestro test examples/canary/.maestro/release
+#
+# A release build that throws at startup closes, and nothing below is ever visible. A debug build
+# shows the error screen instead, which the assertNotVisible lines catch. Either way it fails.
+appId: ${APP_ID || 'dev.angularnative.canary'}
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible: 'Angular Native'
+    timeout: 30000
+- runFlow: ../subflows/no-error-screen.yaml
+
+# The native stack, from react-native-screens: push a screen and pop it with its header item.
+- scrollUntilVisible:
+    element: 'Navigation(, push.*)?'
+- tapOn: 'Navigation(, push.*)?'
+- tapOn: 'push.*'
+- assertVisible: 'Detail'
+- tapOn: 'Done'
+- assertVisible: 'reset to home.*'
+- tapOn: 'reset to home.*'
+- assertVisible: 'Angular Native'
+- runFlow: ../subflows/no-error-screen.yaml
+
+# <safe-area-view>, from react-native-safe-area-context: a native module an app has to depend on
+# itself, and the one a generated app once crashed on. The search tab's content sits inside one.
+- scrollUntilVisible:
+    element: 'Tabs(, a native.*)?'
+- tapOn: 'Tabs(, a native.*)?'
+- tapOn: 'Search'
+- assertVisible: 'Type something, then switch tabs'
+- runFlow: ../subflows/no-error-screen.yaml

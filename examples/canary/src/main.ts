@@ -1,0 +1,96 @@
+// First, and deliberately: it records when the app started, and an import that follows it is an
+// import it measures.
+import './started.ts';
+import { AppRegistry, Image, Platform, processColor } from 'react-native';
+import { mount } from '@ng-native/platform';
+import { currentConditions, deviceTokens, watchConditions } from '@ng-native/device';
+import { getFabricUIManager, registerPlatformComponents, styleSheetOf } from '@ng-native/fabric';
+import { registerExpoUiViews, registerExpoView } from '@ng-native/expo';
+import { registerExpoMap } from '@ng-native/expo/map-view';
+import { App } from './app/app.ts';
+import { appConfig } from './app/app.config.ts';
+import { GlobalStyles } from './app/global-styles.ts';
+
+// registerRunnable, not registerComponent: RN stores a raw mount callback and never
+// renders it with its own renderer. This is the seam the whole project hangs off.
+registerPlatformComponents(Platform.OS);
+
+// expo-image's Fabric view, under an element name of our choosing. Its React component is
+// skipped entirely; the props the component would have computed are written in the template.
+registerExpoView('expo-image', 'ExpoImage');
+// The SwiftUI and Compose controls, by name. Names and defaults rather than a component per
+// view: an Angular wrapper for each would be a second place for every prop to be wrong.
+registerExpoUiViews(Platform.OS as 'ios' | 'android');
+// `<expo-map>`: expo-maps' Apple view here, its Google view on Android.
+registerExpoMap(Platform.OS as 'ios' | 'android');
+
+/**
+ * The benchmark builds: the same screen, one renderer each, chosen at build time.
+ *
+ *     EXPO_PUBLIC_BENCH=angular pnpm --filter canary release:ios   (once, to install a bench app)
+ *     examples/canary/src/bench/run.sh angular 5
+ *     examples/canary/src/bench/run.sh react 5
+ *
+ * `require` rather than `import` so neither screen reaches an ordinary bundle, and a literal path
+ * because Metro builds its graph from those.
+ */
+const bench = process.env.EXPO_PUBLIC_BENCH;
+if (bench) {
+  // The instrument is a Metro polyfill, so the wrapper has been on the global since before React
+  // Native's core loaded the Fabric renderer and took its copy of the methods - which is the only
+  // moment React can be measured. Now that it has, the real host object goes back: native casts
+  // whatever is there straight to C++, and a plain object would be a segfault, not an error.
+  (require('./bench/fabric-instrument.ts') as { restoreFabric(): void }).restoreFabric();
+}
+if (bench === 'react') {
+  const { ReactBench } = require('./bench/react-bench.ts') as { ReactBench: () => unknown };
+  AppRegistry.registerComponent('main', () => ReactBench as never);
+} else if (bench === 'angular') {
+  const { AngularBench } = require('./bench/angular-bench.ts') as { AngularBench: never };
+  AppRegistry.registerRunnable('main', ({ rootTag }) => {
+    const { wrappedFabric } = require('./bench/fabric-instrument.ts') as {
+      wrappedFabric(): never;
+    };
+    // Handed the wrapper directly, where React's renderer had to be caught reading the global.
+    mount(Number(rootTag), AngularBench, wrappedFabric(), {
+      processColor,
+      resolveAssetSource: (value) => Image.resolveAssetSource(value as never),
+    });
+  });
+} else {
+  AppRegistry.registerRunnable('main', ({ rootTag }) => {
+    const app = mount(Number(rootTag), App, getFabricUIManager(), {
+      processColor,
+      globalStyles: styleSheetOf(GlobalStyles),
+      conditions: currentConditions(),
+      tokens: deviceTokens(),
+      // require()d images compile to an asset id; only this turns one into a usable source.
+      resolveAssetSource: (value) => Image.resolveAssetSource(value as never),
+      ...appConfig,
+    });
+
+    // Rotation, a theme switch, and the user asking for less motion. None of them changes a
+    // component or a binding, so nothing would be dirty and nothing would re-render; the engine
+    // re-resolves and commits on its own.
+    watchConditions(app.engine);
+  });
+}
+
+/**
+ * The entry file's own dev loop.
+ *
+ * Component modules look after themselves: each one patches its live class when only the template
+ * changed, and asks `mount` for a reload when the change is more than that. This file has no
+ * components in it, so it accepts its own updates and reloads.
+ *
+ * Set `__angularNativeEventLog` to trace every Fabric event with its target and matched listener
+ * count. Off by default: it is one console.log per event, and at scroll rates that is itself
+ * enough to skew what you are measuring.
+ */
+declare const module: { hot?: { accept(callback?: () => void): void } };
+
+if (__DEV__) {
+  module.hot?.accept(() => {
+    (globalThis as { __angularNativeReload?: () => void }).__angularNativeReload?.();
+  });
+}

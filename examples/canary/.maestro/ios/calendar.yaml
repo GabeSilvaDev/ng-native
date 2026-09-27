@@ -1,0 +1,16 @@
+# Calendar: the add button puts an event on the chosen day's timeline, and the month steps on.
+appId: dev.angularnative.canary
+---
+- runFlow:
+    file: subflows/open.yaml
+    env:
+      SCREEN: Calendar
+- tapOn: 'Add event at 10:00'
+- scrollUntilVisible:
+    element: 'New event, 10:00 to 11:00'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'Next month'
+    direction: UP
+- tapOn: 'Next month'
+- assertVisible: '.*, 0 events|.*, 1 event|.*, \d+ events'

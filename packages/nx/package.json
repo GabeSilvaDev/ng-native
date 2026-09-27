@@ -1,0 +1,44 @@
+{
+  "name": "@ng-native/nx",
+  "version": "0.0.0",
+  "description": "Nx generators for Angular Native: nx add, and an Expo app project whose targets run it.",
+  "type": "module",
+  "generators": "./generators.json",
+  "dependencies": {
+    "@nx/devkit": "^23.0.0",
+    "minimatch": "^10.0.0",
+    "semver": "^7.7.0"
+  },
+  "peerDependencies": {
+    "nx": "^23.0.0"
+  },
+  "devDependencies": {
+    "@types/semver": "^7.7.0"
+  },
+  "nx": {
+    "tags": [
+      "scope:nx",
+      "layer:build"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"*.test.ts\" \"{init,application}/*.test.ts\""
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/nx"
+  },
+  "files": [
+    "*.cjs",
+    "generators.json",
+    "*/*.cjs",
+    "*/*.json",
+    "files"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

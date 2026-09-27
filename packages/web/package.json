@@ -1,0 +1,97 @@
+{
+  "name": "@ng-native/web",
+  "version": "0.0.0",
+  "description": "A browser host for Angular Native: the same components, rendered into the DOM instead of native views.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./web-view": "./src/web-view.ts",
+    "./reset.css": "./src/reset.css",
+    "./vite": {
+      "types": "./vite.d.mts",
+      "default": "./vite.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./web-view": {
+        "types": "./dist/web-view.d.ts",
+        "default": "./dist/web-view.js"
+      },
+      "./reset.css": "./dist/reset.css",
+      "./vite": {
+        "types": "./vite.d.mts",
+        "default": "./vite.mjs"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@ng-native/device": "workspace:*",
+    "@ng-native/fabric": "workspace:*",
+    "@oxc-angular/vite": "0.0.38"
+  },
+  "peerDependencies": {
+    "@angular/core": "^22.0.0",
+    "vite": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@angular/common": "22.2.0",
+    "@angular/compiler": "22.2.0",
+    "@angular/platform-browser": "22.2.0",
+    "@ng-icons/core": "^36.0.0",
+    "@ng-native/components": "workspace:*",
+    "@ng-native/icons": "workspace:*",
+    "@ng-native/metro": "workspace:*",
+    "@ng-native/tailwind": "workspace:*",
+    "@ng-native/testing": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/jsdom": "^27.0.0",
+    "@vitest/browser": "^5.0.2",
+    "@vitest/browser-playwright": "^5.0.2",
+    "@vitest/coverage-v8": "^5.0.2",
+    "jsdom": "^27.0.0",
+    "playwright": "^1.63.0",
+    "rxjs": "^7.8.2",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  },
+  "nx": {
+    "tags": [
+      "scope:web",
+      "layer:angular"
+    ]
+  },
+  "scripts": {
+    "build": "ngc -p tsconfig.build.json && cp src/reset.css dist/",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import ./register-linker.mjs --test \"src/*.test.ts\"",
+    "test:browser": "vitest run"
+  },
+  "license": "MIT",
+  "files": [
+    "dist",
+    "vite.mjs",
+    "vite.d.mts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ng-native/ng-native.git",
+    "directory": "packages/web"
+  }
+}

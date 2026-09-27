@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.published.json",
+  "compilerOptions": {
+    // The gesture library is not installed here: its test imports it by name, as an app does,
+    // and gets the stand-in `ngNative()` resolves it to. This types it the same way.
+    "paths": {
+      "react-native-gesture-handler": ["./src/gesture-handler.ts"],
+      "react-native-reanimated": ["./src/reanimated-library.ts"],
+      "react-native-worklets": ["./src/worklets-library.ts"]
+    }
+  },
+  "include": ["src", "runner/*.d.mts", "vitest.config.ts"],
+  "exclude": ["**/*.generated.ts"]
+}

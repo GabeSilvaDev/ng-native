@@ -1,0 +1,323 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import { Pressable, Text, View } from '@ng-native/components';
+import { GestureRoot, NativeGesture } from '@ng-native/components/gestures';
+import { UiHost, UiSlider } from '@ng-native/expo';
+import { NativeNavigation } from '@ng-native/router';
+import { Gesture } from 'react-native-gesture-handler';
+import { Playback, clock, seekTarget } from './player-model.ts';
+
+/**
+ * The full player, presented as a page sheet the user swipes down to dismiss: the cover large
+ * over a gradient of its own colour, a scrubber drawn and dragged here rather than native, the
+ * transport, and SwiftUI's own slider for the volume.
+ *
+ * The cover grows while the track plays and shrinks when it is paused, by a transition on
+ * `scale`; the scrubber's thumb grows while it is held. Every colour comes from the track, bound
+ * as a CSS variable the gradients and shadows mix from.
+ */
+@Component({
+  selector: 'x-now-playing',
+  imports: [GestureRoot, NativeGesture, Pressable, Text, UiHost, UiSlider, View],
+  template: `
+    <gesture-root>
+      @if (playback.track(); as track) {
+        <view class="now" [style.--cover]="track.colour">
+          <view class="grabber"></view>
+          <view class="art-frame">
+            <view [class]="playback.playing() ? 'art playing' : 'art'">
+              <text class="art-initial">{{ track.title[0] }}</text>
+            </view>
+          </view>
+
+          <view class="meta">
+            <text class="title">{{ track.title }}</text>
+            <text class="artist">{{ track.artist }}</text>
+          </view>
+
+          <view
+            class="scrubber"
+            accessibilityRole="adjustable"
+            [accessibilityLabel]="'Position, ' + elapsed() + ' of ' + total()"
+            [gesture]="scrub"
+            (layout)="width.set($event.nativeEvent.layout.width)"
+          >
+            <view class="rail">
+              <view class="fill" [style.width.%]="percent()"></view>
+            </view>
+            <view [class]="dragging() ? 'thumb held' : 'thumb'" [style.left.%]="percent()"></view>
+          </view>
+          <view class="times">
+            <text class="time">{{ elapsed() }}</text>
+            <text class="time">-{{ remaining() }}</text>
+          </view>
+
+          <view class="transport">
+            <pressable
+              class="skip"
+              accessibilityRole="button"
+              accessibilityLabel="Previous"
+              (press)="playback.previous()"
+            >
+              <text class="skip-glyph">⏮</text>
+            </pressable>
+            <pressable
+              class="play"
+              accessibilityRole="button"
+              [accessibilityLabel]="playback.playing() ? 'Pause' : 'Play'"
+              (press)="playback.toggle()"
+            >
+              <text class="play-glyph">{{ playback.playing() ? '❚❚' : '▶' }}</text>
+            </pressable>
+            <pressable
+              class="skip"
+              accessibilityRole="button"
+              accessibilityLabel="Next"
+              (press)="playback.next()"
+            >
+              <text class="skip-glyph">⏭</text>
+            </pressable>
+          </view>
+
+          <view class="volume">
+            <text class="volume-glyph">🔈</text>
+            <ui-host class="volume-host" [matchContents]="{ vertical: true }">
+              <ui-slider
+                [value]="playback.volume()"
+                [min]="0"
+                [max]="1"
+                (valueChanged)="playback.setVolume($event.nativeEvent.value)"
+              />
+            </ui-host>
+            <text class="volume-glyph">🔊</text>
+          </view>
+
+          <pressable
+            [class]="playback.repeat() ? 'repeat on' : 'repeat'"
+            accessibilityRole="switch"
+            accessibilityLabel="Repeat"
+            [accessibilityState]="{ checked: playback.repeat() }"
+            (press)="playback.repeat.set(!playback.repeat())"
+          >
+            <text class="repeat-label">Repeat</text>
+          </pressable>
+        </view>
+      } @else {
+        <view class="now empty">
+          <text class="artist">Nothing is playing.</text>
+          <pressable class="button" accessibilityRole="button" (press)="nav.back()">
+            <text class="button-label">Close</text>
+          </pressable>
+        </view>
+      }
+    </gesture-root>
+  `,
+  styles: `
+    .now {
+      flex: 1;
+      padding: 12px 28px 28px;
+      gap: 18px;
+      background-image:
+        radial-gradient(
+          circle at 50% 18%,
+          color-mix(in oklch, var(--cover) 75%, white) 0%,
+          transparent 60%
+        ),
+        linear-gradient(180deg, var(--cover), color-mix(in oklch, var(--cover) 35%, black) 75%);
+    }
+    .empty {
+      align-items: center;
+      justify-content: center;
+      background-color: oklch(0.2 0.02 270);
+    }
+    .grabber {
+      align-self: center;
+      width: 40px;
+      height: 5px;
+      border-radius: 3px;
+      background-color: rgba(255, 255, 255, 0.45);
+    }
+    .art-frame {
+      align-items: center;
+      padding-block: 20px;
+    }
+    .art {
+      width: 78%;
+      aspect-ratio: 1;
+      border-radius: 22px;
+      align-items: center;
+      justify-content: center;
+      background-image: linear-gradient(
+        145deg,
+        color-mix(in oklch, var(--cover) 60%, white),
+        var(--cover) 45%,
+        color-mix(in oklch, var(--cover) 55%, black)
+      );
+      box-shadow:
+        0 30px 50px -18px rgba(0, 0, 0, 0.55),
+        0 0 0 1px rgba(255, 255, 255, 0.12);
+      scale: 0.86;
+      transition: scale 450ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    }
+    .playing {
+      scale: 1;
+    }
+    .art-initial {
+      /* The shadow's depth, which iOS would otherwise cut off at the text's box. */
+      padding: 30px;
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 120px;
+      font-weight: 900;
+      letter-spacing: -6px;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+    .meta {
+      gap: 2px;
+    }
+    .title {
+      color: white;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      line-clamp: 1;
+    }
+    .artist {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 18px;
+    }
+    .scrubber {
+      height: 28px;
+      justify-content: center;
+    }
+    .rail {
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      background-color: rgba(255, 255, 255, 0.25);
+    }
+    .fill {
+      height: 6px;
+      background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.75), white);
+    }
+    .thumb {
+      position: absolute;
+      top: 7px;
+      width: 14px;
+      height: 14px;
+      margin-left: -7px;
+      border-radius: 7px;
+      background-color: white;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      transition: scale 120ms ease-out;
+    }
+    .held {
+      scale: 1.8;
+    }
+    .times {
+      flex-direction: row;
+      justify-content: space-between;
+      margin-top: -10px;
+    }
+    .time {
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+    .transport {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-evenly;
+    }
+    .skip {
+      padding: 12px;
+    }
+    .skip:active {
+      opacity: 0.5;
+    }
+    .skip-glyph {
+      color: white;
+      font-size: 30px;
+    }
+    .play {
+      width: 78px;
+      height: 78px;
+      border-radius: 39px;
+      align-items: center;
+      justify-content: center;
+      background-color: white;
+      box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.45);
+      transition: scale 140ms ease-out;
+    }
+    .play:active {
+      scale: 0.9;
+    }
+    .play-glyph {
+      color: color-mix(in oklch, var(--cover) 50%, black);
+      font-size: 26px;
+      font-weight: 800;
+    }
+    .volume {
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+    .volume-host {
+      flex: 1;
+    }
+    .volume-glyph {
+      font-size: 16px;
+    }
+    .repeat {
+      align-self: center;
+      padding: 8px 18px;
+      border-radius: 18px;
+      border-width: 1px;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .on {
+      background-color: rgba(255, 255, 255, 0.9);
+    }
+    .repeat-label {
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+    .on .repeat-label {
+      color: color-mix(in oklch, var(--cover) 50%, black);
+    }
+  `,
+})
+export class NowPlaying {
+  protected readonly playback = inject(Playback);
+  protected readonly nav = inject(NativeNavigation);
+  protected readonly width = signal(0);
+  protected readonly dragging = signal(false);
+  /** Where the drag is, while there is one: the scrubber follows the finger, not the audio. */
+  private readonly dragTo = signal<number | null>(null);
+
+  private readonly duration = computed(() => this.playback.state().duration);
+  private readonly position = computed(() => this.dragTo() ?? this.playback.state().currentTime);
+  protected readonly percent = computed(() => {
+    const duration = this.duration();
+    return duration > 0 ? Math.min(100, (this.position() / duration) * 100) : 0;
+  });
+  protected readonly elapsed = computed(() => clock(this.position()));
+  protected readonly remaining = computed(() => clock(this.duration() - this.position()));
+  protected readonly total = computed(() => clock(this.duration()));
+
+  protected readonly scrub = Gesture.Pan()
+    .runOnJS(true)
+    .minDistance(0)
+    .onBegin((event) => {
+      this.dragging.set(true);
+      this.dragTo.set(seekTarget(event.x, this.width(), this.duration()));
+    })
+    .onUpdate((event) => this.dragTo.set(seekTarget(event.x, this.width(), this.duration())))
+    .onFinalize(() => {
+      const to = this.dragTo();
+      if (to !== null) this.playback.seek(to);
+      this.dragTo.set(null);
+      this.dragging.set(false);
+    });
+}

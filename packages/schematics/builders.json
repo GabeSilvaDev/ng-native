@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/@angular-devkit/architect/src/builders-schema.json",
+  "builders": {
+    "expo": {
+      "implementation": "./builders/expo.cjs",
+      "schema": "./builders/expo.json",
+      "description": "Runs an Expo CLI command in the project: start, export, run:ios, run:android."
+    },
+    "vitest": {
+      "implementation": "./builders/vitest.cjs",
+      "schema": "./builders/vitest.json",
+      "description": "Runs the project's tests once with Vitest, through @ng-native/testing."
+    }
+  }
+}
