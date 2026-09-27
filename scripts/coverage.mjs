@@ -163,10 +163,14 @@ function uncoveredRanges(lines) {
 function run() {
   mkdirSync(OUT, { recursive: true });
   for (const suite of SUITES) {
+    const started = Date.now();
     const result = spawnSync(suite.command, suite.args(suite.report(OUT)), {
       cwd: path.join(ROOT, suite.cwd),
       stdio: ['ignore', 'inherit', 'inherit'],
     });
+    console.log(
+      `\n${suite.name}: ${((Date.now() - started) / 1000).toFixed(1)}s on ${availableParallelism()} cores`,
+    );
     if (result.status !== 0) {
       console.error(`\n${suite.name} suite failed; coverage from a red suite is not worth having.`);
       process.exit(result.status ?? 1);
