@@ -47,9 +47,10 @@ jobs:
       - name: Lint and typecheck what changed
         run: npx nx affected -t lint typecheck --parallel=3
 
-      # What the packages publish, so a change that only the compiler rejects fails here.
+      # What the packages publish, so a change that only the compiler rejects fails here. The
+      # documentation is the one build that is not a package, and its own workflow builds it.
       - name: Build the packages that changed
-        run: npx nx affected -t build -p '@ng-native/*'
+        run: npx nx affected -t build --exclude=documentation
 
       # The browser suite (`packages/web/browser`, run by `pnpm coverage` below) drives a real
       # Chromium, and only Chromium is installed. Cached by Playwright's version, which is what

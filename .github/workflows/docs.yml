@@ -31,6 +31,9 @@ jobs:
 
       - uses: ./.github/actions/setup
 
+      # The build prerenders every page in a headless Chromium.
+      - run: pnpm --filter documentation exec playwright install --with-deps --only-shell chromium
+
       # The site reads the compiler's own sources for its live previews, so it is built in the
       # workspace rather than from published packages.
       - run: pnpm nx build documentation
