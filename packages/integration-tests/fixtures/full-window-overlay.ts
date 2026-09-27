@@ -10,7 +10,7 @@ import { FullWindowOverlay } from '../../router/src/full-window-overlay.ts';
   template: `
     <view nativeID="app"><text>screen</text></view>
     @if (shown()) {
-      <full-window-overlay>
+      <full-window-overlay modal>
         <view nativeID="toast"><text>Saved</text></view>
       </full-window-overlay>
     }

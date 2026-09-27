@@ -36,6 +36,7 @@ describe('a full-window overlay', () => {
     assert.equal(overlay.props['width'], size.width);
     assert.equal(overlay.props['height'], size.height);
     assert.ok(flatten([overlay]).some((n) => n.props['nativeID'] === 'toast'));
+    assert.equal(overlay.props['accessibilityContainerViewIsModal'], true, 'a bare modal is true');
     cleanup();
   });
 

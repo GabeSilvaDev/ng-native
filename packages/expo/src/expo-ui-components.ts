@@ -23,6 +23,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  booleanAttribute,
   computed,
   inject,
   input,
@@ -306,7 +307,7 @@ export class UiDatePicker {
   readonly modifiers = input<readonly UiModifier[]>();
   /** The picked date: what `[formField]` binds. */
   readonly value = model<Date | null>(null);
-  readonly disabled = input(false);
+  readonly disabled = input(false, { transform: booleanAttribute });
   /** The user picked, which is when a form shows a field's errors: a picker has no blur. */
   readonly touch = output<void>();
   readonly dateChange = output<UiDateChangeEvent>();
@@ -391,7 +392,7 @@ export class UiPicker {
   readonly modifiers = input<readonly UiModifier[]>();
   /** The chosen option's value: what `[formField]` binds. */
   readonly value = model<string | number | null>(null);
-  readonly disabled = input(false);
+  readonly disabled = input(false, { transform: booleanAttribute });
   /** The user picked, which is when a form shows a field's errors: a picker has no blur. */
   readonly touch = output<void>();
   readonly selectionChange =

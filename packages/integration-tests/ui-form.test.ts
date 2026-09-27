@@ -83,6 +83,17 @@ describe('a date picker in a form', () => {
     );
   });
 
+  it('is disabled by a bare disabled attribute, outside a form', async () => {
+    await render(mod['UiDisabled'] as Type<unknown>);
+    for (const id of ['bare-date', 'bare-room']) {
+      const modifiers = (screen.getByTestId(id).props['modifiers'] ?? []) as { $type: string }[];
+      assert.ok(
+        modifiers.some((modifier) => modifier.$type === 'disabled'),
+        `${id} is disabled`,
+      );
+    }
+  });
+
   it('speaks Compose s dialect on Android: milliseconds in, and its own event out', async () => {
     registerPlatformComponents('android');
     registerExpoUiViews('android');

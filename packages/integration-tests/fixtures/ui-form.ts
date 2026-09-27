@@ -33,6 +33,21 @@ export class UiForm {
   ];
 }
 
+/** Pickers disabled outside a form, by a bare attribute. */
+@Component({
+  selector: 'x-ui-disabled',
+  imports: [UiDatePicker, UiHost, UiPicker],
+  template: `
+    <ui-host>
+      <ui-date-picker nativeID="bare-date" disabled />
+      <ui-picker nativeID="bare-room" disabled [options]="rooms" />
+    </ui-host>
+  `,
+})
+export class UiDisabled {
+  readonly rooms = [{ value: 'single', label: 'Single' }];
+}
+
 /** Hosts sized to their SwiftUI content, both ways and one way. */
 @Component({
   selector: 'x-ui-hosts',

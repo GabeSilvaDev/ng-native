@@ -18,7 +18,7 @@
  * it is a plain view filling the window, last in its parent so it draws on top; put it last in the
  * root component's template for that.
  */
-import { Component, ElementRef, computed, inject, input } from '@angular/core';
+import { Component, ElementRef, booleanAttribute, computed, inject, input } from '@angular/core';
 import { Screen } from '@ng-native/device';
 import type { EngineNode } from '@ng-native/fabric';
 import { ownHost } from './own-host.ts';
@@ -36,7 +36,7 @@ export class FullWindowOverlay {
   private readonly screen = inject(Screen);
 
   /** iOS: VoiceOver stays inside the overlay while it is shown, as for a modal. */
-  readonly modal = input(false);
+  readonly modal = input(false, { transform: booleanAttribute });
 
   protected readonly fill = computed(() => {
     const { width, height } = this.screen.window();
