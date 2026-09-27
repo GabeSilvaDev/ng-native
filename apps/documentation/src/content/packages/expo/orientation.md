@@ -55,7 +55,8 @@ export class Player {
 - **`lock(lock)`** - pins the screen to `'default'` (portrait, and on a phone nothing else),
   `'all'`, `'portrait'` or `'landscape'`. Returns the function that unlocks it, ready to hand
   straight to `DestroyRef.onDestroy` so a screen that wants landscape while it is up does not have
-  to think about it again.
+  to think about it again. Locks stack: releasing one puts back the lock an earlier `lock()` still
+  holds, such as the screen underneath a pushed one, and the screen unlocks once none is held.
 
 ## Without the module installed
 

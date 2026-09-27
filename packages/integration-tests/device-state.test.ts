@@ -184,6 +184,33 @@ describe('orientation', () => {
     assert.deepEqual(calls, ['lock:landscape', 'unlock']);
   });
 
+  it('puts back the lock of the screen below when the one above releases its own', async () => {
+    // A video screen locked to landscape pushes a portrait-locked form, and Back pops it. The
+    // form's release unlocked the whole app, and the video screen below lost its lock.
+    const calls: string[] = [];
+    const orientation = serviceWith(
+      DeviceOrientation.SOURCE,
+      {
+        reported: source('portrait' as const),
+        lock: async (lock: string) => void calls.push(`lock:${lock}`),
+        unlock: async () => void calls.push('unlock'),
+      },
+      () => new DeviceOrientation(),
+    );
+
+    const releaseBelow = orientation.lock('landscape');
+    const releaseAbove = orientation.lock('portrait');
+    releaseAbove();
+    await settle();
+    assert.deepEqual(calls, ['lock:landscape', 'lock:portrait', 'lock:landscape']);
+
+    releaseAbove();
+    releaseBelow();
+    await settle();
+    assert.equal(calls.at(-1), 'unlock', 'and unlocks once nothing holds a lock');
+    assert.equal(calls.filter((call) => call === 'unlock').length, 1);
+  });
+
   it('is about the device, not the window', async () => {
     // A screen pinned to portrait still has a phone that is sideways, which is what a camera
     // preview needs to know.
@@ -220,6 +247,33 @@ describe('brightness', () => {
     await settle();
 
     assert.deepEqual(calls, ['set:1', 'restore']);
+  });
+
+  it('puts back the level of the screen below when the one above restores its own', async () => {
+    // A boarding pass at full brightness pushes a dimmed screen over it; popping that restored
+    // the system level under the boarding pass, which is the screen that needed it.
+    const calls: string[] = [];
+    const brightness = serviceWith(
+      Brightness.SOURCE,
+      {
+        get: async () => 0.4,
+        set: async (level) => void calls.push(`set:${level}`),
+        restore: async () => void calls.push('restore'),
+      },
+      () => new Brightness(),
+    );
+    await settle();
+
+    const restoreBelow = brightness.set(1);
+    const restoreAbove = brightness.set(0.2);
+    restoreAbove();
+    await settle();
+    assert.deepEqual(calls, ['set:1', 'set:0.2', 'set:1']);
+    assert.equal(brightness.level(), 1);
+
+    restoreBelow();
+    await settle();
+    assert.equal(calls.at(-1), 'restore');
   });
 
   it('refuses to ask for a level outside the range the platform has', () => {

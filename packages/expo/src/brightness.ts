@@ -55,12 +55,33 @@ export class Brightness {
    */
   set(level: number): () => void {
     const clamped = Math.min(1, Math.max(0, level));
-    this.current.set(clamped);
-    void this.native?.set(clamped);
-    return () => this.restore();
+    // A stack, as the status bar's is: a screen pushed over one that set a level of its own puts
+    // back the level beneath it, not the system's, when it goes.
+    const entry = { level: clamped };
+    this.levels.push(entry);
+    this.apply(clamped);
+    return () => {
+      const at = this.levels.indexOf(entry);
+      if (at === -1) return;
+      this.levels.splice(at, 1);
+      if (at < this.levels.length) return;
+      const below = this.levels.at(-1);
+      if (below) this.apply(below.level);
+      else this.restore();
+    };
+  }
+
+  /** Every level set and not yet put back, the one in force last. */
+  private readonly levels: { readonly level: number }[] = [];
+
+  private apply(level: number): void {
+    this.current.set(level);
+    void this.native?.set(level);
   }
 
   restore(): void {
+    // Everything set so far is put back, so a release still to come has nothing left to undo.
+    this.levels.length = 0;
     void this.native
       ?.restore()
       .then(() => this.native?.get().then((level) => this.current.set(level)));

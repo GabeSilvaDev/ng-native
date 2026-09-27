@@ -80,7 +80,21 @@ export class DeviceOrientation {
    * it is up can hand it to `DestroyRef.onDestroy` and not think about it again.
    */
   lock(lock: OrientationLock): () => void {
+    // A stack, as the status bar's is: a screen pushed over one with a lock of its own releases
+    // only its own, and the lock beneath it comes back rather than the whole app unlocking.
+    const entry = { lock };
+    this.locks.push(entry);
     void this.source.lock(lock);
-    return () => void this.source.unlock();
+    return () => {
+      const at = this.locks.indexOf(entry);
+      if (at === -1) return;
+      this.locks.splice(at, 1);
+      if (at < this.locks.length) return;
+      const below = this.locks.at(-1);
+      void (below ? this.source.lock(below.lock) : this.source.unlock());
+    };
   }
+
+  /** Every lock not yet released, the one in force last. */
+  private readonly locks: { readonly lock: OrientationLock }[] = [];
 }

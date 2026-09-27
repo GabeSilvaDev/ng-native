@@ -47,12 +47,14 @@ export class BoardingPass {
 
 - **`level`** - a signal, nought to one. Starts at `1`, since that is what a screen already shows
   before anything asks the platform.
-- **`set(level)`** - clamps to `0..1`, applies it, and returns the function that restores the
-  brightness the system had before. Always use the returned function rather than calling
-  `restore()` separately: an app that leaves the screen at full brightness after showing a
-  boarding pass is one the user experiences as a battery fault, not a bug they can name.
-- **`restore()`** - what the returned function calls. Available directly if a screen needs to put
-  the brightness back without waiting for teardown.
+- **`set(level)`** - clamps to `0..1`, applies it, and returns the function that puts back what
+  was there before: the level an earlier `set()` still holds, such as the screen underneath a
+  pushed one, or the system's own brightness once nothing does. Always use the returned function
+  rather than calling `restore()` separately: an app that leaves the screen at full brightness
+  after showing a boarding pass is one the user experiences as a battery fault, not a bug they
+  can name.
+- **`restore()`** - puts the system's brightness back at once, whatever is still set. Available
+  directly if a screen needs to put the brightness back without waiting for teardown.
 
 ## Without the module installed
 
