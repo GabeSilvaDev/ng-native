@@ -2,6 +2,18 @@
   "name": "@ng-native/device",
   "version": "0.0.0",
   "description": "Angular Native device services: keyboard, screen, colour scheme, app state, accessibility, hardware back and deep links.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "keyboard",
+    "deep-links",
+    "accessibility"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
@@ -27,6 +39,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/device#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

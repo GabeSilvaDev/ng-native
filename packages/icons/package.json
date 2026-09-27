@@ -2,6 +2,18 @@
   "name": "@ng-native/icons",
   "version": "0.0.0",
   "description": "@ng-icons rendered as native react-native-svg shapes in Angular Native.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "icons",
+    "ng-icons",
+    "svg"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
@@ -23,6 +35,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/icons#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

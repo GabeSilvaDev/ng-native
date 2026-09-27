@@ -2,6 +2,17 @@
   "name": "@ng-native/expo",
   "version": "0.0.0",
   "description": "Expo modules as Angular services for Angular Native, plus registerExpoView for a module's native view.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "expo",
+    "expo-modules"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -174,6 +185,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/expo#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "peerDependencies": {
     "@angular/core": "^22.0.0",
     "@expo/ui": "^57.0.0",

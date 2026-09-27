@@ -132,7 +132,7 @@ describe('deep links', () => {
 
   it('reduces a url to the path the router can navigate to', () => {
     assert.equal(pathOf('canary://primitives'), '/primitives');
-    assert.equal(pathOf('https://angularnative.dev/primitives'), '/primitives');
+    assert.equal(pathOf('https://example.com/primitives'), '/primitives');
     assert.equal(pathOf('canary://'), '/');
     assert.equal(pathOf(null), null);
   });

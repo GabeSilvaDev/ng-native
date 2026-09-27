@@ -31,7 +31,7 @@ export function deepLinkSource(): DeepLinkSource {
  * The path a url means to this app: everything after the scheme and host.
  *
  * Prefixes are app configuration and every app's are different, but stripping one is not: what a
- * router can navigate to is a path. `canary://primitives` and `https://angularnative.dev/primitives`
+ * router can navigate to is a path. `canary://primitives` and `https://example.com/primitives`
  * both mean `/primitives` - which takes noticing that only the second one has a host.
  *
  * Expo Go is the exception worth handling here rather than in every app: it serves every project

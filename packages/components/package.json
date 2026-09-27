@@ -2,6 +2,17 @@
   "name": "@ng-native/components",
   "version": "0.0.0",
   "description": "Angular Native's core components: view, text, image, pressable, scroll-view, virtual-list, text-input and the rest of React Native's set.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "components",
+    "ui"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -62,6 +73,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/components#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "peerDependenciesMeta": {
     "react-native": {
       "optional": true

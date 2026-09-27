@@ -2,6 +2,19 @@
   "name": "@ng-native/metro",
   "version": "0.0.0",
   "description": "Metro transformer and config preset for Angular Native: Angular AOT through oxc, the linker, and the build-time CSS compiler.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "metro",
+    "bundler",
+    "aot",
+    "css"
+  ],
   "type": "commonjs",
   "main": "angular-transform.cjs",
   "dependencies": {
@@ -28,6 +41,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/metro#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

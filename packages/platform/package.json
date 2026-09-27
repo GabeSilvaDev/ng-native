@@ -2,6 +2,17 @@
   "name": "@ng-native/platform",
   "version": "0.0.0",
   "description": "Angular Native's Renderer2 and bootstrap: mounts an Angular application onto React Native's Fabric.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "renderer",
+    "bootstrap"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -48,6 +59,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/platform#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

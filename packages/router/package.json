@@ -2,6 +2,18 @@
   "name": "@ng-native/router",
   "version": "0.0.0",
   "description": "@angular/router over native navigation for Angular Native: stack and tab outlets, native headers and links.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "router",
+    "navigation",
+    "react-native-screens"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "dependencies": {
@@ -25,6 +37,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/router#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

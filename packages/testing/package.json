@@ -2,6 +2,19 @@
   "name": "@ng-native/testing",
   "version": "0.0.0",
   "description": "Test Angular Native components in Node with no simulator: a fake Fabric, Testing Library queries and events, and Vitest and node:test integration.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "testing",
+    "testing-library",
+    "vitest",
+    "node-test"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -77,6 +90,10 @@
     "test": "node --import ./runner/register.mjs --test \"src/**/*.node.test.ts\" && vitest run"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/testing#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

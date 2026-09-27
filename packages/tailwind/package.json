@@ -2,6 +2,18 @@
   "name": "@ng-native/tailwind",
   "version": "0.0.0",
   "description": "Tailwind CSS preset for Angular Native, for native and web.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "tailwind",
+    "tailwindcss",
+    "css"
+  ],
   "type": "commonjs",
   "main": "flatten.cjs",
   "dependencies": {
@@ -15,6 +27,10 @@
     ]
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/tailwind#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "peerDependencies": {
     "@ng-native/metro": "workspace:*",
     "@tailwindcss/cli": "^4.3.3",

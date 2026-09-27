@@ -2,6 +2,17 @@
   "name": "@ng-native/fabric",
   "version": "0.0.0",
   "description": "Angular Native's engine: a retained view tree committed to React Native's Fabric, with events, the responder system and a CSS cascade.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "renderer",
+    "css"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "nx": {
@@ -15,6 +26,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/fabric#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

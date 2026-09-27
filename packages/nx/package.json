@@ -2,6 +2,19 @@
   "name": "@ng-native/nx",
   "version": "0.0.0",
   "description": "Nx generators for Angular Native: nx add, and an Expo app project whose targets run it.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "nx",
+    "nx-plugin",
+    "generators",
+    "expo"
+  ],
   "type": "module",
   "generators": "./generators.json",
   "dependencies": {
@@ -26,6 +39,10 @@
     "test": "node --test \"*.test.ts\" \"{init,application}/*.test.ts\""
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/nx#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ng-native/ng-native.git",

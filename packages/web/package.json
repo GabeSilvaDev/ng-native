@@ -2,6 +2,17 @@
   "name": "@ng-native/web",
   "version": "0.0.0",
   "description": "A browser host for Angular Native: the same components, rendered into the DOM instead of native views.",
+  "keywords": [
+    "angular",
+    "react-native",
+    "angular-native",
+    "ios",
+    "android",
+    "fabric",
+    "native",
+    "web",
+    "dom"
+  ],
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -84,6 +95,10 @@
     "test:browser": "vitest run"
   },
   "license": "MIT",
+  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/web#readme",
+  "bugs": {
+    "url": "https://github.com/ng-native/ng-native/issues"
+  },
   "files": [
     "dist",
     "vite.mjs",
