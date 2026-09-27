@@ -66,6 +66,27 @@ describe('a sensor', () => {
     assert.equal(native.listeners, 1);
   });
 
+  it('keeps reading for one component when another that started it stops', () => {
+    // The sensor is one per app, and each component hands its own stop to its DestroyRef. A
+    // screen pushed over one that reads the accelerometer, and popped again, stopped it for both.
+    const native = sensor();
+    const accelerometer = new Sensor(native, ORIGIN);
+    const stopBelow = accelerometer.start(100);
+    const stopAbove = accelerometer.start(20);
+    assert.equal(native.interval, 20, 'as often as the most demanding reader asks');
+
+    stopAbove();
+    assert.equal(native.listeners, 1, 'still reading for the screen below');
+    assert.equal(native.interval, 100, 'and back to its own interval');
+    native.emit({ x: 4, y: 5, z: 6 });
+    assert.deepEqual(accelerometer.reading(), { x: 4, y: 5, z: 6 });
+
+    stopAbove();
+    assert.equal(native.listeners, 1, 'a stop called twice takes nothing more');
+    stopBelow();
+    assert.equal(native.listeners, 0);
+  });
+
   it('is inert with no sensor at all', async () => {
     const accelerometer = new Sensor<Vector>(null, ORIGIN);
     // Null rather than false first: a template asking `@if (sensor.available())` should show

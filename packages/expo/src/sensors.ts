@@ -72,13 +72,30 @@ export class Sensor<T> {
    * because a sensor nobody stops is a battery nobody gets back.
    */
   start(intervalMs = 100): () => void {
-    this.stop();
-    this.native?.setUpdateInterval(intervalMs);
-    this.subscription = this.native?.addListener((reading) => this.current.set(reading)) ?? null;
-    return () => this.stop();
+    // One sensor serves the whole app, so each start is a claim of its own, and its stop gives
+    // back that claim alone: the sensor reads while anyone still wants it, as often as the most
+    // demanding of them asks.
+    const claim = { intervalMs };
+    this.claims.add(claim);
+    this.native?.setUpdateInterval(this.fastest());
+    this.subscription ??= this.native?.addListener((reading) => this.current.set(reading)) ?? null;
+    return () => {
+      if (!this.claims.delete(claim)) return;
+      if (this.claims.size === 0) this.stop();
+      else this.native?.setUpdateInterval(this.fastest());
+    };
   }
 
+  /** Every `start` not yet stopped. */
+  private readonly claims = new Set<{ readonly intervalMs: number }>();
+
+  private fastest(): number {
+    return Math.min(...[...this.claims].map((claim) => claim.intervalMs));
+  }
+
+  /** Stop reading for everyone who started it. */
   stop(): void {
+    this.claims.clear();
     this.subscription?.remove();
     this.subscription = null;
   }
