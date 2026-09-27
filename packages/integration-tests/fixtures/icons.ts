@@ -29,6 +29,7 @@ export const lucideTarget =
     <ng-icon nativeID="named" name="hero-academic-cap" [size]="size()" [color]="color()" />
     <ng-icon nativeID="raw" [svg]="raw" [strokeWidth]="3" />
     <ng-icon nativeID="labelled" [svg]="odd()" accessibilityLabel="Target" />
+    <ng-icon nativeID="static" [svg]="raw" size="32" />
   `,
 })
 export class IconHost {

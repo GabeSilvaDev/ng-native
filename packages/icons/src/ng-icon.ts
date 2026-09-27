@@ -30,6 +30,7 @@ import {
   effect,
   inject,
   input,
+  numberAttribute,
   type Signal,
 } from '@angular/core';
 import { claimHost, type EngineNode, HostEngine } from '@ng-native/fabric';
@@ -78,8 +79,11 @@ export class NgIcon {
   readonly name = input<string>();
   /** Markup, for an icon that comes from somewhere other than a provider. */
   readonly svg = input<string>();
-  /** Points, square. Icons are drawn from a `viewBox`, so this is the size on screen. */
-  readonly size = input<number>(24);
+  /**
+   * Points, square. Icons are drawn from a `viewBox`, so this is the size on screen. A static
+   * `size="32"` is read as the number it spells.
+   */
+  readonly size = input(24, { transform: (value: number | string) => numberAttribute(value, 24) });
   /** What a `currentColor` stroke or fill paints as. Native resolves it, so binding is cheap. */
   readonly color = input<string>();
   /** Fills in `var(--ng-icon__stroke-width, …)`, which is how an outline set carries its weight. */

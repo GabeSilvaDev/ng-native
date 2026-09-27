@@ -215,6 +215,13 @@ describe('an icon in the tree', () => {
     assert.equal(byId('named').props['name'], undefined, 'the input is not a native prop');
   });
 
+  it('takes a size written as a static attribute, which arrives as a string', () => {
+    // `size="32"` is how the web writes it. A string width is one native drops, and the icon
+    // lost its size.
+    assert.equal(byId('static').props['width'], 32);
+    assert.equal(byId('static').props['bbWidth'], 32);
+  });
+
   it('finds the icon through provideIcons, by the name a web app uses', () => {
     const paths = flatten([byId('named')]).filter((n) => n.viewName === 'RNSVGPath');
     assert.equal(paths.length, 1, 'the heroicon drew');
