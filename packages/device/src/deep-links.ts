@@ -68,8 +68,10 @@ export function pathOf(url: string | null): string | null {
   // A url with a host has one to skip. A custom scheme does not: `canary://settings` names a
   // path, not a machine, and treating the two alike is how it quietly becomes `/`.
   if (HAS_HOST.has(scheme?.[1]?.toLowerCase() ?? '')) {
-    const slash = rest.indexOf('/');
-    return slash === -1 ? '/' : rest.slice(slash);
+    // The host ends at the path, or at a query or fragment when there is no path.
+    const end = rest.search(/[/?#]/);
+    if (end === -1) return '/';
+    return rest[end] === '/' ? rest.slice(end) : `/${rest.slice(end)}`;
   }
   return rest.startsWith('/') ? rest : `/${rest}`;
 }

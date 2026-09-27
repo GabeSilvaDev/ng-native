@@ -137,6 +137,13 @@ describe('deep links', () => {
     assert.equal(pathOf(null), null);
   });
 
+  it('keeps the query and fragment of a web link with no path', () => {
+    // A universal link is often the bare domain with an invite code on it.
+    assert.equal(pathOf('https://example.com?invite=abc'), '/?invite=abc');
+    assert.equal(pathOf('https://example.com#top'), '/#top');
+    assert.equal(pathOf('https://example.com/join?invite=abc'), '/join?invite=abc');
+  });
+
   it('finds the app path inside an Expo Go development url', () => {
     assert.equal(pathOf('exp://127.0.0.1:8081/--/detail'), '/detail');
     assert.equal(
