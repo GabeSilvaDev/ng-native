@@ -216,6 +216,28 @@ describe('compiling a transition', () => {
   it('keeps `all` through the longhand form too', () => {
     assert.deepEqual(Object.keys(transitionOf('transition-property: all;')), ['all']);
   });
+
+  it('keys a shorthand by every prop it compiles to', () => {
+    // `transition-colors` names `border-color`, and `padding` is how a transition on spacing is
+    // written. Each compiles to one prop per side, and a spec keyed `padding` matched none.
+    const keys = (css: string) => Object.keys(transitionOf(css)).sort();
+    assert.deepEqual(keys('transition: padding 1s;'), [
+      'paddingBottom',
+      'paddingLeft',
+      'paddingRight',
+      'paddingTop',
+    ]);
+    assert.deepEqual(keys('transition: border-color 1s;'), [
+      'borderBottomColor',
+      'borderLeftColor',
+      'borderRightColor',
+      'borderTopColor',
+    ]);
+    assert.deepEqual(keys('transition: background 1s;'), ['backgroundColor']);
+    assert.deepEqual(keys('transition: gap 1s;'), ['columnGap', 'rowGap']);
+    assert.deepEqual(keys('transition: inset 1s;'), ['bottom', 'left', 'right', 'top']);
+    assert.equal(transitionOf('transition: margin 250ms;')['marginTop']!.duration, 250);
+  });
 });
 
 /**
@@ -286,6 +308,17 @@ describe('running a transition', () => {
     assert.equal(s.tick(50), false, 'and done');
     assert.equal(s.painted('opacity'), 0, 'exactly the target, not an interpolated near-miss');
     assert.equal(s.engine.animating, false);
+  });
+
+  it('transitions every side a shorthand names', () => {
+    const s = scene(`
+      view { padding: 0; transition: padding 100ms linear; }
+      view.open { padding: 20px; }
+    `);
+    s.classes('open');
+    s.tick(50);
+    assert.equal(s.painted('paddingTop'), 10, 'halfway');
+    assert.equal(s.painted('paddingLeft'), 10);
   });
 
   it('interpolates a percentage, which is how a bar fills up', () => {

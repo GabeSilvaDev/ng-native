@@ -786,11 +786,12 @@ function finishTransition(out, context) {
     // A custom property is not something this engine can animate, and Tailwind puts four of them
     // in `transition-colors` for its gradient slots. Listing them is dead weight in every bundle.
     if (name === 'none' || name.startsWith('--')) continue;
-    spec[name === 'all' ? 'all' : propName(name, context)] = {
+    const timing = {
       duration: milliseconds(cycle(parts['duration'], index)),
       delay: milliseconds(cycle(parts['delay'], index)),
       easing: easing(cycle(parts['timing-function'], index), context),
     };
+    for (const key of name === 'all' ? ['all'] : propNames(name, context)) spec[key] = timing;
   }
   // Not `transition`: that is also a prop some native views take, `expo-image`'s among them.
   out['$transition'] = spec;
@@ -800,20 +801,55 @@ function finishTransition(out, context) {
  * What React Native calls the property being transitioned. Compiling a probe declaration is the
  * honest way to ask: it goes through the same table as the real one, so a property that has a
  * different name in React Native, or none at all, answers for itself.
+ *
+ * A shorthand is every prop it compiles to, since those are the names the engine sees change:
+ * `padding` is four sides, and `background` is `backgroundColor`.
  */
-function propName(property, context) {
+function propNames(property, context) {
   // A probe value of 0 is not a rotation, and would be named after the CSS spelling.
-  if (Object.hasOwn(INDIVIDUAL_TRANSFORMS, property)) return INDIVIDUAL_TRANSFORMS[property];
+  if (Object.hasOwn(INDIVIDUAL_TRANSFORMS, property)) return [INDIVIDUAL_TRANSFORMS[property]];
   const probe = {};
   try {
     translate(property, 0, probe, context);
   } catch {
-    // A property this table cannot express is not a property that can change, so naming it after
-    // the CSS spelling is enough for the engine to never match it.
-    return camel(property);
+    // Not a length. A colour, say, or a property this table cannot express, which is not a
+    // property that can change: then naming it after the CSS spelling is enough for the engine
+    // to never match it.
   }
   const names = Object.keys(probe);
-  return names.length === 1 ? names[0] : camel(property);
+  if (names.length === 1) return names;
+  const longhands = shorthandProps(property);
+  return longhands.length ? longhands : [camel(property)];
+}
+
+/**
+ * Values a shorthand can be compiled with to learn the props it fills. More than one, because
+ * which it fills can hang on the value: `padding-inline: 1px` is left and right, and
+ * `padding-inline: 1px 2px` is start and end.
+ */
+const SHORTHAND_PROBES = ['1px', '1px 2px', '1px solid red', 'red', '1'];
+
+/** Every prop a shorthand compiles to, through the whole compiler; cached by property. */
+const shorthandCache = new Map();
+function shorthandProps(property) {
+  if (shorthandCache.has(property)) return shorthandCache.get(property);
+  // Required here rather than at the top: compile.cjs requires this module.
+  const { compileCss } = require('./compile.cjs');
+  const names = new Set();
+  for (const value of SHORTHAND_PROBES) {
+    try {
+      for (const rule of compileCss(`a{${property}:${value}}`, 'probe').rules) {
+        for (const name of Object.keys(rule.declarations)) names.add(name);
+        for (const deferred of rule.deferred ?? [])
+          for (const name of deferred.props) names.add(name);
+      }
+    } catch {
+      // Not a value this property takes.
+    }
+  }
+  const found = [...names];
+  shorthandCache.set(property, found);
+  return found;
 }
 
 /** Where a rule's animation parts wait for the rule to finish, as `LONGHANDS` does for transitions. */
