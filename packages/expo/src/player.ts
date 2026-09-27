@@ -100,6 +100,8 @@ export function watchPlayer(
       patch({ currentTime }),
     ),
     listen(player, 'sourceChange', () => patch({ ...INITIAL, status: 'loading' })),
+    // The only event that says how long the video is: nothing else carries a duration.
+    listen(player, 'sourceLoad', ({ duration }: { duration: number }) => patch({ duration })),
   ];
 
   if (options.timeUpdate !== undefined) player.timeUpdateEventInterval = options.timeUpdate;

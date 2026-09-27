@@ -71,6 +71,14 @@ describe('watching a player', () => {
     assert.equal(state().playing, true);
   });
 
+  it('knows how long the video is once its source has loaded', () => {
+    // `currentTime / duration` is the progress bar every player draws, and the duration stayed 0.
+    const native = player();
+    const { state } = watchPlayer(native);
+    native.emit('sourceLoad', { duration: 42.5, videoSource: null });
+    assert.equal(state().duration, 42.5);
+  });
+
   it('leaves currentTime alone unless a caller asked for progress', () => {
     // `timeUpdate` is off by default in both modules and is the most frequent event either emits.
     // A screen with no progress bar should not be paying for one.
