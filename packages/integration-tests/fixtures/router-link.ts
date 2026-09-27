@@ -10,6 +10,7 @@ import { NativeRouterLink } from '../../router/src/native-router-link.ts';
   template: `
     <pressable nativeRouterLink="/pushed"><text>push</text></pressable>
     <pressable nativeRouterLink="/replaced" [replace]="true"><text>replace</text></pressable>
+    <pressable nativeRouterLink="/replaced" replace><text>bare replace</text></pressable>
     <pressable nativeRouterLink="detail" [extras]="{ replaceUrl: true }">
       <text>relative</text>
     </pressable>

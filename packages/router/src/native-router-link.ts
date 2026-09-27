@@ -8,7 +8,7 @@
  * binds to `Pressable`'s `press` output without importing it, so the router package does not
  * depend on the components package.
  */
-import { Directive, inject, input } from '@angular/core';
+import { Directive, booleanAttribute, inject, input } from '@angular/core';
 import { ActivatedRoute, Router, type NavigationExtras } from '@angular/router';
 import { NATIVE_INTENT } from './native-navigation.ts';
 
@@ -22,7 +22,7 @@ export class NativeRouterLink {
   readonly extras = input<NavigationExtras>();
 
   /** Replace the current screen rather than pushing a new one. */
-  readonly replace = input(false);
+  readonly replace = input(false, { transform: booleanAttribute });
 
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute, { optional: true });

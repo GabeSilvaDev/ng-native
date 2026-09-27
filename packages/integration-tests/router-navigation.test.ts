@@ -233,6 +233,13 @@ describe('nativeRouterLink', () => {
     assert.deepEqual(state?.[NATIVE_INTENT], { stack: 'replace' });
   });
 
+  it('reads a bare replace attribute as replace, as a boolean attribute is read', async () => {
+    await fireEvent.press(labelled('bare replace'));
+    assert.equal(navigated[0]!.extras['replaceUrl'], true);
+    const state = navigated[0]!.extras['state'] as Record<string, unknown> | undefined;
+    assert.deepEqual(state?.[NATIVE_INTENT], { stack: 'replace' });
+  });
+
   it('resolves a relative link against the route it is on, keeping the extras it was given', async () => {
     await fireEvent.press(labelled('relative'));
     assert.deepEqual(navigated[0]!.commands, ['detail']);
