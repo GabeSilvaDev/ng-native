@@ -32,7 +32,7 @@ From the repository root, after `pnpm install`:
 
 ```sh
 cd examples/runs
-pnpm start     # press i or a - the maps, location and keep-awake modules need a native build
+pnpm ios       # or pnpm android: a development build, since Expo Go has no native map view
 pnpm test      # Vitest in Node, no simulator
 ```
 
