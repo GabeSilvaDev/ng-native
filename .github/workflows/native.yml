@@ -99,6 +99,16 @@ jobs:
           "$RUNNER_TEMP/apk-cache/canary.apk" "$RUNNER_TEMP/apk-cache/assets.json"
           "$RUNNER_TEMP/apk-cache/debug.keystore" "$RUNNER_TEMP/canary.apk"
 
+      # A build leaves too little of the runner's disk for the emulator's system image, so the
+      # toolchains the runner ships and this job never uses (.NET, Haskell, CodeQL, Swift, Boost)
+      # go first.
+      - name: Free disk space for the build
+        if: steps.rebundle.outcome != 'success'
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/share/swift /usr/local/share/boost
+          df -h "$GITHUB_WORKSPACE"
+
       - if: steps.rebundle.outcome != 'success'
         uses: actions/setup-java@v6
         with:
