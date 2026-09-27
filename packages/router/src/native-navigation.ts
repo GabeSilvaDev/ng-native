@@ -50,6 +50,9 @@ export interface PresentOptions extends NativeNavigationOptions {
   as?: StackPresentation;
 }
 
+/** A url string up to its query or fragment. */
+const pathOf = (url: string): string => url.split(/[?#]/, 1)[0]!;
+
 /** Read the intent off a navigation's state, if it carries one. */
 export function intentOf(state: unknown): NativeIntent | null {
   if (!state || typeof state !== 'object') return null;
@@ -147,8 +150,9 @@ export class NativeNavigation {
       : intent;
 
     const navigate = () =>
-      this.router.navigate(typeof commands === 'string' ? [commands] : [...commands], {
+      this.router.navigate(typeof commands === 'string' ? [pathOf(commands)] : [...commands], {
         ...extras,
+        ...(typeof commands === 'string' ? this.queryOf(commands, extras) : {}),
         state: { ...(state as object), [NATIVE_INTENT]: full },
       });
     // A screen stacked on the first one waits for it. Navigating while the router's first
@@ -158,6 +162,21 @@ export class NativeNavigation {
     return intent.stack !== 'reset' && this.firstNavigationRunning()
       ? this.firstNavigation().then(navigate)
       : navigate();
+  }
+
+  /**
+   * The query and fragment written into a url string, as the extras `navigate` takes them: it
+   * reads a string command as one path segment, and would encode a `?` into it. Extras given
+   * alongside win over the ones in the string.
+   */
+  private queryOf(url: string, extras: NavigationExtras): NavigationExtras {
+    const cut = url.search(/[?#]/);
+    if (cut < 0) return {};
+    const { queryParams, fragment } = this.router.parseUrl(url.slice(cut));
+    return {
+      queryParams: { ...queryParams, ...extras.queryParams },
+      fragment: extras.fragment ?? fragment ?? undefined,
+    };
   }
 
   private firstNavigationRunning(): boolean {

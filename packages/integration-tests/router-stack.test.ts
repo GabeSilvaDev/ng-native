@@ -140,6 +140,14 @@ describe('a native stack driven by the router', () => {
       assert.equal(created['User'], 1);
     });
 
+    it('reads a query and a fragment written into the url string', async () => {
+      // A string is a url, as `navigateByUrl` and `popTo` read it, not one path segment.
+      assert.equal(await nav.push('/user/1?tab=posts#top'), true);
+      await idle();
+      assert.equal(router.url, '/user/1?tab=posts#top');
+      assert.deepEqual(stack(fabric), ['home', 'user 1']);
+    });
+
     it('updates one screen in place on a route marked with reuseScreen', async () => {
       await nav.push('/photo/1');
       await nav.push('/photo/2');
