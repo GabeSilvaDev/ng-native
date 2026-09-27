@@ -601,12 +601,13 @@ export function sample(
 
 /**
  * How far through its frames the animation is, 0 to 1, in the direction its current iteration
- * runs. A finished animation is at the end of its last iteration, not the start of one after it.
+ * runs. A finished animation is at the end of its last iteration, not the start of one after it,
+ * and a fractional count ends part of the way through that iteration.
  */
 function directedProgress(spec: AnimationSpec, finished: boolean, elapsed: number): number {
   const position = finished ? (spec.iterations ?? 1) : Math.max(0, elapsed) / spec.duration;
   const iteration = finished ? Math.max(0, Math.ceil(position) - 1) : Math.floor(position);
-  const through = finished ? 1 : position - iteration;
+  const through = Math.min(1, Math.max(0, position - iteration));
   return backwards(spec.direction, iteration) ? 1 - through : through;
 }
 

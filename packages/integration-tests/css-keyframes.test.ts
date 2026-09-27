@@ -341,6 +341,17 @@ describe('playing an animation', () => {
     assert.equal(s.painted('opacity'), 0, 'two iterations, the second backwards, ends at from');
   });
 
+  it('holds the frame a fractional count ends on, part of the way through its last iteration', () => {
+    const s = scene(`
+      @keyframes rise { from { opacity: 0; } to { opacity: 1; } }
+      view { opacity: 0.5; }
+      view.enter { animation: rise 100ms linear 1.5 forwards; }
+    `);
+    s.classes('enter');
+    s.tick(250);
+    assert.equal(s.painted('opacity'), 0.5, 'half way through the second iteration');
+  });
+
   it('interpolates each property across the frames', () => {
     const s = scene(css);
     s.classes('enter');
