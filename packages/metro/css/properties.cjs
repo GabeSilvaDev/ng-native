@@ -12,6 +12,7 @@ const {
   color,
   keyword,
   length,
+  nearestWeight,
   number,
   round,
 } = require('./values.cjs');
@@ -1546,9 +1547,10 @@ function translate(property, value, out, context = property) {
             `absolute one. Write the weight: bold, or a number from 100 to 900.`,
         );
       }
-      out.fontWeight = String(
-        value?.value?.type === 'bold' ? 700 : (value?.value?.value ?? keyword(value, property)),
-      );
+      out.fontWeight =
+        typeof value?.value?.value === 'number'
+          ? nearestWeight(value.value.value)
+          : String(value?.value?.type === 'bold' ? 700 : keyword(value, property));
       return;
     default:
       break;

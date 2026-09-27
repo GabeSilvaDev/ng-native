@@ -129,6 +129,16 @@ describe('the value a binding holds', () => {
     );
   });
 
+  it('takes a number as a weight, as a stylesheet token of one is', () => {
+    // `[style.--w]="600"` beside `font-weight: var(--w)`: a stylesheet's `--w: 600` is a weight,
+    // and a bound one was a number only, so the text kept the fallback.
+    const weight = (value: unknown) =>
+      committed('.a { font-weight: var(--w, 300) }', { '--w': value })['fontWeight'];
+    assert.equal(weight(600), '600');
+    assert.equal(weight('600'), '600');
+    assert.equal(weight(550), '600', 'at a weight native draws');
+  });
+
   it("treats an empty value as unset, leaving the element's rule to define it", () => {
     const props = committed('.a { --g: 4px; gap: var(--g, 5px) }', { '--g': '' });
     assert.equal(props['rowGap'], 4);

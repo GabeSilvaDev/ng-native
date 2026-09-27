@@ -19,10 +19,17 @@ const COLOR_FUNCTION = /^(#[\da-f]{3,8}|(rgba?|hsla?|hwb)\(.*\))$/i;
 const WORD = /^-?[a-z][\w-]*$/i;
 const WEIGHTS: Record<string, string> = { normal: '400', bold: '700' };
 
-/** CSS takes a bare 0 wherever it takes a length, and no other bare number. */
+/**
+ * CSS takes a bare 0 wherever it takes a length, and no other bare number. A number from 1 to 1000
+ * is a weight as well, at the nearest hundred, which is every weight native draws.
+ */
 function fromNumber(value: number): TokenValue | undefined {
   if (!Number.isFinite(value)) return undefined;
-  return value === 0 ? { number: 0, length: 0 } : { number: value };
+  const weight =
+    value >= 1 && value <= 1000
+      ? { weight: String(Math.min(900, Math.max(100, Math.round(value / 100) * 100))) }
+      : {};
+  return value === 0 ? { number: 0, length: 0 } : { number: value, ...weight };
 }
 
 /**

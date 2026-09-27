@@ -872,6 +872,18 @@ describe('values the build settles on its own', () => {
     assert.deepEqual(declarationsOf('border: var(--c) hidden'), everySide('Width', 0));
   });
 
+  it('settles a weight between the hundreds on the nearest one native draws', () => {
+    // Native takes the nine hundreds and no others: `550` or `1000` is drawn at the regular
+    // weight, with nothing but a native log line to say so.
+    assert.equal(declarationsOf('font-weight: 550')['fontWeight'], '600');
+    assert.equal(declarationsOf('font-weight: 449')['fontWeight'], '400');
+    assert.equal(declarationsOf('font-weight: 1000')['fontWeight'], '900');
+    assert.equal(declarationsOf('font-weight: 1')['fontWeight'], '100');
+    assert.equal(declarationsOf('font-weight: 700')['fontWeight'], '700');
+    const token = compileCss(':root { --w: 550 }').rules[0].tokens['--w'];
+    assert.equal(token.weight, '600', 'a token holding one too');
+  });
+
   it('reads a bare 0 as no hue rotation, on Android where the filter is drawn', () => {
     const rule = compileCss('view { filter: hue-rotate(0) }', 'filters', { platform: 'android' })
       .rules[0];

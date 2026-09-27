@@ -340,12 +340,22 @@ function number(value, context) {
 const NAMED_WEIGHTS = { bold: '700', normal: '400' };
 
 /**
+ * A numeric weight as one native draws. Fabric takes the nine hundreds and no other number, and
+ * reads anything else - `550`, `1000` - as the regular weight, with only a native log line to say
+ * so. The nearest hundred is also where CSS's own font matching lands for a family without that
+ * exact weight.
+ */
+const nearestWeight = (value) =>
+  String(Math.min(900, Math.max(100, Math.round(value / 100) * 100)));
+
+/**
  * A font weight, as the string React Native's `fontWeight` takes. Its own form rather than a
  * number, because `bold` and `normal` are weights too and a number cannot hold them.
  */
 function weight(value) {
   const inner = typeof value === 'object' && value !== null ? value.value : value;
-  if (typeof inner === 'number') return inner >= 1 && inner <= 1000 ? String(inner) : undefined;
+  if (typeof inner === 'number')
+    return inner >= 1 && inner <= 1000 ? nearestWeight(inner) : undefined;
   const ident = typeof inner === 'object' && inner !== null ? inner.value : inner;
   return NAMED_WEIGHTS[ident];
 }
@@ -594,5 +604,6 @@ module.exports = {
   number,
   tokenValue,
   formOf,
+  nearestWeight,
   REM,
 };
