@@ -99,11 +99,10 @@ jobs:
           "$RUNNER_TEMP/apk-cache/canary.apk" "$RUNNER_TEMP/apk-cache/assets.json"
           "$RUNNER_TEMP/apk-cache/debug.keystore" "$RUNNER_TEMP/canary.apk"
 
-      # A build leaves too little of the runner's disk for the emulator's system image, so the
-      # toolchains the runner ships and this job never uses (.NET, Haskell, CodeQL, Swift, Boost)
-      # go first.
-      - name: Free disk space for the build
-        if: steps.rebundle.outcome != 'success'
+      # The emulator's userdata partition needs more disk than the runner has left, build or no
+      # build, so the toolchains the runner ships and this job never uses (.NET, Haskell, CodeQL,
+      # Swift, Boost) go first.
+      - name: Free disk space for the emulator
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
             /usr/share/swift /usr/local/share/boost
@@ -177,9 +176,7 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          # The default userdata partition is 7 GB, more than the runner has left; the app and its
-          # data need a fraction of it. A boot that has not finished in three minutes will not.
-          disk-size: 2048M
+          # A boot that has not finished in three minutes will not.
           emulator-boot-timeout: 180
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           script: ./examples/canary/scripts/smoke-android.sh "$RUNNER_TEMP/canary.apk" "$RUNNER_TEMP/maestro"
