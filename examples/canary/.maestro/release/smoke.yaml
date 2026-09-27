@@ -20,9 +20,9 @@ appId: ${APP_ID || 'dev.angularnative.canary'}
 - runFlow: ../subflows/no-error-screen.yaml
 
 # The native stack, from react-native-screens: push a screen and pop it with its header item.
-- scrollUntilVisible:
-    element: 'Navigation(, push.*)?'
-- tapOn: 'Navigation(, push.*)?'
+# By deep link: the home list is longer than a scroll reliably reaches.
+- openLink: canary://navigation
+- waitForAnimationToEnd
 - tapOn: 'push.*'
 - assertVisible: 'Detail'
 - tapOn: 'Done'
@@ -33,9 +33,8 @@ appId: ${APP_ID || 'dev.angularnative.canary'}
 
 # <safe-area-view>, from react-native-safe-area-context: a native module an app has to depend on
 # itself, and the one a generated app once crashed on. The search tab's content sits inside one.
-- scrollUntilVisible:
-    element: 'Tabs(, a native.*)?'
-- tapOn: 'Tabs(, a native.*)?'
+- openLink: canary://tabs
+- waitForAnimationToEnd
 - tapOn: 'Search'
 - assertVisible: 'Type something, then switch tabs'
 - runFlow: ../subflows/no-error-screen.yaml
