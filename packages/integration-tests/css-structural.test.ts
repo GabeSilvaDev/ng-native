@@ -242,3 +242,69 @@ describe('matching one', () => {
     assert.equal(all[1]!.props['borderBottomWidth'], 4);
   });
 });
+
+describe('a position test that is not at the top of its compound', () => {
+  // `.row:not(:last-child)` is the separator idiom written the other way round, and `:empty` asks
+  // about a child list too. The engine only restyles on a child-list change for a sheet marked as
+  // asking about position, so these need the mark as much as `:last-child` does.
+  const lastProps = (fabric: FakeFabric, node: unknown): Record<string, unknown> => {
+    const all = (n: FakeFabricNode): FakeFabricNode[] => [n, ...n.children.flatMap(all)];
+    const found = fabric.committed.flatMap(all).find((n) => n.instanceHandle === node);
+    assert.ok(found, 'committed');
+    return found.props;
+  };
+
+  it('marks the sheet when the test is inside :not() or :is(), or is :empty', () => {
+    assert.equal(compileCss('.a:not(:last-child) { color: red }', 'test').structural, true);
+    assert.equal(compileCss('.a:is(:first-child, .b) { color: red }', 'test').structural, true);
+    assert.equal(compileCss('.a:empty { color: red }', 'test').structural, true);
+  });
+
+  it('restyles the old last row when a row is added after it', () => {
+    const fabric = createFakeFabric();
+    const css = '.row:not(:last-child) { border-bottom-width: 1px }';
+    const engine = new Engine(fabric, 1, { globalStyles: compileCss(css, 'test') });
+    const list = engine.createElement('view');
+    const first = engine.createElement('view');
+    engine.setClasses(first, 'row');
+    engine.appendChild(engine.root, list);
+    engine.appendChild(list, first);
+    engine.commit();
+    assert.equal(lastProps(fabric, first)['borderBottomWidth'], undefined);
+
+    const second = engine.createElement('view');
+    engine.setClasses(second, 'row');
+    engine.appendChild(list, second);
+    engine.commit();
+    assert.equal(lastProps(fabric, first)['borderBottomWidth'], 1, 'no longer the last');
+  });
+
+  it('restyles an :empty node when a child arrives', () => {
+    const fabric = createFakeFabric();
+    const css = '.list:empty { opacity: 0.5 }';
+    const engine = new Engine(fabric, 1, { globalStyles: compileCss(css, 'test') });
+    const list = engine.createElement('view');
+    engine.setClasses(list, 'list');
+    engine.appendChild(engine.root, list);
+    engine.commit();
+    assert.equal(lastProps(fabric, list)['opacity'], 0.5);
+
+    engine.appendChild(list, engine.createElement('view'));
+    engine.commit();
+    assert.equal(lastProps(fabric, list)['opacity'], null, 'no longer empty');
+  });
+
+  it('counts a node holding only the anchor of an empty @for or @if as :empty', () => {
+    // The anchor is a comment on the web, and :empty ignores comments. A list whose @for has no
+    // rows holds nothing else.
+    const fabric = createFakeFabric();
+    const css = '.list:empty { opacity: 0.5 }';
+    const engine = new Engine(fabric, 1, { globalStyles: compileCss(css, 'test') });
+    const list = engine.createElement('view');
+    engine.setClasses(list, 'list');
+    engine.appendChild(engine.root, list);
+    engine.appendChild(list, engine.createAnchor());
+    engine.commit();
+    assert.equal(lastProps(fabric, list)['opacity'], 0.5);
+  });
+});

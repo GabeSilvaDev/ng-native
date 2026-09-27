@@ -1732,7 +1732,22 @@ function fontUrl(sources, family, context) {
 function asksAboutSiblings(rule) {
   if (rule.combinators.some((one) => one === 'next-sibling' || one === 'later-sibling'))
     return true;
-  return rule.compounds.some((one) => one.nth !== undefined);
+  return rule.compounds.some(asksAboutPosition);
+}
+
+/**
+ * Whether a compound, or any compound nested in it, asks about a child list: its place in its
+ * parent's, or whether its own is empty. `:not(:last-child)` asks as much as `:last-child` does.
+ */
+function asksAboutPosition(compound) {
+  if (compound.nth !== undefined || compound.empty !== undefined) return true;
+  const nested = [
+    ...(compound.not ?? []),
+    ...(compound.is ?? []).flat(),
+    ...(compound.ancestors ?? []),
+    ...(compound.hostContext ?? []),
+  ];
+  return nested.some(asksAboutPosition);
 }
 
 /**

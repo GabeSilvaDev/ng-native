@@ -509,7 +509,10 @@ function matchesCompound(node: StyleTarget, compound: Compound, sheet: StyleShee
       if (!matchesAttribute(node, test)) return false;
     }
   }
-  if (compound.empty !== undefined && (node.children?.length ?? 0) > 0) return false;
+  // An anchor is a comment on the web, and :empty does not see comments.
+  if (compound.empty !== undefined && node.children?.some((child) => child.kind !== 'anchor')) {
+    return false;
+  }
   if (compound.nth !== undefined) {
     for (const test of compound.nth) {
       if (!matchesNth(node, test)) return false;
