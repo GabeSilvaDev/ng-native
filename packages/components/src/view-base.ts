@@ -504,17 +504,26 @@ export abstract class ViewBase {
    *   `ui-select-item` and `ui-dropdown-menu-item` do not - which is the shape of a bug that gets
    *   copied rather than fixed.
    *
-   * Not writing `undefined` costs the ability to clear a prop by clearing its input, which is not
-   * a thing any of these forty props is asked to do: they are set from a template that either
-   * binds them or does not. Clearing a *class* still clears the style it brought, because that
-   * goes through the cascade rather than through here.
+   * An input that goes back to `undefined` clears the prop only when this is what set it, so a
+   * binding such as `[pointerEvents]="busy() ? 'none' : undefined"` still switches off, and a
+   * prop that arrived by one of those other routes is still never touched. Clearing a *class*
+   * clears the style it brought, because that goes through the cascade rather than through here.
    */
   private writer(): (key: string, value: unknown) => void {
     return (key, value) => {
-      if (value === undefined) return;
+      if (value === undefined) {
+        // Cleared only if this wrote it: `[pointerEvents]="busy() ? 'none' : undefined"` has to
+        // give the view its touches back, and a prop another route set is still left alone.
+        if (this.written?.delete(key)) this.engine.setProp(this.node, key, null);
+        return;
+      }
+      (this.written ??= new Set()).add(key);
       this.engine.setProp(this.node, key, value);
     };
   }
+
+  /** The props `writer` has set from an input, so it can clear one when its input is unset. */
+  private written: Set<string> | null = null;
 
   private writeIdentity(): void {
     const write = this.writer();

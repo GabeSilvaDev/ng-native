@@ -31,8 +31,11 @@ import { View } from '../../components/src/view.ts';
 
     <image testID="pic" alt="A cat asleep on a keyboard" />
     <image testID="decoration" />
+
+    <view testID="busy" [pointerEvents]="busy() ? 'none' : undefined"></view>
   `,
 })
 export class Accessible {
   readonly off = signal(false);
+  readonly busy = signal(true);
 }

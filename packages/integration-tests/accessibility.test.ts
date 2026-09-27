@@ -48,6 +48,22 @@ describe('accessibility state that a component owns', () => {
   });
 });
 
+describe('a prop an input stops asking for', () => {
+  type Toggles = { busy: { set(value: boolean): void } };
+
+  it('clears a prop whose binding went back to undefined', async () => {
+    const mod = await compileFixture(
+      fileURLToPath(new URL('./fixtures/accessibility.ts', import.meta.url)),
+    );
+    const { instance, getByTestId, rerender } = await render(mod['Accessible'] as Type<Toggles>);
+    assert.equal(getByTestId('busy').props['pointerEvents'], 'none');
+    instance.busy.set(false);
+    await rerender();
+    assert.equal(getByTestId('busy').props['pointerEvents'] ?? null, null, 'touchable again');
+    cleanup();
+  });
+});
+
 describe('accessibility defaults', () => {
   it('leaves a plain view alone, because a box is not an element', async () => {
     assert.equal(node('plain').props['accessible'], undefined);
