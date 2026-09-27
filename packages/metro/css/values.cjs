@@ -67,7 +67,7 @@ function length(value, context) {
       // Relative to something known only after the cascade has run, or that changes while the app
       // is open. Marked here and resolved at match time, beside var().
       if (unit === 'em' || unit === 'vw' || unit === 'vh' || unit === 'vmin' || unit === 'vmax') {
-        return { __defer: { unit, factor: n } };
+        return { __defer: { unit, factor: round(n) } };
       }
       throw new CssUnsupported(
         `${context}: unit '${unit}' has no meaning on native ` +

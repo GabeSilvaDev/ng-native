@@ -279,6 +279,16 @@ describe('viewport and font-relative lengths', () => {
     assert.throws(() => compileCss('.a { border-top-left-radius: 1em 2em }'), /elliptical/);
   });
 
+  it('rounds the factor of a deferred length, which arrives as f32 noise', () => {
+    // `letter-spacing: 0.1em` is Bootstrap's and Tailwind's tracking, and 0.1 is not an f32.
+    assert.deepEqual(compileCss('.a { letter-spacing: 0.1em }', 'em').rules[0].deferred, [
+      { props: ['letterSpacing'], compute: { unit: 'em', factor: 0.1 } },
+    ]);
+    assert.deepEqual(compileCss('.a { width: 33.3vw }', 'vw').rules[0].deferred, [
+      { props: ['width'], compute: { unit: 'vw', factor: 33.3 } },
+    ]);
+  });
+
   it('reads the line-height in a font shorthand the way the longhand reads it', () => {
     assert.equal(declarationsOf('font: 12px/150% serif')['lineHeight'], 18);
     assert.equal(declarationsOf('font: 12px/1.5 serif')['lineHeight'], 18);
