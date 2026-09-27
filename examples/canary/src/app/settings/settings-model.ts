@@ -120,7 +120,7 @@ export interface Network {
 }
 
 export const NETWORKS: readonly Network[] = [
-  { name: 'Hunter Home', strength: 3, secured: true },
+  { name: 'Morgan Home', strength: 3, secured: true },
   { name: 'BT-Hub-7F2A', strength: 2, secured: true },
   { name: 'Cafe Nero Guest', strength: 2, secured: false },
   { name: 'SKY9C1D0', strength: 1, secured: true },
@@ -142,7 +142,7 @@ export class Settings {
   private readonly scheme = inject(ColorScheme);
   readonly airplane = signal(false);
   readonly wifi = signal(true);
-  readonly network = signal<string | null>('Hunter Home');
+  readonly network = signal<string | null>('Morgan Home');
   readonly bluetooth = signal(true);
   readonly appearance = signal<Appearance>('automatic');
   readonly textSize = signal(3);

@@ -44,9 +44,9 @@ export const CATEGORY_NAMES: Record<Category, string> = {
 };
 
 export const CARDS: readonly Card[] = [
-  { id: 'everyday', name: 'Everyday', last4: '4821', holder: 'A. Hunter', tone: '#7c3aed' },
-  { id: 'travel', name: 'Travel', last4: '0917', holder: 'A. Hunter', tone: '#0d9488' },
-  { id: 'saver', name: 'Saver', last4: '3360', holder: 'A. Hunter', tone: '#e11d48' },
+  { id: 'everyday', name: 'Everyday', last4: '4821', holder: 'A. Morgan', tone: '#7c3aed' },
+  { id: 'travel', name: 'Travel', last4: '0917', holder: 'A. Morgan', tone: '#0d9488' },
+  { id: 'saver', name: 'Saver', last4: '3360', holder: 'A. Morgan', tone: '#e11d48' },
 ];
 
 const t = (id: string, merchant: string, category: Category, amount: number, daysAgo: number) =>

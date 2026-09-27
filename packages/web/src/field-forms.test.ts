@@ -64,15 +64,15 @@ describe('Field + Signal Forms, mounted through mount', () => {
     const { componentRef, messagesOf, touch, type } = await boot();
     await touch('email');
     assert.deepEqual(messagesOf('email-error'), ['Email is required']);
-    await type('email', 'ashley@example.com');
+    await type('email', 'alex@example.com');
     assert.deepEqual(messagesOf('email-error'), []);
     componentRef.destroy();
   });
 
   it('writes the keystroke through to the Signal Form model, not just the field', async () => {
     const { componentRef, app, type } = await boot();
-    await type('email', 'ashley@example.com');
-    assert.equal(app.model().email, 'ashley@example.com');
+    await type('email', 'alex@example.com');
+    assert.equal(app.model().email, 'alex@example.com');
     componentRef.destroy();
   });
 

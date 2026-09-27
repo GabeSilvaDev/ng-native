@@ -9,7 +9,7 @@ import { NativeHeader } from '@ng-native/router';
 import { NETWORKS, ROWS, Settings, type Appearance } from './settings-model.ts';
 
 const ABOUT: readonly [string, string][] = [
-  ['Name', 'Ashley’s iPhone'],
+  ['Name', 'Alex’s iPhone'],
   ['iOS Version', '26.5'],
   ['Model Name', 'iPhone 17 Pro'],
   ['Model Number', 'MG8K4B/A'],

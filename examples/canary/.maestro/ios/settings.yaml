@@ -9,7 +9,7 @@ appId: dev.angularnative.canary
 - tapOn: 'Airplane Mode'
 - assertVisible: 'Wi-Fi, Off'
 - tapOn: 'Airplane Mode'
-- assertVisible: 'Wi-Fi, Hunter Home'
+- assertVisible: 'Wi-Fi, Morgan Home'
 - tapOn: 'Search'
 - inputText: 'dark'
 - tapOn: 'Display & Brightness.*'

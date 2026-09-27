@@ -86,11 +86,11 @@ export const SETTINGS_ICONS = {
         <pressable
           class="group account"
           accessibilityRole="button"
-          accessibilityLabel="Ashley Hunter, Account and iCloud"
+          accessibilityLabel="Alex Morgan, Account and iCloud"
         >
-          <view class="avatar"><text class="avatar-initials">AH</text></view>
+          <view class="avatar"><text class="avatar-initials">AM</text></view>
           <view class="account-text">
-            <text class="account-name">Ashley Hunter</text>
+            <text class="account-name">Alex Morgan</text>
             <text class="account-hint">Account, iCloud, Media and Purchases</text>
           </view>
           <ng-icon name="lucideChevronRight" [size]="20" color="#b8b8bd" />

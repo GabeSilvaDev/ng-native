@@ -37,7 +37,7 @@ describe('settings', () => {
   test('the Airplane Mode row switches, and Wi-Fi says it is off', async () => {
     await boot('/settings');
     const row = await screen.findByRole('switch', { name: 'Airplane Mode' });
-    expect(screen.getByLabelText('Wi-Fi, Hunter Home')).toBeTruthy();
+    expect(screen.getByLabelText('Wi-Fi, Morgan Home')).toBeTruthy();
     await userEvent.press(row);
     await screen.findByLabelText('Wi-Fi, Off');
     expect(
