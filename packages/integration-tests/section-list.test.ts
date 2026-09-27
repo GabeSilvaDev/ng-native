@@ -172,6 +172,16 @@ describe('section list on Android', () => {
     registerViewName('input-accessory-view', 'InputAccessoryView');
   });
 
+  it('pins the header for a bare stickySectionHeadersEnabled, which arrives as an empty string', async () => {
+    // Headers do not pin here unless asked, and a bare attribute is how a template asks.
+    const { fabric, app, instance } = await boot();
+    instance.sticky.set('' as never);
+    await settle();
+    await scrollTo(fabric, 3 * SECTION + 100);
+    assert.equal(slotOf(fabric, 'S3#3')?.props['zIndex'], 1);
+    app.unmount();
+  });
+
   it('does not pin headers by default, as RN does not', async () => {
     const { fabric, app } = await boot();
     await scrollTo(fabric, 3 * SECTION + 100);

@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { nativePlatform } from '@ng-native/fabric';
 import { TemplateSlot } from './template-slot.ts';
+import { optionalBoolean } from './transforms.ts';
 import { View } from './view.ts';
 import { VirtualList } from './virtual-list.ts';
 
@@ -238,7 +239,7 @@ export class SectionList<T, S extends SectionListSection<T> = SectionListSection
   readonly sectionHeaderHeight = input<Height<[section: S]>>(0);
   readonly sectionFooterHeight = input<Height<[section: S]>>(0);
   /** Pin the current section's header. Defaults to true on iOS and false on Android, as RN. */
-  readonly stickySectionHeadersEnabled = input<boolean | undefined>(undefined);
+  readonly stickySectionHeadersEnabled = input(undefined, { transform: optionalBoolean });
   readonly overscan = input(4, { transform: numberAttribute });
   readonly endReachedThreshold = input(2, { transform: numberAttribute });
 
