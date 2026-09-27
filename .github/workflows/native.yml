@@ -177,6 +177,10 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
+          # The default userdata partition is 7 GB, more than the runner has left; the app and its
+          # data need a fraction of it. A boot that has not finished in three minutes will not.
+          disk-size: 2048M
+          emulator-boot-timeout: 180
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           script: ./examples/canary/scripts/smoke-android.sh "$RUNNER_TEMP/canary.apk" "$RUNNER_TEMP/maestro"
 

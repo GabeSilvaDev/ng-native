@@ -23,6 +23,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { availableParallelism } from 'node:os';
 import path from 'node:path';
 import url from 'node:url';
 
@@ -61,6 +62,9 @@ const SUITES = [
       '--import',
       './register-linker.mjs',
       '--test',
+      // One file per core. Node's default leaves a core free, which on a two-core CI runner is
+      // one file at a time, and this suite is 160 files.
+      `--test-concurrency=${availableParallelism()}`,
       '--experimental-test-coverage',
       ...EXCLUDE.map((pattern) => `--test-coverage-exclude=${pattern}`),
       '--test-reporter=lcov',
