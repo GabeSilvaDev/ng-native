@@ -53,13 +53,25 @@ export class KeepAwake {
    * that matters.
    */
   hold(tag = DEFAULT_TAG): () => void {
-    this.held.update((tags) => new Set(tags).add(tag));
-    void this.native?.activate(tag).catch(() => {});
+    // Counted per tag: two screens of one kind hold the same one, and the native module keeps a
+    // set of tags, so the first to release would otherwise let go for both.
+    const count = this.counts.get(tag) ?? 0;
+    this.counts.set(tag, count + 1);
+    if (count === 0) {
+      this.held.update((tags) => new Set(tags).add(tag));
+      void this.native?.activate(tag).catch(() => {});
+    }
 
     let released = false;
     return () => {
       if (released) return;
       released = true;
+      const left = (this.counts.get(tag) ?? 1) - 1;
+      if (left > 0) {
+        this.counts.set(tag, left);
+        return;
+      }
+      this.counts.delete(tag);
       this.held.update((tags) => {
         const next = new Set(tags);
         next.delete(tag);
@@ -68,4 +80,7 @@ export class KeepAwake {
       void this.native?.deactivate(tag).catch(() => {});
     };
   }
+
+  /** How many holds each tag has that are not yet released. */
+  private readonly counts = new Map<string, number>();
 }

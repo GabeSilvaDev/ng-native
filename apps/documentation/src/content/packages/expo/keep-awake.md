@@ -41,8 +41,9 @@ export class Recording {
 ## What it does
 
 - **`hold(tag)`** - holds the screen on under that tag, and returns the function that releases it.
-  The tag defaults to a package-wide constant, but naming it explicitly is what lets two screens
-  each hold the screen on without either releasing the other's hold.
+  The tag defaults to a package-wide constant. Holds are counted per tag, so two screens holding
+  the same tag, or the default, each keep the screen on until their own hold is released; naming
+  the tag is what tells them apart in `holders`.
 - **`holders`** - a signal of the set of tags currently holding the screen on, for a debug screen
   that wants to say which.
 - **`active`** - whether anything currently holds the screen on, computed from whether `holders` is

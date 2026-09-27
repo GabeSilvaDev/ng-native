@@ -406,6 +406,25 @@ describe('keeping the screen on', () => {
     assert.equal(keepAwake.active(), true, 'the recording is still going');
   });
 
+  it('keeps a tag held until every hold under it is released', async () => {
+    // Two screens of one kind hold the same tag: a video pushed over another video, each holding
+    // the default. The native module keeps a set of tags, so the first release let both go.
+    const native = platform();
+    const keepAwake = serviceWith(KeepAwake.SOURCE, native, () => new KeepAwake());
+    const below = keepAwake.hold();
+    const above = keepAwake.hold();
+
+    above();
+    await settle();
+    assert.equal(keepAwake.active(), true, 'the screen below still holds it');
+    assert.ok(native.held.length > 0, 'and so does the device');
+
+    below();
+    await settle();
+    assert.equal(keepAwake.active(), false);
+    assert.deepEqual(native.held, []);
+  });
+
   it('ignores a release called twice', async () => {
     const native = platform();
     const keepAwake = serviceWith(KeepAwake.SOURCE, native, () => new KeepAwake());
