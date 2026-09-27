@@ -310,6 +310,20 @@ describe('running a transition', () => {
     assert.equal(s.engine.animating, false);
   });
 
+  it('changes a value it cannot interpolate at once, rather than at the end', () => {
+    // Tailwind's `transition` and `transition-all` both cover `display`. A discrete value does not
+    // transition on the web, so `hidden` hides at once; holding it for the duration left the
+    // element on screen and then made it vanish.
+    const s = scene(`
+      view { display: flex; flex-direction: row; transition: all 100ms linear; }
+      view.gone { display: none; flex-direction: column; }
+    `);
+    s.classes('gone');
+    assert.equal(s.painted('display'), 'none');
+    assert.equal(s.painted('flexDirection'), 'column');
+    assert.equal(s.engine.animating, false);
+  });
+
   it('transitions every side a shorthand names', () => {
     const s = scene(`
       view { padding: 0; transition: padding 100ms linear; }

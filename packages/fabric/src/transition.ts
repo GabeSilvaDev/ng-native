@@ -424,8 +424,13 @@ export function step(
   // value for the whole duration, which is how a section that opened to a height nothing had
   // measured stayed shut - and clearing a height is also what stops the layout that would have
   // corrected it, so it stayed shut rather than catching up a frame later.
+  //
+  // The same goes for a pair with nothing between them at all, a keyword such as `display` or
+  // `flex-direction`: CSS changes it at once rather than transitioning it, and `transition: all`
+  // covers it. Holding the old one for the duration kept a `display: none` on screen until the
+  // end and then made it vanish.
   const started = !Object.is(seen.to, props[key]);
-  if (started && !bothEnds(seen.to, props[key])) {
+  if (started && !interpolable(seen.current, props[key])) {
     state.set(key, settled(props[key], rule));
     return false;
   }
@@ -435,14 +440,17 @@ export function step(
 }
 
 /**
- * Whether there is a pair here to interpolate at all.
+ * Whether there is a pair here to interpolate at all: two numbers, two colours, two percentages,
+ * or two transform lists of the same shape.
  *
  * A transform is the one thing that animates from nothing, because "no transform" has a value -
  * the identity - and `interpolateTransform` starts there. Everything else needs both ends.
  */
-function bothEnds(from: unknown, to: unknown): boolean {
-  if (from != null && to != null) return true;
-  return Array.isArray(from) || Array.isArray(to);
+function interpolable(from: unknown, to: unknown): boolean {
+  if (typeof from === 'number' && typeof to === 'number') return true;
+  if (parseColor(from) !== null && parseColor(to) !== null) return true;
+  if (interpolatePercentage(from, to, 0) !== null) return true;
+  return interpolateTransform(from, to, 0) !== null;
 }
 
 /** A property seen for the first time: recorded so the next change has something to aim from. */
