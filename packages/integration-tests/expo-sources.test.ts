@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { StoreReview } from '@ng-native/expo/store-review';
 import { DeviceOrientation } from '@ng-native/expo/orientation';
 import { Locale } from '@ng-native/expo/locale';
 import { SecureStorage, Storage } from '@ng-native/expo/store';
@@ -402,6 +403,25 @@ describe('the notifications source', () => {
   it('is inert with no expo-notifications installed', () => {
     assert.equal(
       withModules({}, () => defaultSource(Notifications.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the store review source', () => {
+  it('is expo-store-review itself, whose functions the service calls by their own names', () => {
+    const expoStoreReview = { requestReview: async () => {} };
+    assert.equal(
+      withModules({ 'expo-store-review': expoStoreReview }, () =>
+        defaultSource(StoreReview.SOURCE),
+      ),
+      expoStoreReview,
+    );
+  });
+
+  it('is inert with no expo-store-review installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(StoreReview.SOURCE)),
       null,
     );
   });

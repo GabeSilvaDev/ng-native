@@ -45,6 +45,7 @@
     "./sensors": "./src/sensors.ts",
     "./splash-screen": "./src/splash-screen.ts",
     "./store": "./src/store.ts",
+    "./store-review": "./src/store-review.ts",
     "./updates": "./src/updates.ts",
     "./package.json": "./package.json"
   },
@@ -169,6 +170,10 @@
         "types": "./dist/store.d.ts",
         "default": "./dist/store.js"
       },
+      "./store-review": {
+        "types": "./dist/store-review.d.ts",
+        "default": "./dist/store-review.js"
+      },
       "./updates": {
         "types": "./dist/updates.d.ts",
         "default": "./dist/updates.js"
@@ -226,6 +231,7 @@
     "expo-sensors": "^57.0.0",
     "expo-splash-screen": "^57.0.0",
     "expo-sqlite": "^57.0.0",
+    "expo-store-review": "^57.0.0",
     "expo-updates": "^57.0.0",
     "expo-video": "^57.0.0",
     "expo-web-browser": "^57.0.0",
@@ -353,6 +359,9 @@
       "optional": true
     },
     "expo-sqlite": {
+      "optional": true
+    },
+    "expo-store-review": {
       "optional": true
     },
     "expo-updates": {

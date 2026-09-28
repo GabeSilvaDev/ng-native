@@ -190,6 +190,7 @@ export const PACKAGES: NavSection = {
         { path: 'packages/expo/haptics', title: 'Haptics', group: 'Feedback' },
         { path: 'packages/expo/clipboard', title: 'Clipboard' },
         { path: 'packages/expo/notifications', title: 'Notifications' },
+        { path: 'packages/expo/store-review', title: 'Store review' },
         { path: 'packages/expo/storage', title: 'Storage', group: 'Storage and files' },
         { path: 'packages/expo/file-system', title: 'File system' },
         { path: 'packages/expo/database', title: 'Database' },

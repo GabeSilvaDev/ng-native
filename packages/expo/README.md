@@ -294,7 +294,7 @@ handed over again.
 
 Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from the module.
 
-## Photos, location and sign-in
+## Photos, files, location and privacy
 
 - **`ImagePicker`** (`image-picker.ts`): `pick()` and `capture()`, each resolving to the picked
   assets, empty if they cancelled. `capture()` asks for the camera itself.
@@ -307,6 +307,9 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
 - **`AppInfo`** (`app-info.ts`): the version, build, identifier and device, as plain values.
 - **`Camera`** (`camera.ts`): a directive on `<expo-camera>` whose `takePicture()` takes a picture
   from the view on screen, without a React ref.
+- **`StoreReview`** (`store-review.ts`): `available()`, `hasAction()`, `request()` and
+  `storeUrl()`. Whether the prompt appears is the platform's decision, and a call that resolves is
+  not a prompt that was shown.
 
 ## The rest
 
