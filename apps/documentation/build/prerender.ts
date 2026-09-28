@@ -369,42 +369,6 @@ async function writeAgents(): Promise<void> {
   );
 }
 
-/**
- * The social card: the landing page's hero itself, photographed at 1200 x 630 on every build.
- *
- * Captured rather than drawn separately, so the card is always the page it links to - the
- * headline, the code and both phones. Reduced motion, so every stroke is finished and nothing
- * is mid-intro, and without the header, which is navigation rather than content.
- */
-async function captureSocialImage(
-  browser: Awaited<ReturnType<typeof chromium.launch>>,
-  origin: string,
-): Promise<void> {
-  const page = await browser.newPage({
-    viewport: { width: 1200, height: 630 },
-    deviceScaleFactor: 1,
-    colorScheme: 'light',
-    reducedMotion: 'reduce',
-  });
-  try {
-    await page.goto(origin + '/', { waitUntil: 'networkidle' });
-    // The hero's phones are screenshots: wait until every visible one has decoded.
-    await page.waitForFunction(
-      () =>
-        [...document.querySelectorAll<HTMLImageElement>('landing-hero img')]
-          .filter((img) => img.checkVisibility())
-          .every((img) => img.complete && img.naturalWidth > 0),
-      undefined,
-      { timeout: 30_000 },
-    );
-    await page.addStyleTag({ content: 'landing-header { display: none !important; }' });
-    await page.waitForTimeout(400);
-    await page.screenshot({ path: path.join(dist, 'og.png') });
-  } finally {
-    await page.close();
-  }
-}
-
 async function prerender(): Promise<void> {
   const shell = await readFile(path.join(dist, 'index.html'), 'utf8');
   if (!shell.includes(HOST)) throw new Error(`dist/index.html has no ${HOST} to replace`);
@@ -424,9 +388,6 @@ async function prerender(): Promise<void> {
       await writeSnapshot(route.path, compose(shell, snapshot, FONT_PRELOADS));
       console.log(`  prerendered ${route.path}`);
     }
-
-    await captureSocialImage(browser, server.origin);
-    console.log('  captured og.png from the landing hero');
 
     // No route on this site matches `/__not-found__`, so this exercises exactly what a reader
     // hitting a typo'd URL does: the wildcard route resolves, `doc-page` fails to find a document

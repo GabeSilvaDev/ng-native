@@ -76,6 +76,6 @@ block is that design.
 
 The three faces are OFL-licensed woff2 files in `public/fonts`, copied from the
 `@fontsource-variable` packages of the same names, with their licenses beside them.
-`build/prerender.ts` preloads the display and body faces on every page, and photographs the
-hero at 1200 x 630 as `og.png` on every build. The favicon is `public/favicon.svg`, the same
+`build/prerender.ts` preloads the display and body faces on every page. The social image is
+`public/og.png`, a 1280 x 640 card that is also the GitHub repository's social preview. The favicon is `public/favicon.svg`, the same
 drawing as `mark.ts`.
