@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { Tracking } from '@ng-native/expo/tracking';
 import { StoreReview } from '@ng-native/expo/store-review';
 import { DeviceOrientation } from '@ng-native/expo/orientation';
 import { Locale } from '@ng-native/expo/locale';
@@ -422,6 +423,25 @@ describe('the store review source', () => {
   it('is inert with no expo-store-review installed', () => {
     assert.equal(
       withModules({}, () => defaultSource(StoreReview.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the tracking source', () => {
+  it('is expo-tracking-transparency itself, whose functions the service calls by their own names', () => {
+    const expoTracking = { getAdvertisingId: () => null };
+    assert.equal(
+      withModules({ 'expo-tracking-transparency': expoTracking }, () =>
+        defaultSource(Tracking.SOURCE),
+      ),
+      expoTracking,
+    );
+  });
+
+  it('is inert with no expo-tracking-transparency installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(Tracking.SOURCE)),
       null,
     );
   });

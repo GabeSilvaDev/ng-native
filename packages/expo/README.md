@@ -310,6 +310,8 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
 - **`StoreReview`** (`store-review.ts`): `available()`, `hasAction()`, `request()` and
   `storeUrl()`. Whether the prompt appears is the platform's decision, and a call that resolves is
   not a prompt that was shown.
+- **`Tracking`** (`tracking.ts`): App Tracking Transparency's `permission`, `available()` and
+  `advertisingId()`, which is null until tracking is allowed.
 
 ## The rest
 

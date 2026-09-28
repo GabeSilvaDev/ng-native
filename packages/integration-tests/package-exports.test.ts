@@ -116,6 +116,7 @@ describe('the entry points Metro has to resolve', () => {
       'splash-screen',
       'store',
       'store-review',
+      'tracking',
       'updates',
     ]) {
       assert.equal(

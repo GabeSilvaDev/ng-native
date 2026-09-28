@@ -88,6 +88,7 @@ is organised into one entry point per module.
 - [Maps](/packages/expo/maps) - `<expo-map>`, Apple Maps on iOS and Google Maps on Android, with markers and taps.
 - [Biometrics](/packages/expo/biometrics) - Face ID, Touch ID and fingerprint unlock.
 - [Sign in with Apple](/packages/expo/apple-sign-in) - Apple's sign-in sheet and its approved button.
+- [Tracking](/packages/expo/tracking) - Apple's App Tracking Transparency permission, and the advertising identifier.
 - [Browser](/packages/expo/browser) - an in-app browser, and a sign-in session.
 
 ### Intelligence
