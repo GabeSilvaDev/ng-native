@@ -57,7 +57,7 @@ step.
 A matching file goes through the AOT compiler: templates become instructions, the decorator block
 is gone, styles are compiled separately (below). A few things ride along with that:
 
-- A capitalised element name is a hard build failure, not a blank screen: this checks for exactly
+- A capitalized element name is a hard build failure, not a blank screen: this checks for exactly
   that shape per component and throws, naming the element it found, rather than letting a green
   build ship an empty screen.
 - A resource import is added for every external template or stylesheet a component uses, so

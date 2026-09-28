@@ -23,8 +23,8 @@ Variants stack: `android:dark:bg-zinc-950` applies on Android in dark mode, whet
 sit on one ancestor, as they do on the root, or on two.
 
 `disabled:` matches `[data-disabled]` as well as `:disabled`, because a control's `disabled` input
-is consumed by the behaviour composed onto it and never left as a prop `:disabled` could read;
-`data-disabled` is what that behaviour publishes instead.
+is consumed by the behavior composed onto it and never left as a prop `:disabled` could read;
+`data-disabled` is what that behavior publishes instead.
 
 `dark:` matches a `.dark` class. `watchConditions(app.engine)` - which the template's
 `src/main.ts` already calls - keeps `dark` on the root in step with the system scheme, so `dark:`
@@ -80,7 +80,7 @@ arrives from a keyboard, a remote or an assistive technology, exactly the situat
 `:focus-visible` is dropped with a build warning on native for the same reason `:hover` is. Both
 platforms also match `[data-focus]`, because focus lands on the control itself while the border and padding that
 form the ring usually sit on a wrapper around it, which can only know it is focused because the
-behaviour composed onto the control told it.
+behavior composed onto the control told it.
 
 ## `peer-*` and `group-*`
 

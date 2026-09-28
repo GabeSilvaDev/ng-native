@@ -1,9 +1,9 @@
 ---
-title: Colour scheme
+title: Color scheme
 summary: Light or dark mode, as the user set it, for the decisions CSS cannot make.
 ---
 
-# Colour scheme
+# Color scheme
 
 `ColorScheme` reports whether the user has the system in light or dark mode.
 
@@ -23,7 +23,7 @@ export class Logo {
 
 Styling should almost never touch this directly: `@media (prefers-color-scheme: dark)` and
 Tailwind's `dark:` variant are resolved by the engine without anything being injected, and they are
-the right tool for "this text is a different colour in dark mode." `ColorScheme` is for the
+the right tool for "this text is a different color in dark mode." `ColorScheme` is for the
 decisions a stylesheet cannot make - which image asset to load, which of two distinct native
 components to render, which status bar style to request.
 

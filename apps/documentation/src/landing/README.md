@@ -75,7 +75,7 @@ block is that design.
 ## Fonts and the social image
 
 The three faces are OFL-licensed woff2 files in `public/fonts`, copied from the
-`@fontsource-variable` packages of the same names, with their licences beside them.
+`@fontsource-variable` packages of the same names, with their licenses beside them.
 `build/prerender.ts` preloads the display and body faces on every page, and photographs the
 hero at 1200 x 630 as `og.png` on every build. The favicon is `public/favicon.svg`, the same
 drawing as `mark.ts`.

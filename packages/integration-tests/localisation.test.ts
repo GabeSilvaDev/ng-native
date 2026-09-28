@@ -1,6 +1,6 @@
 /**
  * Localisation with `@angular/localize` itself, end to end: what the guide at
- * `guide/localisation.md` says works, run against the compiler the Metro preset uses.
+ * `guide/localization.md` says works, run against the compiler the Metro preset uses.
  *
  * Marking text, loading translations before the root renders, choosing the language from
  * `Locale`, formatting with Angular's locale data, and extracting the messages with

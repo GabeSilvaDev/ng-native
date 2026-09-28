@@ -6,7 +6,7 @@ summary: The url an app was launched with, and every link that arrives while it 
 # Deep links
 
 `DeepLinks` delivers the URL an app was launched with (`initialUrl()`, once it is known) and every
-link that arrives while it is running (`subscribe()`), both normalised to a path your router can
+link that arrives while it is running (`subscribe()`), both normalized to a path your router can
 navigate to.
 
 ```ts

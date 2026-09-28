@@ -131,7 +131,7 @@ with nothing anywhere to say why.
 **There is no font matching on a device.** Native looks a family up by name and that is all, so a
 bold cut is a family of its own: the second face above is registered as `Inter-700` as well, and
 a rule that wants it asks for `font-family: Inter-700`. Writing `font-weight: 700` against a
-family with one registered face gets whatever the platform synthesises, exactly as it would in a
+family with one registered face gets whatever the platform synthesizes, exactly as it would in a
 React Native app.
 
 `loadFonts` takes any number of sheets and does nothing at all when none of them declare a face,
@@ -166,7 +166,7 @@ protected readonly thrifty = computed(() => this.battery.saving() || this.batter
 
 ### Sensors and locale
 
-The sensors are one class parameterised by the reading, not one per sensor - they are all the same
+The sensors are one class parameterized by the reading, not one per sensor - they are all the same
 object underneath. Nothing subscribes until `start`, and the interval is explicit:
 
 ```ts
@@ -298,7 +298,7 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
 ## Photos, files, location and privacy
 
 - **`ImagePicker`** (`image-picker.ts`): `pick()` and `capture()`, each resolving to the picked
-  assets, empty if they cancelled. `capture()` asks for the camera itself.
+  assets, empty if they canceled. `capture()` asks for the camera itself.
 - **`Location`** (`location.ts`): a `position` signal, filled by `current(accuracy)` once or by
   `start({ accuracy, distance })` until the function it returns is called.
 - **`Biometrics`** (`biometrics.ts`): `available()`, `kinds()` and `authenticate(message)`, which
@@ -314,7 +314,7 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
 - **`Tracking`** (`tracking.ts`): App Tracking Transparency's `permission`, `available()` and
   `advertisingId()`, which is null until tracking is allowed.
 - **`DocumentPicker`** (`document-picker.ts`): `pick(options)`, resolving to the files picked,
-  empty if they cancelled.
+  empty if they canceled.
 - **`Crypto`** (`crypto.ts`): `randomUUID()`, `digestString()`, `digest()`, `randomBytes()` and
   `randomValues()`. The one service that throws without its module, since an empty identifier or
   hash is a wrong answer that looks right.
@@ -342,7 +342,7 @@ plain promise, and what the hook adds is a _lifecycle_.
   opening, because two connections to one file is a lock waiting to happen. Migrations run in
   order, each in a transaction, with the version recorded in SQLite's own `user_version`.
 - **`Updates`** checks and downloads in one call, because an app that checks without downloading
-  has learnt something it cannot act on. `apply()` **restarts the app**, which is why nothing here
+  has learned something it cannot act on. `apply()` **restarts the app**, which is why nothing here
   does it automatically: the moment is one the app knows and this does not. In Expo Go it reports
   itself disabled rather than offering a banner that can never resolve.
 - **`Assets`** preloads the images a screen should not pop in with, and resolves even when one

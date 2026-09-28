@@ -276,7 +276,7 @@ export const EXAMPLE_APPS: readonly ExampleApp[] = [
         docs: '/packages/expo/keep-awake',
       },
       {
-        label: 'Colour scheme',
+        label: 'Color scheme',
         detail: "Now Playing's icons follow light and dark mode, not just its stylesheet.",
         docs: '/packages/device/color-scheme',
       },
@@ -428,7 +428,7 @@ export const EXAMPLE_APPS: readonly ExampleApp[] = [
       {
         label: 'Offline sync',
         detail:
-          'A write queue ordered by seq, a serialised flush, and a merge that keeps pending notes.',
+          'A write queue ordered by seq, a serialized flush, and a merge that keeps pending notes.',
         docs: '/guide/offline',
       },
       {

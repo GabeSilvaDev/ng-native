@@ -81,7 +81,7 @@ comes from keyboards, remotes or assistive technology, where rings are useful. S
 
 Both platforms also match `data-focus` so a wrapper can show its control's focus ring. The native
 text field receives focus, while its wrapper owns the border, radius and padding; the control's
-composed behaviour informs the wrapper.
+composed behavior informs the wrapper.
 
 ### `ios:`, `android:`, `web:`, `native:`
 

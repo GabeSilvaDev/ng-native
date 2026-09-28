@@ -32,12 +32,12 @@ AppRegistry.registerRunnable('main', ({ rootTag }) => {
 `mount(rootTag, component, fabric, options?)` takes an options object that is mostly there to
 close gaps a browser never had:
 
-- **`processColor`** converts a colour string or number to whatever the platform wants, the same
-  function React Native exports as `processColor`. Without it colours reach native unconverted.
+- **`processColor`** converts a color string or number to whatever the platform wants, the same
+  function React Native exports as `processColor`. Without it colors reach native unconverted.
 - **`resolveAssetSource`** turns what `require('./x.png')` compiles to - an asset id - into
   `{uri, width, height, scale}`. Without it a local image is blank; a remote `{uri}` object happens
   to pass through unresolved and hides the gap until someone reaches for a bundled asset.
-- **`conditions`** is what `@media` resolves against: viewport width and height, colour scheme, and
+- **`conditions`** is what `@media` resolves against: viewport width and height, color scheme, and
   the reduced-motion preference. Without it every media query evaluates false.
 - **`tokens`** seeds device-level custom properties - the hairline width, mainly - below `:root`, so
   an app's own stylesheet still wins if it sets the same name.

@@ -139,7 +139,7 @@ from the native object; worth calling from `DestroyRef` for a field inside a lis
 goes, since a state that lives as long as the app does not need one.
 
 `nativeState()` returns **null** off a device, where there is no native module to hold the state -
-bind `name?.id` and the prop is simply absent, which is the field's own unmanaged behaviour rather
+bind `name?.id` and the prop is simply absent, which is the field's own unmanaged behavior rather
 than a crash.
 
 ## Without the module

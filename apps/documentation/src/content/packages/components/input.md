@@ -95,7 +95,7 @@ carries just the new string, matching React Native's `onChangeText`; `(change)`,
 Several inputs exist only because a native keyboard is a different object than an `<input>`:
 `textContentType` and `autoComplete` hint at autofill (a password manager, a one-time code) the
 way `autocomplete` does on the web, but with platform-specific values. `passwordRules` (iOS)
-constrains what a generated password looks like. On iOS, `dataDetectorTypes` makes recognised
+constrains what a generated password looks like. On iOS, `dataDetectorTypes` makes recognized
 links and phone numbers tappable when `multiline` is true and `editable` is false.
 `keyboardAppearance` (iOS) sets
 the keyboard's own light or dark look independent of the app's theme, and `showSoftInputOnFocus`

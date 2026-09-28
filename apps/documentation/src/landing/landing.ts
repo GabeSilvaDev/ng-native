@@ -178,7 +178,7 @@ export const LANDING_DESCRIPTION =
                   Tailwind, on iOS and Android.
                 </h2>
                 <p class="landing-prose mt-5">
-                  Use the Tailwind you know. Layout, spacing, colour, type, borders and gradients
+                  Use the Tailwind you know. Layout, spacing, color, type, borders and gradients
                   compile to native styles, and the same classes work on the web.
                 </p>
                 <p class="landing-prose mt-4">

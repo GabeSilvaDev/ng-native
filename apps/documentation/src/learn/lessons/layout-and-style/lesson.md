@@ -60,7 +60,7 @@ habit and its status in it:
 ```
 
 `justify-content: space-between` pushes the two texts to either end of the row. The screen is
-white, so the card only shows once the screen has a colour of its own: give `.screen` a
+white, so the card only shows once the screen has a color of its own: give `.screen` a
 `background-color: #f4f4f5`.
 
 ## Space things out

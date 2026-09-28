@@ -1,6 +1,6 @@
 ---
 title: Status bar
-summary: A stack of claims on the status bar's style, visibility and colour, not a setter.
+summary: A stack of claims on the status bar's style, visibility and color, not a setter.
 ---
 
 # Status bar

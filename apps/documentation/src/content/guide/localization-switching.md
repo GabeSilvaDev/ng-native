@@ -5,11 +5,11 @@ summary: Restart the JavaScript to change LOCALE_ID in the app, or let the syste
 
 # Switching language
 
-After [Loading a language](/guide/localisation-loading), calling `loadTranslations()` again changes
+After [Loading a language](/guide/localization-loading), calling `loadTranslations()` again changes
 no existing templates, even after unmounting and remounting. Template messages are evaluated on the
 component's first render anywhere in the app and cached for the JavaScript runtime's lifetime.
 `$localize` class fields in newly created components use the new language, producing mixed-language
-screens. Tests verify both behaviours.
+screens. Tests verify both behaviors.
 
 Restart JavaScript to switch languages. Expo can reload in place:
 
@@ -64,11 +64,11 @@ Android 13+ expose per-app language settings, which `Locale` reports:
 ```
 
 iOS terminates the app after a Settings language change; the next launch uses the new language.
-Android's behaviour for a running React Native app remains unverified. If necessary, on foreground,
+Android's behavior for a running React Native app remains unverified. If necessary, on foreground,
 compare `chooseLanguage` over `Locale.locales()` with `LOCALE_ID` and reload if they differ.
 
-Expo documents `reloadAppAsync` for release and development builds; device behaviour remains
+Expo documents `reloadAppAsync` for release and development builds; device behavior remains
 unverified here.
 
-Next: [Formatting and right to left](/guide/localisation-formatting) covers dates, numbers and
+Next: [Formatting and right to left](/guide/localization-formatting) covers dates, numbers and
 layout mirroring.

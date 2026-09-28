@@ -1,6 +1,6 @@
 ---
 title: Sign in with Apple
-summary: Apple's sign-in sheet and its approved button, with a cancelled sheet answering null.
+summary: Apple's sign-in sheet and its approved button, with a canceled sheet answering null.
 ---
 
 # Sign in with Apple
@@ -87,7 +87,7 @@ export class SignIn {
   closes resolves to null; any other failure rejects.
 - **`refresh(options)`** and **`signOut(options)`** make the same request for a user already
   signed in.
-- **`credentialState(user)`** resolves to whether a user's credential is still authorised, for a
+- **`credentialState(user)`** resolves to whether a user's credential is still authorized, for a
   check at launch: `AppleAuthenticationCredentialState.AUTHORIZED`, `REVOKED`, `NOT_FOUND` or
   `TRANSFERRED`.
 - **`formatName(fullName, style)`** formats the credential's name for the user's locale.
@@ -101,14 +101,14 @@ code that uses them runs in a test, where the module cannot load.
 ## The button
 
 `<apple-sign-in-button>` is `ASAuthorizationAppleIDButton`, which Apple's guidelines approve as it
-is: its wording, logo and colours are the system's, localised and accessible.
+is: its wording, logo and colors are the system's, localized and accessible.
 
 - **`buttonType`** - `sign-in` (the default), `continue` or `sign-up`.
 - **`buttonStyle`** - `black` (the default), `white`, or `white-outline` for a white background.
 - **`cornerRadius`** - in points.
 - **`(buttonPress)`** - the tap. Start `signIn()` here.
 
-It needs a width and a height to show. Its colour and corners come from `buttonStyle` and
+It needs a width and a height to show. Its color and corners come from `buttonStyle` and
 `cornerRadius`; a CSS background or border radius does not apply to it.
 
 ## Without the module

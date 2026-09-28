@@ -133,7 +133,7 @@ and `registerExpoViews('expo-maps-google')` register the same two views under th
 - **`polygons`** - filled shapes: `{ id, coordinates, color, lineColor, lineWidth }`, with the
   corners as `coordinates`.
 - **`circles`** - filled circles: `{ id, center, radius, color, lineColor, lineWidth }`, with the
-  `radius` in metres.
+  `radius` in meters.
 - **`cameraPosition`** - `{ coordinates, zoom }`. Setting a new value moves the camera.
 - **`properties`** - `expo-maps`' map properties: `mapType`, `isTrafficEnabled`,
   `isMyLocationEnabled`, `selectionEnabled`, and each platform's own (`elevation`,
@@ -144,7 +144,7 @@ and `registerExpoViews('expo-maps-google')` register the same two views under th
 - **`colorScheme`** - `LIGHT` or `DARK` on both, `AUTOMATIC` on iOS, `FOLLOW_SYSTEM` on Android.
 
 `expo-maps`' enums are typed as their string values, so `mapType: 'HYBRID'` needs no import of
-`expo-maps` itself. A shape's colours are written as a template writes any colour (`'#ff5a36'`,
+`expo-maps` itself. A shape's colors are written as a template writes any color (`'#ff5a36'`,
 `'rgba(0, 128, 0, 0.5)'`, `'green'`) and converted before they reach native, as `expo-maps`' own
 React components convert them.
 
@@ -177,7 +177,7 @@ Each is the view's own event, so the payload is `$event.nativeEvent`:
 - **`(cameraMove)`** - the camera moved: its `coordinates`, `zoom`, `tilt` and `bearing`, and the
   visible region's `latitudeDelta` and `longitudeDelta`. Also sent once when the map first appears.
 - **`(polylineClick)`**, **`(polygonClick)`**, **`(circleClick)`** - a tap on a shape: the shape,
-  with its `id`. Its colours come back as native holds them rather than as the strings you gave.
+  with its `id`. Its colors come back as native holds them rather than as the strings you gave.
 
 ## Moving the camera from code
 
@@ -202,9 +202,9 @@ engine committed the view under, so a `viewChild` is all you need.
 - `duration` in `setCameraPosition` is Android's; iOS moves without it.
 - Marker and shape taps need iOS 18. On iOS 17 the map, its markers and its shapes show, and
   `(markerClick)`, `(polylineClick)`, `(polygonClick)` and `(circleClick)` never fire.
-- A tapped circle's centre is `coordinates` on iOS and `center` on Android, where
+- A tapped circle's center is `coordinates` on iOS and `center` on Android, where
   `clickCoordinates` also says where the tap landed.
-- Apple markers take `systemImage`, `monogram` and a `tintColor` colour string; Google markers take
+- Apple markers take `systemImage`, `monogram` and a `tintColor` color string; Google markers take
   a `snippet` and can be dragged.
 
 ## Limits

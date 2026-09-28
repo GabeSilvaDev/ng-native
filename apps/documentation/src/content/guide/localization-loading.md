@@ -5,7 +5,7 @@ summary: Decide LOCALE_ID and load its translations before the app's first frame
 
 # Loading a language
 
-With `messages.fr.json` from [Extracting messages](/guide/localisation-extraction), define a
+With `messages.fr.json` from [Extracting messages](/guide/localization-extraction), define a
 provider in a separate file to choose and load the language:
 
 ```ts
@@ -71,12 +71,12 @@ const app = mount(Number(rootTag), App, getFabricUIManager(), {
 ```
 
 `LOCALE_ID` controls both translation loading and Angular pipe formatting. It selects the in-app
-choice first (see [Switching language](/guide/localisation-switching)), then device languages in
+choice first (see [Switching language](/guide/localization-switching)), then device languages in
 preference order. Use `Locale.locales()`, not `Locale.locale()`: if the user prefers German then
 French, an app without German should choose French rather than English.
 
-`mount` runs initialisers before creating the root component, so translations must load
-synchronously. It starts promise-returning initialisers without awaiting them; network-fetched
+`mount` runs initializers before creating the root component, so translations must load
+synchronously. It starts promise-returning initializers without awaiting them; network-fetched
 translations would arrive after the first frame and template evaluation. Import translations so
 Metro bundles them.
 
@@ -84,5 +84,5 @@ Missing translations fall back to source text and log `No translation found`, so
 file ships a partly English screen rather than a broken one. Unsupported device languages fall
 back to `SOURCE`.
 
-Next: [Switching language](/guide/localisation-switching) covers changing `LOCALE_ID` after
+Next: [Switching language](/guide/localization-switching) covers changing `LOCALE_ID` after
 startup.

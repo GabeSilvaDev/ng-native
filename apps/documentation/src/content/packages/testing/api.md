@@ -30,18 +30,18 @@ promise.
 
 ### `RenderOptions<T>`
 
-| Option                | Type                                   | Default | What it does                                                                                                                                         |
-| --------------------- | -------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `inputs`              | `Record<string, unknown>`              | none    | Inputs, set with `setInput` before the first change detection pass. The only way to give an `input.required()` a value. Class form only.             |
-| `on`                  | `Record<string, (value) => void>`      | none    | Output handlers, by output name, subscribed after the component is created. Class form only.                                                         |
-| `providers`           | `(Provider \| EnvironmentProviders)[]` | none    | Providers for the app the component is mounted in: `provideNativeRouter`, `provideNativeHttpClient`, a stand-in for a service.                       |
-| `imports`             | `unknown[]`                            | none    | What the template may use. Template form only.                                                                                                       |
-| `componentProperties` | `Partial<T> & Record<string, unknown>` | none    | Fields assigned to the instance. On the template form's host, before its first pass; on a class, after it, followed by another pass.                 |
-| `globalStyles`        | `StyleSheet \| null`                   | none    | A compiled global stylesheet, as `compileCss` from `@ng-native/metro/css/compile.cjs` returns it. What Tailwind classes resolve against.             |
-| `conditions`          | `Conditions`                           | none    | What `@media` queries resolve against: width, height, colour scheme. With none, every media query is false.                                          |
-| `tokens`              | `Record<string, TokenValue>`           | none    | Values only a device knows, such as the hairline width.                                                                                              |
-| `processColor`        | `(value: string \| number) => unknown` | none    | React Native's `processColor`. With none, colours reach the props as the strings the stylesheet wrote, which is what a test usually wants to assert. |
-| `resolveAssetSource`  | `(value: unknown) => unknown`          | none    | React Native's `Image.resolveAssetSource`.                                                                                                           |
+| Option                | Type                                   | Default | What it does                                                                                                                                        |
+| --------------------- | -------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inputs`              | `Record<string, unknown>`              | none    | Inputs, set with `setInput` before the first change detection pass. The only way to give an `input.required()` a value. Class form only.            |
+| `on`                  | `Record<string, (value) => void>`      | none    | Output handlers, by output name, subscribed after the component is created. Class form only.                                                        |
+| `providers`           | `(Provider \| EnvironmentProviders)[]` | none    | Providers for the app the component is mounted in: `provideNativeRouter`, `provideNativeHttpClient`, a stand-in for a service.                      |
+| `imports`             | `unknown[]`                            | none    | What the template may use. Template form only.                                                                                                      |
+| `componentProperties` | `Partial<T> & Record<string, unknown>` | none    | Fields assigned to the instance. On the template form's host, before its first pass; on a class, after it, followed by another pass.                |
+| `globalStyles`        | `StyleSheet \| null`                   | none    | A compiled global stylesheet, as `compileCss` from `@ng-native/metro/css/compile.cjs` returns it. What Tailwind classes resolve against.            |
+| `conditions`          | `Conditions`                           | none    | What `@media` queries resolve against: width, height, color scheme. With none, every media query is false.                                          |
+| `tokens`              | `Record<string, TokenValue>`           | none    | Values only a device knows, such as the hairline width.                                                                                             |
+| `processColor`        | `(value: string \| number) => unknown` | none    | React Native's `processColor`. With none, colors reach the props as the strings the stylesheet wrote, which is what a test usually wants to assert. |
+| `resolveAssetSource`  | `(value: unknown) => unknown`          | none    | React Native's `Image.resolveAssetSource`.                                                                                                          |
 
 `dev`, `now` and `onDirty` are the engine's own options too, and pass through unchanged.
 
@@ -131,12 +131,12 @@ span is part of its text, not a match of its own.
 
 **Matching** follows Testing Library's rules:
 
-- Both sides are normalised first: whitespace runs collapse to one space, and the ends are trimmed.
+- Both sides are normalized first: whitespace runs collapse to one space, and the ends are trimmed.
   `getByText('  Pears ')` finds a paragraph holding `Pears`.
 - A string matches the whole value, case-sensitively, by default.
 - `{ exact: false }` matches a case-insensitive substring instead: `getByText('apple', { exact: false })`
   finds `Apples`.
-- A `RegExp` is tested against the normalised value as given, so `/pears/i` is case-insensitive
+- A `RegExp` is tested against the normalized value as given, so `/pears/i` is case-insensitive
   and `/^and plums$/` is anchored.
 - In `ByRole`, the role itself is always an exact match, and `exact` applies to `name`.
 

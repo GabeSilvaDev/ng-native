@@ -196,7 +196,7 @@ file directly instead of mounting a React component, and the file mounts itself.
 
 - **Only JSON crosses.** No shared services, signals or state; see [What can cross](#what-can-cross).
 - **One browser view per instance.** Tens of megabytes and a few hundred milliseconds to start.
-  Fine for a screen's centrepiece, wrong for a list.
+  Fine for a screen's centerpiece, wrong for a list.
 - **No children.** Native content cannot be projected into a DOM component.
 - **Sized from outside.** The web view does not size itself to its content.
 - **Checked on iOS.** Android uses the same Expo web view and the same pages, but has not been run.

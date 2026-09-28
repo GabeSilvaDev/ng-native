@@ -78,7 +78,7 @@ defaults, matched CSS, explicit props, inline `[style]`, `!important`.
 The cascade emulates inheritance for `color`, `font*`, `lineHeight`, `letterSpacing`, `textAlign`,
 `textTransform` and `textDecorationLine`. React Native does not inherit text properties: a view's
 `color` does not affect its text children. Without this propagation, browser-style sheets would
-silently lose inherited colours.
+silently lose inherited colors.
 
 ## The scope rule
 

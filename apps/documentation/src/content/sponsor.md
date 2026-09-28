@@ -9,7 +9,7 @@ Angular Native is free, MIT licensed and built in the open, as an independent pr
 you or your team time, sponsoring it is the most direct way to keep it moving.
 
 **[Sponsor on GitHub](https://github.com/sponsors/ashley-hunter)** - monthly or one-off, as a
-person or from your company's GitHub organisation.
+person or from your company's GitHub organization.
 
 ## What sponsorship pays for
 

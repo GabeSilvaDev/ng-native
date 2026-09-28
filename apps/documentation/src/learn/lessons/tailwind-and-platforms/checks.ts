@@ -68,7 +68,7 @@ check(
 
 check(
   2,
-  'The row changes colour while it is touched',
+  'The row changes color while it is touched',
   async () => {
     const { fabric } = await render(HabitRow, { inputs: { name: 'Stretch' } });
     const row = () => parentOf(fabric.committed, screen.getByText('Stretch'))!;

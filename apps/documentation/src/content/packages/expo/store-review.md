@@ -11,7 +11,7 @@ Store's review sheet on iOS and the Play Store's in-app review on Android.
 The prompt belongs to the platform, and so does the decision whether it appears. iOS shows it at
 most three times in a year and says nothing when it declines, so `request()` resolving does not
 mean anyone saw a prompt. Ask at a moment of success - a task finished, not an app launched - and
-never from a button labelled "Rate us", which is what the store page is for.
+never from a button labeled "Rate us", which is what the store page is for.
 
 ## Install
 

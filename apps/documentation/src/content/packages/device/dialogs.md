@@ -37,7 +37,7 @@ whether they agreed; `destructive` paints the confirm button red, as the platfor
 The buttons keep the platform's own order: on iOS, Cancel on the left and the confirming button on
 the right.
 
-`ask(title, options?)` asks for a line of text and resolves to `null` if cancelled. It is iOS only:
+`ask(title, options?)` asks for a line of text and resolves to `null` if canceled. It is iOS only:
 `Alert.prompt` has no Android equivalent, and inventing one out of a modal and a text input would be
 a dialog that looks nothing like the platform's, so on Android this resolves to `null` and a caller
 falls back to a screen of its own.

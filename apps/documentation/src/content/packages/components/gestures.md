@@ -72,7 +72,7 @@ The whole app needs to sit inside one `<gesture-root>`, once, the way it would n
 
 It is a different native view on each platform, and that is the library's own split:
 `RNGestureHandlerRootView` is an Android view group that intercepts touches before the rest of the
-tree sees them; on iOS the recognisers hang off the target view itself, so `<gesture-root>`
+tree sees them; on iOS the recognizers hang off the target view itself, so `<gesture-root>`
 renders a plain view there instead.
 
 ## Imports come from their own file
@@ -115,7 +115,7 @@ Under the documented Vitest setup, `ngNative()` resolves `@ng-native/components/
 `react-native-gesture-handler` to stand-ins, because the real ones reach React Native source Node
 cannot load. A root component wrapped in `<gesture-root>`, and any screen with a `[gesture]`,
 render and take presses as they would without them: `<gesture-root>` renders a plain view and
-`[gesture]` keeps its view uncollapsed, with no recogniser attached. `Gesture.Pan()` and the other
+`[gesture]` keeps its view uncollapsed, with no recognizer attached. `Gesture.Pan()` and the other
 builders take any configuration call and keep the callbacks they were given on `callbacks`, so a
 test of what a gesture does calls one directly. `gestureOf` finds the gesture on a view, or the one
 of a kind inside a composed gesture such as `Gesture.Race(pan, tap)`, which is how a test reaches

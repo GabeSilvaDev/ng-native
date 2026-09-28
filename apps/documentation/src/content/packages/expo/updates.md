@@ -44,7 +44,7 @@ export class Root {
 
 Checks for an update and downloads it if there is one, resolving to whether an update is now
 waiting. One method rather than two, because there is nothing useful an app can do between
-checking and downloading: an app that checks without downloading has learnt something it cannot
+checking and downloading: an app that checks without downloading has learned something it cannot
 act on. While it runs, `state()` moves through `'checking'` then `'downloading'`; a failure at
 either step lands in `error()` and moves `state()` to `'error'` rather than throwing.
 
@@ -73,7 +73,7 @@ being rebuilt since - throws a `MissingModuleError` when the service first reach
 message names the module and the commands that fix it; see
 [Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
 
-On the web, and in a test that provides no fake, `enabled` is `false` and `check()` resolves `false` without doing anything, the same behaviour as
+On the web, and in a test that provides no fake, `enabled` is `false` and `check()` resolves `false` without doing anything, the same behavior as
 running in Expo Go. `apply()` does nothing, since `state()` can never reach `'ready'`.
 
 ## Reference

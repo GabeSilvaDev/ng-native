@@ -136,7 +136,7 @@ AppRegistry.registerRunnable('main', ({ rootTag }) => {
 });
 ```
 
-The entry point configures colours, assets and device-dependent styles before rendering:
+The entry point configures colors, assets and device-dependent styles before rendering:
 
 - **`conditions`** supplies `@media` values. `watchConditions` updates them on rotation or theme
   changes, making `dark:` follow the system.
@@ -144,7 +144,7 @@ The entry point configures colours, assets and device-dependent styles before re
   divider instead of a third of a point on a 3x screen.
 - **`resolveAssetSource`** converts `require('./x.png')` to a native-loadable asset; without it,
   images stay blank.
-- **`processColor`** converts colours to platform integers.
+- **`processColor`** converts colors to platform integers.
 
 ## Write the root component
 
@@ -236,4 +236,4 @@ selectors, imports and dependencies require a full reload; the console logs why.
 ## Where to go next
 
 Continue with [Build a form](/guide/forms), [Working offline](/guide/offline), then
-[Shipping to a device and the store](/guide/shipping).
+[Deployment](/guide/deployment).

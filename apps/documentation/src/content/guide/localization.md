@@ -1,9 +1,9 @@
 ---
-title: Localisation
+title: Localization
 summary: Ship an app in more than one language with Angular's own i18n, translated at runtime.
 ---
 
-# Localisation
+# Localization
 
 Use Angular's `i18n` in templates, `$localize` in TypeScript, `localize-extract` to extract
 messages, and `loadTranslations()` from `@angular/localize` to load a language. Unlike the Angular
@@ -184,12 +184,12 @@ export class ReplyLine {
 
 ## Recipes
 
-- [Extracting messages](/guide/localisation-extraction) - pulling `messages.json` out of a Metro
+- [Extracting messages](/guide/localization-extraction) - pulling `messages.json` out of a Metro
   bundle, and translating a copy of it.
-- [Loading a language](/guide/localisation-loading) - deciding `LOCALE_ID` and loading its
+- [Loading a language](/guide/localization-loading) - deciding `LOCALE_ID` and loading its
   translations before the app's first frame.
-- [Switching language](/guide/localisation-switching) - in the app, and following the system.
-- [Formatting and right to left](/guide/localisation-formatting) - dates, numbers, currency, and
+- [Switching language](/guide/localization-switching) - in the app, and following the system.
+- [Formatting and right to left](/guide/localization-formatting) - dates, numbers, currency, and
   mirroring a layout.
 
 ## What does not work yet
@@ -199,7 +199,7 @@ export class ReplyLine {
 - **Build-time translation** (`localize-translate`, one bundle per language) has no Metro integration
   or verification. Use runtime translation.
 - **`ng extract-i18n`** requires an unsupported browser build. Use `localize-extract` on the Metro
-  bundle; see [Extracting messages](/guide/localisation-extraction).
+  bundle; see [Extracting messages](/guide/localization-extraction).
 
 The first two gaps affect the Metro preset's template compiler; see
 [Known limitations](/guide/limitations#i18n-is-partial).

@@ -72,7 +72,7 @@ Switch the preview between iOS and Android to compare.
 
 `dark:` applies beneath an element with the `dark` class. In an app generated from the template,
 `src/main.ts` calls `watchConditions(app.engine)`, which keeps that class on the root in step with
-the system's colour scheme, so `dark:` follows the phone with nothing more to write. This preview
+the system's color scheme, so `dark:` follows the phone with nothing more to write. This preview
 does not run that bootstrap. It reports its Dark setting through `ColorScheme` from
 `@ng-native/device`, so here `App` puts the class on its own host element, which is the root:
 
@@ -93,6 +93,6 @@ export class App {
 An app with a theme switch of its own works the same way on a device: it calls
 `watchConditions(app.engine, { darkClass: false })` and puts the class on its root itself.
 
-Then give the screen, the title and the rows their dark colours: `dark:bg-black` on the screen,
+Then give the screen, the title and the rows their dark colors: `dark:bg-black` on the screen,
 `dark:text-white` on the text, `dark:bg-zinc-900` and `dark:active:bg-zinc-800` on the row. The
 preview's Dark setting changes what `ColorScheme` reports, and nothing else.

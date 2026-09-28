@@ -42,7 +42,7 @@ export class Status {
 Services are constructed when injected. Install the Expo dependencies required by the entry points
 you import: runtime fallbacks do not prevent Metro from reporting an unresolved package.
 [Using a module](/packages/expo/using-a-module) covers exactly how that works, and how the package
-is organised into one entry point per module.
+is organized into one entry point per module.
 
 ## Modules
 

@@ -84,7 +84,7 @@ release`) run on the iOS simulator and Android emulator, producing Hermes byteco
 compiler and `ngDevMode` false.
 
 Many platform facades have unit tests and typechecks but no hardware verification. Simulator checks
-also cover CSS behaviour beyond unit tests; see the canary's verify screen and
+also cover CSS behavior beyond unit tests; see the canary's verify screen and
 [CSS on native](/packages/fabric/css-engine). Treat this as a working prototype. See
 [Known limitations](/guide/limitations) for specific gaps.
 

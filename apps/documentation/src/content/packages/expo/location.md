@@ -55,7 +55,7 @@ export class Run implements OnDestroy {
 - **`current(accuracy)`** reads the position once and returns it (or null, without the permission
   or the module).
 - **`start({ accuracy, distance, interval })`** follows the position into the signal, resolving to
-  the function that stops watching. `distance` is metres moved before the next update; `interval`
+  the function that stops watching. `distance` is meters moved before the next update; `interval`
   is milliseconds between updates, Android only - iOS updates on distance moved, not on a timer.
 - The accuracy is a name, not Expo's numeric enum: `lowest`, `low`, `balanced` (the default),
   `high`, `highest` or `navigation`. Worth choosing deliberately: `navigation` keeps the GPS hot.

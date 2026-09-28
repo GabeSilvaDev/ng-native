@@ -18,14 +18,14 @@ art: switch
 for on a checkbox-shaped control, so `<switch [formField]="f.enabled" />` needs no adapter code.
 `[(checked)]` works the same way without a form.
 
-## Colours on both platforms at once
+## Colors on both platforms at once
 
 The two platforms spell the same props differently - iOS reads `onTintColor`, `tintColor` and
 `thumbTintColor`; Android reads `trackColorForTrue`, `trackColorForFalse`, `trackTintColor` and
 `thumbTintColor` (plus `on` for the value itself). `<switch>` sends both spellings at once, so
 `thumbColor` and `trackColor` (a `{ false?, true? }` pair) work the same way regardless of which
 platform is running, with no app code needing to know which is which. `ios_backgroundColor` sets
-the colour behind the track on iOS when off, seen where the track itself is transparent.
+the color behind the track on iOS when off, seen where the track itself is transparent.
 
 ## Controlled, as in React Native
 
@@ -57,7 +57,7 @@ so a value that arrives later is compared as a refusal and then applied when it 
 `[formField]` counts as a binding. A form takes every value the control gives it, so the switch
 reports each flip to the form and sends native nothing back.
 
-`disabled` ignores touches, greys the control out, and changes the state a screen reader
+`disabled` ignores touches, grays the control out, and changes the state a screen reader
 announces.
 
 <!-- api: @ng-native/components#Switch -->

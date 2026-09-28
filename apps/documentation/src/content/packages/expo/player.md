@@ -48,7 +48,7 @@ export class Clip {
 
 ## `videoPlayer(source, options?)` and `audioPlayer(source, options?)`
 
-Both must be called in an injection context - a field initialiser or a constructor - the same
+Both must be called in an injection context - a field initializer or a constructor - the same
 constraint the React hooks have and for the same reason: something has to know when the component
 that owns the player goes away. `source` is the module's own source type (`VideoSource` or
 `AudioSource`); `options.timeUpdate` is the number of seconds between `currentTime` updates.

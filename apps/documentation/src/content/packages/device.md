@@ -1,6 +1,6 @@
 ---
 title: Device
-summary: Signal-based services for screen size, colour scheme, safe areas and the rest of the host.
+summary: Signal-based services for screen size, color scheme, safe areas and the rest of the host.
 ---
 
 # Device
@@ -72,14 +72,14 @@ TestBed.configureTestingModule({
 
 **Appearance**
 
-- [Colour scheme](/packages/device/color-scheme) - light or dark, as the user set it.
+- [Color scheme](/packages/device/color-scheme) - light or dark, as the user set it.
 - [Accessibility](/packages/device/accessibility) - screen reader, reduced motion, bold text and
   font scale.
 - [Direction](/packages/device/direction) - left-to-right or right-to-left.
 
 **System**
 
-- [Status bar](/packages/device/status-bar) - a stack of claims on style, visibility and colour.
+- [Status bar](/packages/device/status-bar) - a stack of claims on style, visibility and color.
 - [Keyboard](/packages/device/keyboard) - height, position and animation timing.
 - [Hardware back](/packages/device/hardware-back) - claiming Android's hardware back button.
 - [App state](/packages/device/app-state) - whether the app is in front of the user.

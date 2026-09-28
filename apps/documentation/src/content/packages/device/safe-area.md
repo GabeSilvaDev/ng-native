@@ -52,7 +52,7 @@ is a number that stops matching the screen the moment the device rotates.
 
 Off a device `insets` stays at all zeroes and `known()` stays `false` forever, because nothing ever
 calls `report()` without a provider laid out somewhere. On the web there is no equivalent concept,
-so an app that only targets native should still guard behaviour that depends on `known()` rather
+so an app that only targets native should still guard behavior that depends on `known()` rather
 than assuming a provider is always mounted above it.
 
 ## Reference

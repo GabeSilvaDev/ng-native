@@ -66,7 +66,7 @@ Most other packages carry `*.test.ts` files next to the source they test.
 
 The CSS engine does not fail the build on what it cannot express: an unsupported declaration is
 dropped with a build warning, and a regression in the engine can drop one with no warning at all.
-Write the test that pins down the expected behaviour before changing
+Write the test that pins down the expected behavior before changing
 `packages/fabric`'s or `packages/metro`'s CSS code, and keep coverage high there - that is what
 catches a regression this engine would otherwise hide.
 

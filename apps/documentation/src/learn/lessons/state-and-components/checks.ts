@@ -21,7 +21,7 @@ check(
 
 check(
   2,
-  'A card changes colour while it is touched, and changes back when the finger lifts',
+  'A card changes color while it is touched, and changes back when the finger lifts',
   async () => {
     const { fabric } = await render(App);
     const card = () => parentOf(fabric.committed, screen.getByText('Drink water'))!;

@@ -28,7 +28,7 @@ knowing about, because both fail silently if you write around them instead of th
   through `setAttribute`, and gets the same treatment: without it, a static `style` attribute would
   hand Fabric a string where it expects an object, and it drops the whole thing.
 - **Events map by name.** `(touchEnd)` becomes Fabric's `topTouchEnd`. There is no alias for
-  `(press)`: `onPress` is not a native event, React Native's own `Pressable` synthesises it from the
+  `(press)`: `onPress` is not a native event, React Native's own `Pressable` synthesizes it from the
   touch responder system in JavaScript. `Pressable` in `@ng-native/components` does the same
   and exposes it as a directive `output()`, so `(press)` on a `<pressable>` binds to that output
   rather than an event on the renderer.
@@ -69,7 +69,7 @@ handler can then call `detectChanges()` to render the view.
 
 What waits for that first `detectChanges()` is what any binding in the view waits for: bound
 values, interpolated text, and the props a primitive publishes through its host bindings, such as a
-`<text-input>`'s `placeholder` or a `<switch>`'s colours.
+`<text-input>`'s `placeholder` or a `<switch>`'s colors.
 
 ## `@defer` triggers
 
@@ -85,7 +85,7 @@ they do in a browser. The three triggers Angular registers on an element rather 
 
 A phone has no pointer, so there `on hover` waits for focus alone; in development the first
 `on hover` in an app logs a warning saying so. Pair it with another trigger, such as
-`on hover; on interaction`. `on viewport` honours a `threshold` option; `rootMargin` is not applied,
+`on hover; on interaction`. `on viewport` honors a `threshold` option; `rootMargin` is not applied,
 and the root is always the window.
 
 ```html

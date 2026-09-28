@@ -40,7 +40,7 @@ AppRegistry.registerRunnable('main', ({ rootTag }) => {
 `mount` takes a root tag (the number React Native's own runnable handler hands you), your root
 component, a `FabricUIManager` (`getFabricUIManager()` reads `global.nativeFabricUIManager`, which
 only exists once the New Architecture is enabled and only inside an `AppRegistry` runnable), and an
-options object for the gaps a browser never had - colour conversion, asset resolution, media-query
+options object for the gaps a browser never had - color conversion, asset resolution, media-query
 conditions, and the one global stylesheet every element is matched against regardless of which
 component created it.
 

@@ -5,7 +5,7 @@ summary: Dates, numbers and currency from Angular's locale data, and mirroring a
 
 # Formatting and right to left
 
-Alongside translations in [Localisation](/guide/localisation), language affects date and number
+Alongside translations in [Localization](/guide/localization), language affects date and number
 formatting and layout direction.
 
 ## Dates, numbers and currency
@@ -13,7 +13,7 @@ formatting and layout direction.
 Angular's `date`, `number`, `percent` and `currency` pipes use `LOCALE_ID` and Angular's locale
 data. `@angular/common` does not call `Intl`, so Hermes and browsers behave alike without
 polyfills. English is built in; register other languages once, as
-[`localisation.ts`](/guide/localisation-loading) does with `registerLocaleData(localeFr)`.
+[`localisation.ts`](/guide/localization-loading) does with `registerLocaleData(localeFr)`.
 With `LOCALE_ID` set to `fr`:
 
 ```html
@@ -54,7 +54,7 @@ new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tokyo', timeStyle: 'short' })
 Hermes supports only part of `Intl`, affecting direct callers. The iOS Hermes framework used here
 provides `Intl.Collator`, `Intl.DateTimeFormat` and `Intl.NumberFormat`, but no `Intl.PluralRules`,
 `Intl.RelativeTimeFormat` or `Intl.ListFormat`. Hence
-[Localisation](/guide/localisation#plurals-and-selects) uses `i18nPlural`. Check missing APIs before
+[Localization](/guide/localization#plurals-and-selects) uses `i18nPlural`. Check missing APIs before
 using them, for example `'PluralRules' in Intl`.
 
 Angular's locale data excludes user clock and calendar preferences; an English speaker may use a

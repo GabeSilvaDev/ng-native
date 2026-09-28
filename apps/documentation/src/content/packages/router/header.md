@@ -1,6 +1,6 @@
 ---
 title: The native header
-summary: NativeHeader and NativeHeaderItem, where their default colours come from, and withHeaderDefaults.
+summary: NativeHeader and NativeHeaderItem, where their default colors come from, and withHeaderDefaults.
 ---
 
 # The native header
@@ -63,12 +63,12 @@ system, so a `pressable` inside one works like anywhere else.
 
 <!-- api: NativeHeaderItem -->
 
-## Colours
+## Colors
 
 A header prop cannot read the cascade, so left alone each platform chooses for itself: iOS follows
 the system appearance, and Android takes the app theme's `colorPrimary` - the framework blue on
 every screen. `NativeHeader` closes that gap by defaulting `backgroundColor`, `color` and
-`titleColor` to a neutral background/foreground pair for the current colour scheme, so a bar
+`titleColor` to a neutral background/foreground pair for the current color scheme, so a bar
 matches the screen under it without anything bound. `NATIVE_HEADER_PALETTE` overrides those
 defaults for an app that retunes its palette:
 
@@ -111,19 +111,19 @@ export const providers = [
 ];
 ```
 
-Pass an object for defaults that never change, or a function of the colour scheme - `'light'` or
+Pass an object for defaults that never change, or a function of the color scheme - `'light'` or
 `'dark'`, from `ColorScheme` in `@ng-native/device` - for ones that follow the system appearance,
 the way a page's `@media (prefers-color-scheme: dark)` rules do. The function runs inside a
 `computed`, so a signal it reads, such as an in-app theme setting, is followed too.
 
 The defaults cover the header's appearance: `userInterfaceStyle`, `backgroundColor`, `color`,
-`blurEffect`, `hideShadow`, `translucent`, the `title*` and `largeTitle*` colours and fonts,
+`blurEffect`, `hideShadow`, `translucent`, the `title*` and `largeTitle*` colors and fonts,
 `largeTitleHideShadow`, `backTitleFontFamily`, `backTitleFontSize` and `backButtonDisplayMode`.
 What a screen says about itself - its title, whether it has a large title, whether the bar is
 hidden - stays on the screen.
 
 Each `<native-header>` still overrides: anything it binds, including an explicit `false`, wins
-over the defaults. A colour the defaults leave out falls back to `NATIVE_HEADER_PALETTE`.
+over the defaults. A color the defaults leave out falls back to `NATIVE_HEADER_PALETTE`.
 
 ## Insets
 

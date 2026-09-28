@@ -112,7 +112,7 @@ export class Ask {
 }
 ```
 
-`status` is `'streaming'`, then one of `'done'`, `'cancelled'` or `'failed'`. A cancelled stream
+`status` is `'streaming'`, then one of `'done'`, `'cancelled'` or `'failed'`. A canceled stream
 keeps the text it had written. `result` is a promise of the final text, for code that wants to
 wait for it; it rejects when the stream fails, but a stream nobody awaits is never an unhandled
 rejection. `stream()` itself never throws: an unavailable model gives a stream that has already
@@ -209,7 +209,7 @@ go to a server.
 ## Limits
 
 - **A small model.** Foundation Models and Gemini Nano are a few billion parameters: good at
-  summarising, rewriting, classifying and extracting, weak at facts and reasoning. Do not use it
+  summarizing, rewriting, classifying and extracting, weak at facts and reasoning. Do not use it
   as a source of truth.
 - **Short context.** About 4,000 tokens on iOS, prompt and answer together; a longer conversation
   or document fails. Android answers are capped at 256 tokens.

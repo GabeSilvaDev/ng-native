@@ -39,4 +39,4 @@ it('applies a global stylesheet', async () => {
 Styles flatten onto a node's props rather than sitting under a `style` key, so `backgroundColor` on
 the node is exactly what the native view is told to paint. A small stylesheet written for the test,
 rather than the app's real one, keeps the test about which rule wins rather than about what a
-colour token is worth this week. `createRequire` because the compiler is CommonJS.
+color token is worth this week. `createRequire` because the compiler is CommonJS.

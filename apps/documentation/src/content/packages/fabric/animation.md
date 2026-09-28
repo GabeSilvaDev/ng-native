@@ -14,12 +14,12 @@ which the engine plays independently of the other two.
 
 React Native has no CSS transition of its own, so a `transition` property compiles to a spec the
 engine drives in JavaScript: it notices a transitioning value change between two commits, holds the
-old value, and interpolates towards the new one on a `requestAnimationFrame` loop, committing a
-frame at a time until nothing is left running. Numbers interpolate directly; colours interpolate
+old value, and interpolates toward the new one on a `requestAnimationFrame` loop, committing a
+frame at a time until nothing is left running. Numbers interpolate directly; colors interpolate
 channel by channel; a length or an angle interpolates as long as both ends share the same unit
 (`translateY(10%)` to `translateY(100%)` works, `10%` to `20px` does not, because converting between
-them would be a guess). A named colour (`'red'`) does not interpolate - the compiler emits `rgb()`,
-so write colours that way if you want them to.
+them would be a guess). A named color (`'red'`) does not interpolate - the compiler emits `rgb()`,
+so write colors that way if you want them to.
 
 ## `animate.enter` and `animate.leave`
 

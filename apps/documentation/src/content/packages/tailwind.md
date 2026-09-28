@@ -12,7 +12,7 @@ here is an interop layer translating `className` into style objects the way it w
 plain React Native: Tailwind's generated CSS goes through the same build-time CSS compiler your own
 component styles do, and the utility classes it produces are cascade rules like any other.
 
-What this package adds is a build step that turns Tailwind's browser-flavoured output into the
+What this package adds is a build step that turns Tailwind's browser-flavored output into the
 subset native can express, and a preset supplying the vocabulary Tailwind has no reason to ship on
 its own: platform variants, safe-area and hairline utilities, and touch-appropriate meanings for
 `hover:` and `focus-visible:`.
@@ -81,7 +81,7 @@ regardless of which component created it - which is what a utility class needs, 
 ## What the build step does
 
 Tailwind 4 emits CSS aimed at a browser: cascade layers, `@property` declarations, `oklch()`
-colours, and a spacing scale expressed with `calc()`. None of that is a cascade question - it never
+colors, and a spacing scale expressed with `calc()`. None of that is a cascade question - it never
 depends on what element it lands on - so it is all resolved once at build time, before the result
 ever reaches the same CSS compiler your own component styles go through. Whatever is left that
 native genuinely cannot express is reported on the line it was found:

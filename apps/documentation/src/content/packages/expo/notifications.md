@@ -59,7 +59,7 @@ export class App {
 The permission is `notifications.permission`, a [`Permission`](/packages/expo/permissions):
 `ensure()` asks only if it has not been answered, and `blocked()` says when the user has to go to
 Settings. `requestPermission(options)` asks with iOS's finer options, such as provisional
-authorisation.
+authorization.
 
 ## What it reports and does
 
@@ -305,7 +305,7 @@ types.
 | `cancel(id)`, `cancelAll()`                                                                   | Cancels one scheduled notification, or all of them                                                                 |
 | `scheduled()`                                                                                 | Every local notification still waiting for its trigger                                                             |
 | `nextTriggerDate(trigger)`                                                                    | When a trigger would next fire, in milliseconds since the epoch                                                    |
-| `presented()`, `dismiss(id)`, `dismissAll()`                                                  | The app's notifications in the notification centre, and clearing them                                              |
+| `presented()`, `dismiss(id)`, `dismissAll()`                                                  | The app's notifications in the notification center, and clearing them                                              |
 | `badge()`, `setBadge(count)`                                                                  | The app icon's badge                                                                                               |
 | `channels()`, `channel(id)`, `setChannel(id, channel)`, `deleteChannel(id)`                   | Android's notification channels, which a notification on Android 8 and later needs                                 |
 | `channelGroups()`, `channelGroup(id)`, `setChannelGroup(id, group)`, `deleteChannelGroup(id)` | Android's channel groups                                                                                           |

@@ -5,7 +5,7 @@ title: Touch
 A phone has no click. A finger goes down, may move, and comes up, and the responder system decides
 which view the touch belongs to. `<pressable>` is the view that takes part in that: it claims the
 touch, works out with nested controls and scrolling ancestors which of them keeps it, and emits
-`press` when a short touch ends without being cancelled.
+`press` when a short touch ends without being canceled.
 
 ## Tick a habit off
 
@@ -33,7 +33,7 @@ matching on `name` would flip every habit called the same thing at once.
 `accessibilityRole="button"` is what VoiceOver and TalkBack announce, and what a screen reader
 user can activate: there is no `<button>` element to carry the role, so the pressable says it.
 
-A touch that wanders too far before lifting is cancelled, and is not a press. How far it may go is
+A touch that wanders too far before lifting is canceled, and is not a press. How far it may go is
 `pressRetentionOffset`, which reaches past the card's visible edge, so crossing the edge does not
 cancel the press straight away. A touch held past the long-press delay emits `longPress` instead
 of `press`.
@@ -51,7 +51,7 @@ view holding the touch responder and to its ancestors. Here the pressable claims
 ```
 
 It is written as on the web, but set by the engine from the responder rather than by a browser.
-It clears when the touch is released or cancelled, or when another view, such as a scroll view
+It clears when the touch is released or canceled, or when another view, such as a scroll view
 starting to scroll, takes the touch over.
 
 ## Give each row a component of its own

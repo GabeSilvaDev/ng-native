@@ -70,5 +70,5 @@ mount(1, App, fabric, {
 Flow and a static import would make this package - and `@ng-native/components`, which imports
 it - unloadable in Node. Off a device the require finds nothing and every capability is inert: the
 keyboard is never visible, the screen is zero by zero, a back handler is never called. That is the
-same behaviour as not providing the token that used to stand here, and it is what lets the test
+same behavior as not providing the token that used to stand here, and it is what lets the test
 suite import any of this without a simulator.

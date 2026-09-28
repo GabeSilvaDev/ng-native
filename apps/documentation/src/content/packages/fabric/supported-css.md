@@ -33,7 +33,7 @@ native, and a stylesheet written for the web puts its tokens there.
 A rule with one of these selectors is dropped with a warning.
 
 `::before`, `::after` and every other pseudo-element are permanently unsupported, not a "not yet".
-Rendering one would mean synthesising a node no template declared, which would make the style
+Rendering one would mean synthesizing a node no template declared, which would make the style
 engine responsible for view hierarchy a template never wrote - so the fix, when a design wants one,
 is to write the element.
 
@@ -52,36 +52,36 @@ would have to be matched again whenever anything beneath it changed.
 
 ## Everything else CSS can paint
 
-Colours can be written as a named colour, hex, `rgb()`, `hsl()`, `hwb()`, `lab()`, `lch()`,
-`oklab()` or `oklch()`, with or without an alpha, and a `color-mix()` of two such colours in any of
+Colors can be written as a named color, hex, `rgb()`, `hsl()`, `hwb()`, `lab()`, `lch()`,
+`oklab()` or `oklch()`, with or without an alpha, and a `color-mix()` of two such colors in any of
 those spaces. Native paints sRGB only, so each is converted to `rgb()` at build time with CSS Color
-4's formulas; a colour outside sRGB is brought inside by CSS Color 4's gamut mapping, which reduces
+4's formulas; a color outside sRGB is brought inside by CSS Color 4's gamut mapping, which reduces
 its chroma rather than clipping each channel, so the hue holds. `color()` with a named space, such
 as `display-p3`, is dropped. A `color-mix()` with a `var()` in it is worked out on device once
 the token is known, in the space it names (`srgb`, `oklab`, `oklch`, `lab`, `lch`, `hsl` or `hwb`)
 with CSS Color 4's arithmetic: premultiplied alpha, a hue the shorter way round unless a hue
-method says otherwise, an achromatic colour's hue taken from the other colour, and the result
+method says otherwise, an achromatic color's hue taken from the other color, and the result
 brought inside sRGB by the same gamut mapping. That is what themes a list row by a bound custom
 property: `[style.--cover]="track.colour"` on the row, and `color-mix(in oklch, var(--cover) 70%,
 white)` for its lighter shade.
 
-A relative colour from a token, such as `oklch(from var(--brand) l c h / 0.2)` or
+A relative color from a token, such as `oklch(from var(--brand) l c h / 0.2)` or
 `hsl(from var(--brand) h s calc(l - 20))`, is worked out on device too, in `rgb()`, `hsl()`,
 `hwb()`, `lab()`, `lch()`, `oklab()` or `oklch()`. Each channel keyword is the origin's number in
 that space, on CSS Color 5's scale (`r g b` 0 to 255, the `s l w b` of `hsl()` and `hwb()` 0 to
 100), and a channel is a keyword, a number, or `calc()` of them. A percentage or an angle stands
-alone as a channel, since CSS does not add one to a keyword. A hue a grey does not have is 0.
+alone as a channel, since CSS does not add one to a keyword. A hue a gray does not have is 0.
 
-`light-dark(<light>, <dark>)` picks by the app's colour scheme, the one `prefers-color-scheme`
-reads; native has no per-element `color-scheme`. It works anywhere a colour does: a declaration, a
+`light-dark(<light>, <dark>)` picks by the app's color scheme, the one `prefers-color-scheme`
+reads; native has no per-element `color-scheme`. It works anywhere a color does: a declaration, a
 token (`--surface: light-dark(white, black)`), a gradient stop, a shadow, inside a `color-mix()`,
 with tokens on either side.
 
 Gradients (`background-image: linear-gradient(...)` or `radial-gradient(...)`, compiled to the
 structure Fabric's `experimental_backgroundImage` prop reads) support linear and radial only, not
-conic. A stop can be a `var()`, a `color-mix()` with one in it, or a literal colour beside them;
+conic. A stop can be a `var()`, a `color-mix()` with one in it, or a literal color beside them;
 a stop that is a lone `var()` nobody defines is dropped, which is what makes an optional middle
-colour optional. A radial gradient with tokens in its stops takes its shape, size and centre as
+color optional. A radial gradient with tokens in its stops takes its shape, size and center as
 keywords and positions (`circle closest-side at 50% 18%`), not an explicit radius; a position
 can be a token too (`at var(--x) 30%`), with a fallback after its name. `background-image` takes gradients only - a `url()` in `background-image` is dropped, because there is no
 image loader behind that prop; put an image in an `<image>` element instead.
@@ -129,12 +129,12 @@ token in it, `transform` takes the translate, scale, rotate and skew functions.
 `box-shadow` and `text-shadow` both work, though native has room for exactly one `text-shadow`, not
 a list. On iOS a `text-shadow` is drawn inside the text's own box, so a blur or offset that
 reaches past it is cut off square; give the text padding as deep as the shadow. A `box-shadow` can
-have tokens in it as design systems write them: a colour that is a `var()`, a `color-mix()`, a
-relative colour, `rgba(var(--channels), 0.25)` or an `hsl()` of tokens; a length that is
+have tokens in it as design systems write them: a color that is a `var()`, a `color-mix()`, a
+relative color, `rgba(var(--channels), 0.25)` or an `hsl()` of tokens; a length that is
 a `var()` or `calc()` around one (`0 0 0 var(--ring-width)`); and a whole shadow that is a token,
 in a list with others, with the shadows after its name as the fallback. A shadow whose lengths are
 all one token is the exception, since a token is read in one form: write its lengths out, or put
-the whole shadow in the token. A `text-shadow` takes tokens the same way, in its colour and its
+the whole shadow in the token. A `text-shadow` takes tokens the same way, in its color and its
 lengths.
 
 Truncation is a paragraph's props on native, not a style, and CSS's three ways of asking for it
@@ -175,12 +175,12 @@ edge wins, whichever was written last.
 
 `border-style` is likewise one value for all four sides: a native border has one style, and a
 per-side style that disagrees with the others is dropped for the same reason. `border-top` and
-the other per-side shorthands set that side's width and colour, and take `solid` (native's
+the other per-side shorthands set that side's width and color, and take `solid` (native's
 default) or `none` as their style.
 
 A custom property can hold a font stack (read as its first family, as `font-family` is), a
-unitless line-height, a ratio for `aspect-ratio`, a whole `box-shadow` list, or bare colour
-channels for `rgba(var(--channels), <alpha>)`, which is how Bootstrap writes its colour utilities.
+unitless line-height, a ratio for `aspect-ratio`, a whole `box-shadow` list, or bare color
+channels for `rgba(var(--channels), <alpha>)`, which is how Bootstrap writes its color utilities.
 A shorthand may mix `var()`s and written values: `padding: var(--y) var(--x)`,
 `border: var(--width) solid var(--colour)`. `flex: var(--grow)` is `flex: <number>`: it grows by
 the token, shrinks by 1, and starts from a basis of 0.

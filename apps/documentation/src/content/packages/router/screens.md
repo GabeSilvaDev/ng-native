@@ -64,12 +64,12 @@ A push to the route already on top, with different parameters, is a new screen: 
 the push came from `NativeNavigation`, `nativeRouterLink`, `Router.navigate()` or a deep link. That
 is what a native stack does with a detail that links to another detail, a product to a similar
 product or a thread to a reply. Angular's own route reuse strategy on the web keeps one component
-for the route and feeds it the new parameters instead; the native stack keeps that behaviour for
+for the route and feeds it the new parameters instead; the native stack keeps that behavior for
 changes that do not change the path: a different query string or fragment updates the screen
 already there.
 
 A route whose parameter picks what one screen shows, rather than naming another screen to go to,
-opts back into the web behaviour with `reuseScreen`:
+opts back into the web behavior with `reuseScreen`:
 
 ```ts
 import type { Routes } from '@angular/router';

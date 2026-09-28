@@ -38,7 +38,7 @@ polyfills every app needs before `@angular/core` first runs. It also patches Met
 and dev-server watching so an edit to the compiler itself is never served stale, and embeds a hot
 -reload path that can patch a live component's template without a full bundle reload.
 
-A capitalised element name - `<Card>` instead of `<card>` - is a hard build failure here rather
+A capitalized element name - `<Card>` instead of `<card>` - is a hard build failure here rather
 than a blank screen, because Angular itself would otherwise compile it to an empty template with no
 error at all.
 

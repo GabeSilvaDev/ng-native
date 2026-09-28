@@ -50,7 +50,7 @@ owns it.
 Your own components' hosts (`<app-card>`) never trigger it, whatever their selector, and neither
 do names registered with `registerViewName` or `registerExpoView`.
 
-A misspelt input or attribute on an element is caught the same way. `[numberofLines]` on a
+A misspelled input or attribute on an element is caught the same way. `[numberofLines]` on a
 `<text>` binds no input, so Angular hands it on as a property and native ignores it. Development
 builds compare each element's props with what its component declares, its inputs and the native
 props it writes, and log the rest once per element and name:

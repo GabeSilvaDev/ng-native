@@ -1,6 +1,6 @@
 ---
 title: Document picker
-summary: Pick files with the system's own picker, and get nothing back when it is cancelled.
+summary: Pick files with the system's own picker, and get nothing back when it is canceled.
 ---
 
 # Document picker
@@ -8,7 +8,7 @@ summary: Pick files with the system's own picker, and get nothing back when it i
 `DocumentPicker` opens the system's file picker, bound to `expo-document-picker`: the Files app's
 browser on iOS and the storage access framework on Android.
 
-The options are the module's own, passed through unchanged. A cancelled picker answers with no
+The options are the module's own, passed through unchanged. A canceled picker answers with no
 files rather than a result to unwrap, and the system picker needs no permission, so none is asked
 for.
 
@@ -49,7 +49,7 @@ export class Attach {
 ## What it does
 
 - **`pick(options?)`** - opens the picker and resolves to the files chosen, empty if the user
-  cancelled. Each is the module's own `DocumentPickerAsset`: `uri`, `name`, `mimeType`, `size` and
+  canceled. Each is the module's own `DocumentPickerAsset`: `uri`, `name`, `mimeType`, `size` and
   `lastModified`.
   - `type` - a MIME type such as `'image/*'`, or a list of them. Everything by default.
   - `multiple` - allow more than one file.

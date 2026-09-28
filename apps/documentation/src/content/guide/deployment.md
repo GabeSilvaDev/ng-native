@@ -1,9 +1,9 @@
 ---
-title: Shipping to a device and the store
+title: Deployment
 summary: Development builds, release builds, signing, EAS Build and local builds, and submitting to a store.
 ---
 
-# Shipping to a device and the store
+# Deployment
 
 [Getting started](/guide/getting-started) uses Expo Go, which covers most development. To include
 your own native code, build an app for a physical device and eventual App Store or Google Play
@@ -102,7 +102,7 @@ eas build --platform ios --profile development
 eas build --platform android --profile preview
 ```
 
-EAS Build uses Expo's machines by default. `--local` produces the same artefact locally and requires
+EAS Build uses Expo's machines by default. `--local` produces the same artifact locally and requires
 the native toolchain used by `expo run`. Use it when Expo's build servers are unreachable or policy
 prohibits sending source off the machine.
 

@@ -54,7 +54,7 @@ export class Avatar {
   system UI runs outside your app's sandbox - so `pick()` never asks for one.
 - **`capture(options)`** opens the system camera, asking for the camera permission first. Without
   it, it resolves to an empty list rather than opening the camera.
-- Both resolve to a list of assets, **empty if the person cancelled** (or refused the camera),
+- Both resolve to a list of assets, **empty if the person canceled** (or refused the camera),
   rather than a result object to unwrap - so a destructured `const [photo] = await picker.pick()`
   gives `undefined`, not a `{ canceled: true }` you have to check first.
 - `options` is `expo-image-picker`'s own `ImagePickerOptions`, passed straight through: `mediaTypes`

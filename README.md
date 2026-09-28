@@ -93,7 +93,7 @@ to native styles at build time.
 - [Adding it to an existing app](https://ng-native.com/guide/manual-setup)
 - [Theming and Tailwind](https://ng-native.com/guide/theming)
 - [Build a form](https://ng-native.com/guide/forms)
-- [Shipping to a device and the store](https://ng-native.com/guide/shipping)
+- [Deployment](https://ng-native.com/guide/deployment)
 - [How it compares](https://ng-native.com/guide/comparison)
 - [Known limitations](https://ng-native.com/guide/limitations)
 - [Architecture](ARCHITECTURE.md)
@@ -108,7 +108,7 @@ player (`music`), a run tracker with maps (`runs`) and a notes app (`notes`).
 | `@ng-native/platform`   | `mount()`, the Angular renderer, and `HttpClient` for React Native.                |
 | `@ng-native/components` | The elements: views, text, images, lists, inputs, pressables, gestures, animation. |
 | `@ng-native/router`     | Native stack and tab navigation over `@angular/router`.                            |
-| `@ng-native/device`     | Keyboard, screen, colour scheme, app state, accessibility, deep links and more.    |
+| `@ng-native/device`     | Keyboard, screen, color scheme, app state, accessibility, deep links and more.    |
 | `@ng-native/expo`       | Expo's modules as Angular services and directives.                                 |
 | `@ng-native/icons`      | `<ng-icon>` with the `@ng-icons` sets, drawn as native SVG.                        |
 | `@ng-native/metro`      | The Metro preset: the Angular compiler, the CSS compiler and hot reload.           |
@@ -136,7 +136,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setting up the workspace, running the
 pull request needs. Report a vulnerability privately, as [SECURITY.md](SECURITY.md) describes.
 Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Licence
+## License
 
 [MIT](LICENSE)
 

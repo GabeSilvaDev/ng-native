@@ -25,7 +25,7 @@ Combine [`Network`](/packages/expo/network) for connectivity,
   and paginated rows. `SELECT ... WHERE ... ORDER BY` handles caches beyond a handful of items;
   `Storage` has no equivalent.
 
-The feed below uses `Database`. Use `Storage` for small values such as a last-synchronised
+The feed below uses `Database`. Use `Storage` for small values such as a last-synchronized
 timestamp; see the [Storage guide](/packages/expo/storage).
 
 ## The worked example: a note feed
@@ -307,7 +307,7 @@ mount(rootTag, App, getFabricUIManager(), {
 
 ## An interceptor, for the same reconnect signal everywhere
 
-The `effect` handles one feed's reconnection. Use an `HttpInterceptorFn` for request-wide behaviour,
+The `effect` handles one feed's reconnection. Use an `HttpInterceptorFn` for request-wide behavior,
 such as retrying a failed `GET` once or tagging requests sent offline for the server:
 
 ```ts

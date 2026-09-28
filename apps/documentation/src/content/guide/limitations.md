@@ -40,7 +40,7 @@ automatically - see [Metro](/packages/metro).
 
 Angular i18n translates at runtime using template `i18n`, TypeScript `$localize`,
 `localize-extract` over the Metro bundle, and `loadTranslations()` before mount. See
-[Localisation](/guide/localisation). The Metro preset's template compiler has two gaps:
+[Localization](/guide/localization). The Metro preset's template compiler has two gaps:
 
 - **Plurals and selects** (`{count, plural, =1 {one item} other {...}}`) throw
   `Unable to parse ICU expression` when the component first renders. The compiler drops the ICU's

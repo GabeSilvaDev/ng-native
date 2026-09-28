@@ -38,7 +38,7 @@ tween, with React Native's own asymmetric timings (150ms in, 250ms out).
 ## Props
 
 Every pressable exposes `disabled`, `hitSlop`, `pressRetentionOffset` (how far a finger may wander
-before the press is cancelled - separate from `hitSlop`, which is how far outside the view a touch
+before the press is canceled - separate from `hitSlop`, which is how far outside the view a touch
 may _start_), `delayLongPress`, `delayPressIn`, `delayPressOut`, `minPressDuration` (the pressed
 look is held at least this long even on the quickest tap), `cancelable` (whether a scrolling
 ancestor may take the gesture away mid-press) and, on Android, `androidRipple` for a native

@@ -77,16 +77,16 @@ export const GUIDE: NavSection = {
     { path: 'guide/forms', title: 'Build a form' },
     { path: 'guide/offline', title: 'Working offline' },
     {
-      path: 'guide/localisation',
-      title: 'Localisation',
+      path: 'guide/localization',
+      title: 'Localization',
       children: [
-        { path: 'guide/localisation-extraction', title: 'Extracting messages' },
-        { path: 'guide/localisation-loading', title: 'Loading a language' },
-        { path: 'guide/localisation-switching', title: 'Switching language' },
-        { path: 'guide/localisation-formatting', title: 'Formatting and RTL' },
+        { path: 'guide/localization-extraction', title: 'Extracting messages' },
+        { path: 'guide/localization-loading', title: 'Loading a language' },
+        { path: 'guide/localization-switching', title: 'Switching language' },
+        { path: 'guide/localization-formatting', title: 'Formatting and RTL' },
       ],
     },
-    { path: 'guide/shipping', title: 'Shipping' },
+    { path: 'guide/deployment', title: 'Deployment' },
   ],
 };
 
@@ -152,11 +152,11 @@ export const PACKAGES: NavSection = {
     {
       path: 'packages/device',
       title: 'Device',
-      summary: "The screen, the colour scheme, and the rest of the host's answers",
+      summary: "The screen, the color scheme, and the rest of the host's answers",
       children: [
         { path: 'packages/device/screen', title: 'Screen', group: 'Screen' },
         { path: 'packages/device/safe-area', title: 'Safe area' },
-        { path: 'packages/device/color-scheme', title: 'Colour scheme', group: 'Appearance' },
+        { path: 'packages/device/color-scheme', title: 'Color scheme', group: 'Appearance' },
         { path: 'packages/device/accessibility', title: 'Accessibility' },
         { path: 'packages/device/direction', title: 'Direction' },
         { path: 'packages/device/status-bar', title: 'Status bar', group: 'System' },

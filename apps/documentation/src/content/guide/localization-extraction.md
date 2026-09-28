@@ -6,7 +6,7 @@ summary: Pull messages.json out of a Metro bundle with localize-extract, then tr
 # Extracting messages
 
 After marking templates with `i18n` and TypeScript with `$localize` as in
-[Localisation](/guide/localisation), run `localize-extract` on Metro's unminified JavaScript bundle,
+[Localization](/guide/localization), run `localize-extract` on Metro's unminified JavaScript bundle,
 not Hermes bytecode. It extracts every message from compiled JavaScript:
 
 ```sh
@@ -15,7 +15,7 @@ npx localize-extract -s 'i18n-build/**/*.js' -f json -o locale/messages.json
 rm -rf i18n-build
 ```
 
-The output for the snippets in [Localisation](/guide/localisation), trimmed:
+The output for the snippets in [Localization](/guide/localization), trimmed:
 
 ```json
 {
@@ -52,4 +52,4 @@ Extraction includes template messages and `$localize` strings from app code only
 native properties (`Can't bind to 'zoomScale' since it isn't a known property of
 'scroll-view'`), DOM/native event types and React Native's Flow syntax.
 
-Next: [Loading a language](/guide/localisation-loading) puts `messages.fr.json` into the app.
+Next: [Loading a language](/guide/localization-loading) puts `messages.fr.json` into the app.

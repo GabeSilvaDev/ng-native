@@ -38,14 +38,14 @@ image, since native carries one icon type for both states.
 
 A bar item is not a view - `UITabBarItem` and Android's bottom-navigation item are model objects, a
 title and an image and a badge string, with no way to put a view in their place. That is why
-`<native-tab>` takes no content while `<native-header-item>` does, and why customisation beyond the
+`<native-tab>` takes no content while `<native-header-item>` does, and why customization beyond the
 basics lives in the `standardAppearance`/`scrollEdgeAppearance` inputs rather than in markup.
 
 ## Defaults for every tab bar
 
 `withTabDefaults` is `withHeaderDefaults` for tab bars: the outlet's `tintColor`, `backgroundColor`
 and `colorScheme`, and each tab's `standardAppearance` and `scrollEdgeAppearance`, said once
-beside the routes. As with headers it takes an object or a function of the colour scheme, and
+beside the routes. As with headers it takes an object or a function of the color scheme, and
 anything an outlet or a tab binds itself wins.
 
 ```ts

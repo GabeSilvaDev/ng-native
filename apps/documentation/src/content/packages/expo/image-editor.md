@@ -63,7 +63,7 @@ export class Avatar {
   - `{ flip: FlipType.Horizontal }` or `FlipType.Vertical`.
   - `{ crop: { originX, originY, width, height } }` - in pixels of the image as it is at that step.
   - `{ extent: { width, height, originX?, originY?, backgroundColor? } }` - on the web only, grows
-    or shrinks the canvas, filling any new space with the colour. Elsewhere it is skipped.
+    or shrinks the canvas, filling any new space with the color. Elsewhere it is skipped.
 
   The options are `format` (`SaveFormat.JPEG` by default, `PNG` or `WEBP`), `compress` from 0 to
   1, and `base64`.

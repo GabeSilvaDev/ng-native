@@ -83,7 +83,7 @@ the spinner keeps spinning indefinitely - there is no timeout.
 ```
 
 iOS also reads `tintColor`, `title` and `titleColor` for a label under the spinner. Android reads
-`colors` (the colours the spinner cycles through), `progressBackgroundColor`, `size`
+`colors` (the colors the spinner cycles through), `progressBackgroundColor`, `size`
 (`'default'` or `'large'`) and `enabled` (whether pulling does anything at all, default true).
 `progressViewOffset` sets how far from the top the spinner sits, on both platforms.
 
