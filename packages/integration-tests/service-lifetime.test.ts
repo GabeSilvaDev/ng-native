@@ -99,15 +99,13 @@ const cases: readonly { name: string; service: Type<unknown>; providers: Provide
     providers: [
       {
         provide: Notifications.SOURCE,
+        // expo-notifications' listeners hand back a subscription to remove, not a function.
         useValue: {
-          onReceived: listen,
-          onResponse: listen,
-          lastResponse: async () => null,
-          dismissAll: async () => {},
-          setBadge: async () => {},
-          getExpoPushToken: async () => null,
-          getDevicePushToken: async () => null,
-          onPushTokenChange: listen,
+          addNotificationReceivedListener: () => ({ remove: listen() }),
+          addNotificationResponseReceivedListener: () => ({ remove: listen() }),
+          addNotificationsDroppedListener: () => ({ remove: listen() }),
+          addPushTokenListener: () => ({ remove: listen() }),
+          getLastNotificationResponseAsync: async () => null,
         },
       },
     ],

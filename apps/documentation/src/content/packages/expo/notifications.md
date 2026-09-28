@@ -5,16 +5,17 @@ summary: The notification that launched the app, the one just tapped, and a push
 
 # Notifications
 
-`Notifications` exposes received notifications, notification taps and the response that launched
-the app through `expo-notifications`.
+`Notifications` is all of `expo-notifications` as one injectable service: received notifications,
+taps and the response that launched the app as signals, and the permission, scheduling, the badge,
+Android's channels, action buttons, the foreground handler, push tokens and background tasks as
+methods that take and return the module's own types.
 
-Almost all of `expo-notifications` is already plain promises - scheduling, channels, badges - and
-none of that is wrapped here. Call those on the module directly. What is here is the part that was
-only reachable through a hook - the difference between a notification _arriving_ while the app is
-in front, and a user _tapping_ one, which is a navigation instruction and must not be missed,
-including the one that launched the app, which arrived before anything was listening - plus the
-push token a server needs to send either kind, which needs the permission asked for first and a
-missing module handled the same way everything else here handles it.
+The signals are the part that was only reachable through a hook - the difference between a
+notification _arriving_ while the app is in front, and a user _tapping_ one, which is a navigation
+instruction and must not be missed, including the one that launched the app, which arrived before
+anything was listening. Everything goes through the service's `SOURCE` token, so a test provides a
+fake in place of the module, and without the module installed every query answers empty and every
+change does nothing.
 
 ## Install
 
@@ -55,8 +56,10 @@ export class App {
 }
 ```
 
-Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from the module itself -
-see [permissions](/packages/expo/permissions).
+The permission is `notifications.permission`, a [`Permission`](/packages/expo/permissions):
+`ensure()` asks only if it has not been answered, and `blocked()` says when the user has to go to
+Settings. `requestPermission(options)` asks with iOS's finer options, such as provisional
+authorisation.
 
 ## What it reports and does
 
@@ -111,11 +114,11 @@ native project settings, not this package:
   `remote-notification` background mode. EAS Build adds the capability automatically once
   `expo-notifications` is installed; a bare workflow app enables it in Xcode under **Signing &
   Capabilities**. Sending through Expo's service still needs your APNs key uploaded to Expo's
-  servers (`eas credentials`) - _unverified on a device in this change_.
+  servers (`eas credentials`). This has not been verified on a device.
 - **Android: Firebase Cloud Messaging**, which means a `google-services.json` from a Firebase
   project, referenced from `app.json`'s `android.googleServicesFile`. Expo's push service holds
   Firebase's own server key on your behalf once that file is in place; a device push token (FCM
-  directly) needs nothing beyond the file. _Unverified on a device in this change._
+  directly) needs nothing beyond the file. This has not been verified on a device.
 
 None of this is checked at build time - a missing `projectId` surfaces as `getExpoPushToken()`
 rejecting, and a missing FCM config surfaces as a token that silently never arrives on Android.
@@ -287,17 +290,57 @@ For a device push token instead, send through APNs or FCM's own HTTP API directl
 service has no part in that path. _Both the curl example and a real send have not been run against
 a device for this change; verify the token format and response shape before relying on them._
 
+## Everything else
+
+Each method is the module's function of the same purpose, with the module's own arguments and
+types.
+
+| Method                                                                                        | What it does                                                                                                       |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `schedule(request)`                                                                           | Schedules a local notification, or shows one now with a `null` trigger; the identifier, or null without the module |
+| `cancel(id)`, `cancelAll()`                                                                   | Cancels one scheduled notification, or all of them                                                                 |
+| `scheduled()`                                                                                 | Every local notification still waiting for its trigger                                                             |
+| `nextTriggerDate(trigger)`                                                                    | When a trigger would next fire, in milliseconds since the epoch                                                    |
+| `presented()`, `dismiss(id)`, `dismissAll()`                                                  | The app's notifications in the notification centre, and clearing them                                              |
+| `badge()`, `setBadge(count)`                                                                  | The app icon's badge                                                                                               |
+| `channels()`, `channel(id)`, `setChannel(id, channel)`, `deleteChannel(id)`                   | Android's notification channels, which a notification on Android 8 and later needs                                 |
+| `channelGroups()`, `channelGroup(id)`, `setChannelGroup(id, group)`, `deleteChannelGroup(id)` | Android's channel groups                                                                                           |
+| `categories()`, `setCategory(id, actions, options)`, `deleteCategory(id)`                     | Action buttons, below                                                                                              |
+| `setHandler(handler)`                                                                         | What a notification arriving while the app is in front does; without one it is not shown                           |
+| `clearResponse()`                                                                             | Forgets the last tap, here and in the module                                                                       |
+| `dropped`                                                                                     | A signal: how many times Android reported notifications dropped                                                    |
+| `unregister()`, `setAutoServerRegistration(enabled)`                                          | Stops push delivery; whether Expo re-registers the token itself                                                    |
+| `subscribeToTopic(topic)`, `unsubscribeFromTopic(topic)`                                      | Android: FCM topics                                                                                                |
+| `registerTask(name)`, `unregisterTask(name)`                                                  | A background notification task, below                                                                              |
+
+A schedule's trigger kind is `TriggerType`, exported beside the service: the module's
+`SchedulableTriggerInputTypes`, typed as that enum, without loading the module, so code that
+schedules can run in a test:
+
+```ts
+import { inject } from '@angular/core';
+import { Notifications, TriggerType } from '@ng-native/expo/notifications';
+
+const notifications = inject(Notifications);
+await notifications.schedule({
+  content: { title: 'Time to stretch' },
+  trigger: { type: TriggerType.DAILY, hour: 9, minute: 0 },
+});
+```
+
 ## Action buttons and replies
 
-Buttons on a notification are a category, set once with `expo-notifications` directly. A
-notification opts in with `categoryIdentifier`. A tap on a button arrives as a response like any
+Buttons on a notification are a category, set once with `setCategory`. A notification opts in with
+`categoryIdentifier`. A tap on a button arrives as a response like any
 other, with the button's `identifier` as `actionIdentifier`, and a button with `textInput` carries
 what the user typed as `userText`:
 
 ```ts
-import * as Expo from 'expo-notifications';
+import { inject } from '@angular/core';
+import { Notifications } from '@ng-native/expo/notifications';
 
-await Expo.setNotificationCategoryAsync('message', [
+const notifications = inject(Notifications);
+await notifications.setCategory('message', [
   {
     identifier: 'reply',
     buttonTitle: 'Reply',
@@ -345,6 +388,9 @@ AppRegistry.registerRunnable('main', ({ rootTag }) => {
   // mount(...) as before
 });
 ```
+
+`main.ts` has no injector, so the task is registered there with the module's own
+`registerTaskAsync`; from inside the app, `notifications.registerTask(name)` does the same.
 
 Importing the `@ng-native/*` packages has no native side effects, so the task can share plain
 modules - a storage wrapper, an API client - with the app, as long as they do not need an injector.

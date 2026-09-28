@@ -369,55 +369,14 @@ describe('the storage sources', () => {
 });
 
 describe('the notifications source', () => {
-  it('wires the two listeners, the launch response and the maintenance calls through expo-notifications', async () => {
-    const listeners: Record<string, (payload: unknown) => void> = {};
-    const removed: string[] = [];
-    const launch = {
-      notification: { request: { identifier: 'launch', content: {} } },
-      actionIdentifier: 'default',
-    };
-    const dismissed: string[] = [];
-    const badges: number[] = [];
-    const expoNotifications = {
-      addNotificationReceivedListener: (fn: (n: unknown) => void) => (
-        (listeners['received'] = fn),
-        { remove: () => removed.push('received') }
+  it('is expo-notifications itself, whose functions the service calls by their own names', () => {
+    const expoNotifications = { scheduleNotificationAsync: async () => 'id' };
+    assert.equal(
+      withModules({ 'expo-notifications': expoNotifications }, () =>
+        defaultSource(Notifications.SOURCE),
       ),
-      addNotificationResponseReceivedListener: (fn: (r: unknown) => void) => (
-        (listeners['response'] = fn),
-        { remove: () => removed.push('response') }
-      ),
-      getLastNotificationResponseAsync: async () => launch,
-      dismissAllNotificationsAsync: async () => void dismissed.push('all'),
-      setBadgeCountAsync: async (count: number) => void badges.push(count),
-      getPermissionsAsync: async () => ({ status: 'granted', granted: true, canAskAgain: true }),
-      requestPermissionsAsync: async () => ({
-        status: 'granted',
-        granted: true,
-        canAskAgain: true,
-      }),
-      getExpoPushTokenAsync: async () => ({ type: 'expo', data: 'unused' }),
-      getDevicePushTokenAsync: async () => ({ type: 'ios', data: 'unused' }),
-      addPushTokenListener: () => ({ remove: () => {} }),
-    };
-
-    const native = withModules({ 'expo-notifications': expoNotifications }, () =>
-      defaultSource(Notifications.SOURCE),
-    )!;
-
-    assert.deepEqual(await native.lastResponse(), launch);
-
-    const received: unknown[] = [];
-    const stop = native.onReceived((n) => received.push(n));
-    listeners['received']!({ request: { identifier: 'a', content: {} } });
-    assert.deepEqual(received, [{ request: { identifier: 'a', content: {} } }]);
-    stop();
-    assert.deepEqual(removed, ['received']);
-
-    await native.dismissAll();
-    await native.setBadge(3);
-    assert.deepEqual(dismissed, ['all']);
-    assert.deepEqual(badges, [3]);
+      expoNotifications,
+    );
   });
 
   it('is inert with no expo-notifications installed', () => {
@@ -425,110 +384,6 @@ describe('the notifications source', () => {
       withModules({}, () => defaultSource(Notifications.SOURCE)),
       null,
     );
-  });
-
-  it('asks for the permission before fetching either push token, and passes projectId through', async () => {
-    const calls: string[] = [];
-    const expoNotifications = {
-      addNotificationReceivedListener: () => ({ remove: () => {} }),
-      addNotificationResponseReceivedListener: () => ({ remove: () => {} }),
-      getLastNotificationResponseAsync: async () => null,
-      dismissAllNotificationsAsync: async () => {},
-      setBadgeCountAsync: async () => {},
-      getPermissionsAsync: async () => {
-        calls.push('permission');
-        return { status: 'granted', granted: true, canAskAgain: true };
-      },
-      requestPermissionsAsync: async () => ({
-        status: 'granted',
-        granted: true,
-        canAskAgain: true,
-      }),
-      getExpoPushTokenAsync: async (options?: { projectId?: string }) => {
-        calls.push(`expo:${options?.projectId ?? ''}`);
-        return { type: 'expo', data: 'ExponentPushToken[abc]' };
-      },
-      getDevicePushTokenAsync: async () => {
-        calls.push('device');
-        return { type: 'ios', data: 'apns-token' };
-      },
-      addPushTokenListener: () => ({ remove: () => {} }),
-    };
-
-    const native = withModules({ 'expo-notifications': expoNotifications }, () =>
-      defaultSource(Notifications.SOURCE),
-    )!;
-
-    assert.equal(await native.getExpoPushToken('proj-1'), 'ExponentPushToken[abc]');
-    assert.deepEqual(await native.getDevicePushToken(), { type: 'ios', data: 'apns-token' });
-    // `Permission` remembers a granted answer, so the second call does not ask the platform again -
-    // it is still "permission checked before the token", just not a second round trip.
-    assert.deepEqual(calls, ['permission', 'expo:proj-1', 'device']);
-  });
-
-  it('returns null from both token methods when the permission is refused', async () => {
-    const expoNotifications = {
-      addNotificationReceivedListener: () => ({ remove: () => {} }),
-      addNotificationResponseReceivedListener: () => ({ remove: () => {} }),
-      getLastNotificationResponseAsync: async () => null,
-      dismissAllNotificationsAsync: async () => {},
-      setBadgeCountAsync: async () => {},
-      getPermissionsAsync: async () => ({ status: 'denied', granted: false, canAskAgain: true }),
-      requestPermissionsAsync: async () => ({
-        status: 'denied',
-        granted: false,
-        canAskAgain: true,
-      }),
-      getExpoPushTokenAsync: async () => {
-        throw new Error('must not be called without the permission');
-      },
-      getDevicePushTokenAsync: async () => {
-        throw new Error('must not be called without the permission');
-      },
-      addPushTokenListener: () => ({ remove: () => {} }),
-    };
-
-    const native = withModules({ 'expo-notifications': expoNotifications }, () =>
-      defaultSource(Notifications.SOURCE),
-    )!;
-
-    assert.equal(await native.getExpoPushToken(), null);
-    assert.equal(await native.getDevicePushToken(), null);
-  });
-
-  it('wires the push token listener through to expo-notifications', () => {
-    let handler: ((token: unknown) => void) | undefined;
-    const removed: string[] = [];
-    const expoNotifications = {
-      addNotificationReceivedListener: () => ({ remove: () => {} }),
-      addNotificationResponseReceivedListener: () => ({ remove: () => {} }),
-      getLastNotificationResponseAsync: async () => null,
-      dismissAllNotificationsAsync: async () => {},
-      setBadgeCountAsync: async () => {},
-      getPermissionsAsync: async () => ({ status: 'granted', granted: true, canAskAgain: true }),
-      requestPermissionsAsync: async () => ({
-        status: 'granted',
-        granted: true,
-        canAskAgain: true,
-      }),
-      getExpoPushTokenAsync: async () => ({ type: 'expo', data: 'x' }),
-      getDevicePushTokenAsync: async () => ({ type: 'ios', data: 'x' }),
-      addPushTokenListener: (fn: (token: unknown) => void) => (
-        (handler = fn),
-        { remove: () => removed.push('pushToken') }
-      ),
-    };
-
-    const native = withModules({ 'expo-notifications': expoNotifications }, () =>
-      defaultSource(Notifications.SOURCE),
-    )!;
-
-    const seen: unknown[] = [];
-    const stop = native.onPushTokenChange((token) => seen.push(token));
-    handler!({ type: 'android', data: 'fcm-token' });
-    assert.deepEqual(seen, [{ type: 'android', data: 'fcm-token' }]);
-    stop();
-    assert.deepEqual(removed, ['pushToken']);
   });
 });
 

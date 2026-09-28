@@ -1,40 +1,15 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import * as Notifications from 'expo-notifications';
 import { provideIcons } from '@ng-icons/core';
 import { lucideFlame } from '@ng-icons/lucide';
 import { NgIcon } from '@ng-native/icons';
-import { Permission } from '@ng-native/expo';
+import { Notifications, TriggerType } from '@ng-native/expo/notifications';
 import { SafeAreaView, ScrollView, Switch, Text, View } from '@ng-native/components';
 import { Habits } from '../data/habits.ts';
 
-/** One daily local notification per habit that has a reminder time set. */
-async function scheduleReminders(
-  habits: readonly {
-    readonly id: string;
-    readonly name: string;
-    readonly reminderTime: string | null;
-  }[],
-): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
-  for (const habit of habits) {
-    if (!habit.reminderTime) continue;
-    const [hour, minute] = habit.reminderTime.split(':').map(Number);
-    await Notifications.scheduleNotificationAsync({
-      identifier: habit.id,
-      content: { title: habit.name, body: "Don't forget today." },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour: hour ?? 9,
-        minute: minute ?? 0,
-      },
-    });
-  }
-}
-
 /**
- * Reminders and a quick look at every streak. `Permission` covers the platform dialog and the
- * denied state; scheduling itself is plain `expo-notifications`, called directly as the docs for
- * [Notifications](/packages/expo/notifications) recommend.
+ * Reminders and a quick look at every streak. The `Notifications` service covers the permission
+ * dialog, the denied state and the scheduling: one daily notification per habit that has a
+ * reminder time.
  */
 @Component({
   selector: 'app-settings',
@@ -91,12 +66,10 @@ async function scheduleReminders(
 })
 export class Settings {
   private readonly habitsService = inject(Habits);
+  private readonly notifications = inject(Notifications);
 
   protected readonly habits = this.habitsService.habits;
-  protected readonly permission = Permission.of(
-    Notifications.getPermissionsAsync,
-    Notifications.requestPermissionsAsync,
-  );
+  protected readonly permission = this.notifications.permission;
   protected readonly remindersOn = signal(false);
 
   protected streak(id: string): number {
@@ -106,11 +79,24 @@ export class Settings {
   protected async toggleReminders(wants: boolean): Promise<void> {
     if (!wants) {
       this.remindersOn.set(false);
-      await Notifications.cancelAllScheduledNotificationsAsync();
+      await this.notifications.cancelAll();
       return;
     }
     const granted = await this.permission.ensure();
     this.remindersOn.set(granted);
-    if (granted) await scheduleReminders(this.habits());
+    if (granted) await this.scheduleReminders();
+  }
+
+  private async scheduleReminders(): Promise<void> {
+    await this.notifications.cancelAll();
+    for (const habit of this.habits()) {
+      if (!habit.reminderTime) continue;
+      const [hour, minute] = habit.reminderTime.split(':').map(Number);
+      await this.notifications.schedule({
+        identifier: habit.id,
+        content: { title: habit.name, body: "Don't forget today." },
+        trigger: { type: TriggerType.DAILY, hour: hour ?? 9, minute: minute ?? 0 },
+      });
+    }
   }
 }
