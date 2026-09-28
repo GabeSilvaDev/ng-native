@@ -126,9 +126,13 @@ export class Notifications {
     // The response that launched the app happened before anything was listening, so it has to be
     // asked for rather than waited for. Without this a cold start from a notification does
     // nothing, which is the single most common way this is got wrong.
-    void native.lastResponse().then((response) => {
-      if (response && this.responded() === null) this.responded.set(response);
-    });
+    // A platform that cannot say is the same as a launch without a notification.
+    void native
+      .lastResponse()
+      .then((response) => {
+        if (response && this.responded() === null) this.responded.set(response);
+      })
+      .catch(() => {});
   }
 
   /** The most recent notification that arrived while the app was in front. */
@@ -159,12 +163,12 @@ export class Notifications {
   }
 
   dismissAll(): void {
-    void this.native?.dismissAll();
+    void this.native?.dismissAll().catch(() => {});
   }
 
   /** iOS shows this on the icon; Android shows it where the launcher supports it. */
   setBadge(count: number): void {
-    void this.native?.setBadge(count);
+    void this.native?.setBadge(count).catch(() => {});
   }
 
   /**

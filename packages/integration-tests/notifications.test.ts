@@ -59,6 +59,27 @@ describe('notifications', () => {
     assert.equal(notifications.response(), null, 'arriving is not the user asking for anything');
   });
 
+  it('swallows a native call that fails, rather than leaving an unhandled rejection', async () => {
+    const unhandled: unknown[] = [];
+    const record = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', record);
+    try {
+      const failing = Object.assign(platform(), {
+        lastResponse: () => Promise.reject(new Error('no launch response')),
+        dismissAll: () => Promise.reject(new Error('dismiss failed')),
+        setBadge: () => Promise.reject(new Error('badge failed')),
+      });
+      const notifications = serviceWith(Notifications.SOURCE, failing, () => new Notifications());
+      notifications.dismissAll();
+      notifications.setBadge(3);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      assert.deepEqual(unhandled, []);
+      assert.equal(notifications.response(), null);
+    } finally {
+      process.off('unhandledRejection', record);
+    }
+  });
+
   it('picks up the one that launched the app, which nothing was listening for', async () => {
     // A cold start from a notification: the tap happened before any listener existed. Missing
     // this is the single most common way notification routing is got wrong.
