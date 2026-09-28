@@ -30,6 +30,7 @@ import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
 import { DeviceOrientation } from '@ng-native/expo/orientation';
+import { ScreenCapture } from '@ng-native/expo/screen-capture';
 import { compileFixture } from './compile.ts';
 
 /** Listeners attached and not yet removed, across every fake below. */
@@ -63,6 +64,16 @@ const cases: readonly { name: string; service: Type<unknown>; providers: Provide
           setStringAsync: async () => true,
           addClipboardListener: subscription,
         },
+      },
+    ],
+  },
+  {
+    name: 'ScreenCapture',
+    service: ScreenCapture,
+    providers: [
+      {
+        provide: ScreenCapture.SOURCE,
+        useValue: { addScreenshotListener: subscription },
       },
     ],
   },

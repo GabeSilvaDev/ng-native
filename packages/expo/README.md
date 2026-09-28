@@ -321,6 +321,8 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
   `unregister(name)` and `triggerForTesting()`. The task itself is defined with
   `expo-task-manager` at the top level of `main.ts`, since the platform runs it without
   bootstrapping Angular.
+- **`ScreenCapture`** (`screen-capture.ts`): `prevent(key)` and `allow(key)`, which stay
+  prevented while any key is held, and a `screenshots` signal counting the screenshots taken.
 
 ## The rest
 

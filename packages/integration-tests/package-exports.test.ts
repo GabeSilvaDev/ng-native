@@ -115,6 +115,7 @@ describe('the entry points Metro has to resolve', () => {
       'notifications',
       'orientation',
       'player',
+      'screen-capture',
       'sensors',
       'splash-screen',
       'store',

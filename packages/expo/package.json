@@ -45,6 +45,7 @@
     "./notifications": "./src/notifications.ts",
     "./orientation": "./src/orientation.ts",
     "./player": "./src/player.ts",
+    "./screen-capture": "./src/screen-capture.ts",
     "./sensors": "./src/sensors.ts",
     "./splash-screen": "./src/splash-screen.ts",
     "./store": "./src/store.ts",
@@ -174,6 +175,10 @@
         "types": "./dist/player.d.ts",
         "default": "./dist/player.js"
       },
+      "./screen-capture": {
+        "types": "./dist/screen-capture.d.ts",
+        "default": "./dist/screen-capture.js"
+      },
       "./sensors": {
         "types": "./dist/sensors.d.ts",
         "default": "./dist/sensors.js"
@@ -249,6 +254,7 @@
     "expo-modules-core": "^57.0.0",
     "expo-network": "^57.0.0",
     "expo-notifications": "^57.0.0",
+    "expo-screen-capture": "^57.0.0",
     "expo-screen-orientation": "^57.0.0",
     "expo-secure-store": "^57.0.0",
     "expo-sensors": "^57.0.0",
@@ -377,6 +383,9 @@
       "optional": true
     },
     "expo-notifications": {
+      "optional": true
+    },
+    "expo-screen-capture": {
       "optional": true
     },
     "expo-screen-orientation": {

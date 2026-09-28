@@ -91,6 +91,7 @@ is organised into one entry point per module.
 - [Sign in with Apple](/packages/expo/apple-sign-in) - Apple's sign-in sheet and its approved button.
 - [Tracking](/packages/expo/tracking) - Apple's App Tracking Transparency permission, and the advertising identifier.
 - [Crypto](/packages/expo/crypto) - random UUIDs, secure random bytes and hashes.
+- [Screen capture](/packages/expo/screen-capture) - keep a screen out of screenshots and recordings, and count the screenshots taken.
 - [Browser](/packages/expo/browser) - an in-app browser, and a sign-in session.
 
 ### Intelligence

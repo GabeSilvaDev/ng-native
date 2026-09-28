@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { ScreenCapture } from '@ng-native/expo/screen-capture';
 import { BackgroundTask } from '@ng-native/expo/background-task';
 import { Crypto } from '@ng-native/expo/crypto';
 import { DocumentPicker } from '@ng-native/expo/document-picker';
@@ -500,6 +501,25 @@ describe('the background task source', () => {
   it('is inert with no expo-background-task installed', () => {
     assert.equal(
       withModules({}, () => defaultSource(BackgroundTask.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the screen capture source', () => {
+  it('is expo-screen-capture itself, whose functions the service calls by their own names', () => {
+    const expoScreenCapture = { addScreenshotListener: () => ({ remove() {} }) };
+    assert.equal(
+      withModules({ 'expo-screen-capture': expoScreenCapture }, () =>
+        defaultSource(ScreenCapture.SOURCE),
+      ),
+      expoScreenCapture,
+    );
+  });
+
+  it('is inert with no expo-screen-capture installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(ScreenCapture.SOURCE)),
       null,
     );
   });
