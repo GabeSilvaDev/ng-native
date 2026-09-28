@@ -147,7 +147,7 @@ import { DocsTheme } from './theme.ts';
               </div>
             }
 
-            <main class="page-transition min-w-0 flex-1 pb-20"><router-outlet /></main>
+            <main class="min-w-0 flex-1 pb-20"><router-outlet /></main>
           </div>
 
           <footer

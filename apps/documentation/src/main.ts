@@ -11,14 +11,8 @@
  * detection runs even though they have separate injectors.
  */
 import { bootstrapApplication } from '@angular/platform-browser';
-import { inject, provideZonelessChangeDetection } from '@angular/core';
-import {
-  Router,
-  provideRouter,
-  withComponentInputBinding,
-  withInMemoryScrolling,
-  withViewTransitions,
-} from '@angular/router';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import { App } from './app.ts';
 import { routes } from './routes.ts';
 import './styles.css';
@@ -33,18 +27,6 @@ void bootstrapApplication(App, {
       withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'top' }),
       // A lesson reads its slug as an input.
       withComponentInputBinding(),
-      // The page's content fades across to the next one; see .page-transition in styles.css. A
-      // link to a heading on the same page only scrolls, with nothing to fade.
-      withViewTransitions({
-        onViewTransitionCreated: ({ transition }) => {
-          const router = inject(Router);
-          const next = router.getCurrentNavigation()?.finalUrl;
-          const path = (url: string) => url.split(/[?#]/)[0];
-          if (next && path(router.serializeUrl(next)) === path(router.url)) {
-            transition.skipTransition();
-          }
-        },
-      }),
     ),
   ],
 });
