@@ -27,7 +27,7 @@ import { prefersReducedMotion, underline } from './ink.ts';
           <p class="landing-eyebrow hero-rise flex items-center gap-3" style="--i: 0">
             <span>Angular Native</span>
             <span aria-hidden="true">·</span>
-            <span>{{ status.stage }} {{ status.release }}</span>
+            <span>Now in {{ status.stage }}</span>
           </p>
           <h1 id="hero-title" class="landing-display mt-5 text-[clamp(2.7rem,5vw,4.5rem)]">
             <span class="hero-rise block whitespace-nowrap" style="--i: 1">Build native apps</span>

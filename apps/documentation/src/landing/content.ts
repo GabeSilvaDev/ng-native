@@ -36,14 +36,9 @@ export const LINKS = {
 /** The whole setup, as `guide/getting-started.md` gives it. */
 export const CREATE_COMMAND = 'npx create-expo-app@latest my-app --template @ng-native/template';
 
-/**
- * The versions the alpha is built and verified against: `template/package.json` and the
- * workspace's pins. `release` is the series rather than an exact number, so it stays true from the
- * first release (0.1.0) until a 1.0, with no edit per release.
- */
+/** The versions the alpha is built and verified against: `template/package.json` and the workspace's pins. */
 export const STATUS = {
   stage: 'Alpha',
-  release: '0.x',
   angular: '22',
   expo: 'SDK 57',
   reactNative: '0.86',
