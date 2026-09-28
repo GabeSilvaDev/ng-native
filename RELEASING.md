@@ -7,12 +7,12 @@ one version. `.github/workflows/release.yml` does it, run by hand from the Actio
 
 1. **Own the npm scope.** Create the `ng-native` organisation on npmjs.com. Every package publishes
    as `@ng-native/*`, and a publish to a scope you do not own fails.
-2. **Add an `NPM_TOKEN` repository secret**: a granular access token with read and write on the
-   `@ng-native` scope. The first publish needs it, because npm only lets a trusted publisher be
-   configured on a package that already exists.
-3. After the first release, **configure trusted publishing** on each package's npmjs.com settings:
-   GitHub Actions, this repository, workflow `release.yml`. Then delete the `NPM_TOKEN` secret, and
-   every later publish authenticates through OIDC with no stored credential.
+2. **Publish a placeholder of each package.** npm only lets a trusted publisher be configured on a
+   package that already exists, so each one first went out by hand as an empty `0.0.1`.
+3. **Configure trusted publishing** on each package's settings page on npmjs.com: GitHub Actions,
+   organisation `ng-native`, repository `ng-native`, workflow `release.yml`. The release publishes
+   through OIDC and no npm token is stored anywhere. The first release must be above `0.0.1`:
+   `0.1.0`, or a `minor` bump.
 
 ## Describing changes
 

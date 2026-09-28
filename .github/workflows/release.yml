@@ -17,7 +17,7 @@ concurrency:
 permissions:
   # The version commit, the tag, and the GitHub release.
   contents: write
-  # npm provenance, and trusted publishing once it is configured on npmjs.com.
+  # npm provenance and trusted publishing.
   id-token: write
 
 jobs:
@@ -108,11 +108,9 @@ jobs:
           done
           ls .release
 
+      # No token: each package's trusted publisher on npmjs.com names this workflow, and npm
+      # authenticates the publish through OIDC.
       - name: Publish
-        env:
-          # The first publish needs a token: npm only lets a trusted publisher be configured on a
-          # package that exists. Once it is, delete the secret and this falls through to OIDC.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for tarball in .release/*.tgz; do
             name=$(tar -xOzf "$tarball" package/package.json | jq -r .name)
