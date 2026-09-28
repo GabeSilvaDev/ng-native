@@ -58,9 +58,14 @@ export class Player {
   to think about it again. Locks stack: releasing one puts back the lock an earlier `lock()` still
   holds, such as the screen underneath a pushed one, and the screen unlocks once none is held.
 
-## Without the module installed
+## Without the module
 
-`orientation` stays `'unknown'` and `landscape` stays `false`. `lock()` returns a function that
+On iOS and Android, a missing `expo-screen-orientation` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `orientation` stays `'unknown'` and `landscape` stays `false`. `lock()` returns a function that
 does nothing.
 
 ## Reference

@@ -79,8 +79,8 @@ export class SignIn {
 
 ## Signing in
 
-- **`available()`** resolves to whether the sheet can be shown: iOS 13 and later, with the module
-  installed. Show the button only when it is true.
+- **`available()`** resolves to whether the sheet can be shown: iOS 13 and later. Show the button
+  only when it is true.
 - **`signIn(options)`** shows Apple's sheet and resolves to the credential: a stable `user`
   identifier, an `identityToken` for your server to verify, and - the first time only - the
   user's name and email. Store those then; Apple does not send them again. A sheet the user
@@ -113,9 +113,14 @@ It needs a width and a height to show. Its colour and corners come from `buttonS
 
 ## Without the module
 
-Without `expo-apple-authentication` installed, `available()` resolves to false, `signIn()`,
+On iOS, a missing `expo-apple-authentication` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when `AppleSignIn` first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On Android and the web, and in a test that provides no fake, `available()` resolves to false, `signIn()`,
 `refresh()`, `signOut()` and `credentialState()` resolve to null, and `formatName()` returns an
-empty string. Nothing throws.
+empty string.
 
 ## Reference
 

@@ -18,7 +18,7 @@
  * and the rest already on it, and wrapping those would be a second place for each to be wrong.
  */
 import { DestroyRef, inject, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** The player's own status, which is the same word in both modules. */
 export type PlayerStatus = 'idle' | 'loading' | 'readyToPlay' | 'error';
@@ -172,7 +172,11 @@ export function videoPlayer(
   source: import('expo-video').VideoSource,
   options: { timeUpdate?: number } = {},
 ): Player<import('expo-video').VideoPlayer> {
-  const expo = optional(() => require('expo-video') as typeof import('expo-video'));
+  const expo = expoModule(
+    'expo-video',
+    () => require('expo-video') as typeof import('expo-video'),
+    ['ios', 'android', 'web'],
+  );
   if (!expo) throw new Error('[angular-native] expo-video is not installed');
   const native = expo.createVideoPlayer(source);
   return own(native, () => watchPlayer(native, options));
@@ -188,7 +192,11 @@ export function audioPlayer(
   source: import('expo-audio').AudioSource,
   options: { timeUpdate?: number } = {},
 ): Player<import('expo-audio').AudioPlayer> {
-  const expo = optional(() => require('expo-audio') as typeof import('expo-audio'));
+  const expo = expoModule(
+    'expo-audio',
+    () => require('expo-audio') as typeof import('expo-audio'),
+    ['ios', 'android', 'web'],
+  );
   if (!expo) throw new Error('[angular-native] expo-audio is not installed');
   const updateInterval = options.timeUpdate === undefined ? undefined : options.timeUpdate * 1000;
   const native = expo.createAudioPlayer(source, { updateInterval });

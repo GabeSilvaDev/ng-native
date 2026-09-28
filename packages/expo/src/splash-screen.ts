@@ -28,7 +28,7 @@
  * platform rather than injecting it, because the first call happens before there is an injector.
  */
 import { InjectionToken } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** The slice of `expo-splash-screen` this needs. */
 export interface NativeSplashScreen {
@@ -37,7 +37,10 @@ export interface NativeSplashScreen {
 }
 
 export function expoSplashScreen(): NativeSplashScreen | null {
-  const expo = optional(() => require('expo-splash-screen') as typeof import('expo-splash-screen'));
+  const expo = expoModule(
+    'expo-splash-screen',
+    () => require('expo-splash-screen') as typeof import('expo-splash-screen'),
+  );
   if (!expo) return null;
   return {
     preventAutoHideAsync: () => expo.preventAutoHideAsync(),
@@ -46,11 +49,23 @@ export function expoSplashScreen(): NativeSplashScreen | null {
 }
 
 export class Splash {
-  private readonly native: NativeSplashScreen | null;
+  private readonly source: NativeSplashScreen | null | (() => NativeSplashScreen | null);
+  private resolved: { readonly native: NativeSplashScreen | null } | null = null;
   private held = false;
 
-  constructor(native: NativeSplashScreen | null) {
-    this.native = native;
+  /**
+   * The module, or a function that reaches it: the shared instance is created when its file is
+   * imported, and reaching the module then would fail an import rather than the first call.
+   */
+  constructor(native: NativeSplashScreen | null | (() => NativeSplashScreen | null)) {
+    this.source = native;
+  }
+
+  private get native(): NativeSplashScreen | null {
+    this.resolved ??= {
+      native: typeof this.source === 'function' ? this.source() : this.source,
+    };
+    return this.resolved.native;
   }
 
   /** Whether the module is installed. Without it the screen hides itself on the first frame. */
@@ -107,7 +122,7 @@ const defaultFrame = (): Promise<void> =>
  * The one instance, exported directly because it is needed before an injector exists: holding the
  * splash is the first thing an entry file does.
  */
-export const splashScreen = new Splash(expoSplashScreen());
+export const splashScreen = new Splash(expoSplashScreen);
 
 export const SplashScreen = new InjectionToken<Splash>('angular-native.splashScreen', {
   factory: () => splashScreen,

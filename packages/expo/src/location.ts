@@ -14,7 +14,7 @@
  * permission first, and do nothing without it.
  */
 import { InjectionToken, Service, inject, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 import { Permission, type PermissionResponse } from './permissions.ts';
 
 /** How precise, in Expo's order: `lowest` is kilometres, `navigation` is metres and a hot GPS. */
@@ -77,7 +77,10 @@ export class Location {
   /** Overridden in a test to be somewhere without a GPS. */
   static readonly SOURCE = new InjectionToken<NativeLocation | null>(
     'angular-native.locationSource',
-    { factory: () => optional(() => require('expo-location') as NativeLocation) ?? null },
+    {
+      factory: () =>
+        expoModule('expo-location', () => require('expo-location') as NativeLocation) ?? null,
+    },
   );
 
   private readonly native = inject(Location.SOURCE);

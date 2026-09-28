@@ -76,8 +76,9 @@ token. Nothing in the package statically imports an Expo module, because a file 
 loaded by Node at all - Expo's build output uses extensionless relative imports, and what it pulls
 in reaches `react-native`, which is Flow. A `require` inside the token's factory has neither
 problem: Metro still resolves the string literal and bundles the module exactly as before, and in
-Node the call throws and the service goes inert, which is the same state as a device that does not
-have the thing.
+Node the call throws and the service goes inert. On a device, a module the app should have and does
+not - never installed, or installed without the app being rebuilt since - throws a
+`MissingModuleError` naming it and the commands that fix it.
 
 That token is also the test seam, and it hangs off the service rather than sitting beside it -
 `Clipboard.SOURCE`, not `CLIPBOARD_SOURCE`. One export per capability, and a token that cannot

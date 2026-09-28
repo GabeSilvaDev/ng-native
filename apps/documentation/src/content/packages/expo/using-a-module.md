@@ -33,22 +33,35 @@ never constructed.
 
 ## What happens without the module installed
 
-Each service reaches for its module with a `require()` inside a factory rather than a static
-import, so that the module Node cannot load is only ever reached lazily. A file with a static
-`import ... from 'expo-battery'` would be unloadable by Node at all - Expo's build output uses
-extensionless relative imports, and what it pulls in reaches `react-native`, which is Flow. A
-`require` inside a factory does not have that problem, but it does not make the dependency
-optional at build time: Metro still resolves the string literal while bundling, so an app that
-imports an entry point without installing its module gets a build error from Metro, not a runtime
-fallback. In a test, or anywhere else Node evaluates the call directly outside a bundled app,
-`require` inside an ESM module throws and the service goes inert instead - the same state as a
-device that does not have the thing.
+A service reaches for its module when it is first injected, with a `require()` inside a factory
+rather than a static import: a file with a static `import ... from 'expo-battery'` would be
+unloadable by Node at all - Expo's build output uses extensionless relative imports, and what it
+pulls in reaches `react-native`, which is Flow.
 
-Going inert means the service falls back to reporting nothing, rather than throwing: a level of
-`1`, a status of `'unknown'`, an `available` signal of `null`, a method that resolves to `null` or
-an empty list. Each module's own page says exactly what its "without the module" behaviour is.
-[Crypto](/packages/expo/crypto) is the exception: an empty identifier or hash is a wrong answer
-that looks right, so without `expo-crypto` it throws instead.
+Where the module exists for the platform the app is on, a missing one is a mistake with a fix, so
+the service throws a `MissingModuleError` rather than quietly doing nothing. That covers a package
+that was never installed, and the more common case of one that was installed after the app was
+last built: a development build, and Expo Go, contain only the native modules they were built
+with. The message names the module and the commands to run:
+
+```text
+expo-haptics is not in this build of the app. Install it with "npx expo install expo-haptics",
+then rebuild the app ("npx expo run:ios", or a new EAS build): a development build, and Expo Go,
+contain only the native modules they were built with.
+```
+
+`MissingModuleError` is exported from `@ng-native/expo`, with a `module` property naming the
+package, for an app that wants to catch it and show something of its own.
+
+Where the module cannot exist, the service goes inert instead: an iOS-only module such as
+[Sign in with Apple](/packages/expo/apple-sign-in) on Android, a service on the web, and a test in
+Node, where there is no platform at all. Code shared across platforms, and a test that provides
+no fake, keep working. Inert means reporting nothing rather than throwing: a level of `1`, a
+status of `'unknown'`, a method that resolves to `null` or an empty list. Each module's own page
+says what its service does in both cases. A few cannot be inert, because an empty answer would be
+a wrong one: a [database](/packages/expo/database) or a [player](/packages/expo/player) throws on
+the web as well, and [Crypto](/packages/expo/crypto) throws wherever it has no module, since an
+empty identifier or hash looks right and is not.
 
 ## What is on the bare import
 

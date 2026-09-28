@@ -13,7 +13,7 @@
  * class that needs no React; its `promptAsync` opens this same session.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 type Expo = typeof import('expo-web-browser');
 
@@ -31,7 +31,10 @@ export class Browser {
   /** Overridden in a test to sign in without a browser. */
   static readonly SOURCE = new InjectionToken<NativeBrowser | null>(
     'angular-native.browserSource',
-    { factory: () => optional(() => require('expo-web-browser') as Expo) ?? null },
+    {
+      factory: () =>
+        expoModule('expo-web-browser', () => require('expo-web-browser') as Expo) ?? null,
+    },
   );
 
   private readonly native = inject(Browser.SOURCE);

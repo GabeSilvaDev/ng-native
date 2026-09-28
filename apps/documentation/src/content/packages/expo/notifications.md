@@ -88,9 +88,14 @@ waited for - it has to be asked for. `Notifications` does this on construction, 
 notification routing is got wrong: an app that only listens for new taps does nothing on a cold
 start from a notification.
 
-## Without the module installed
+## Without the module
 
-`latest` and `response` stay `null`, `take()` always returns `null`, `dismissAll()` and
+On iOS and Android, a missing `expo-notifications` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `latest` and `response` stay `null`, `take()` always returns `null`, `dismissAll()` and
 `setBadge()` do nothing, and both push token methods resolve to `null`.
 
 ## Push notifications from your server
@@ -138,7 +143,7 @@ export class Root {
 
   async registerForPush(): Promise<void> {
     const token = await this.notifications.getExpoPushToken();
-    if (!token) return; // permission refused, or expo-notifications is not installed
+    if (!token) return; // permission refused
     // send `token` to your server - see below
   }
 }
@@ -146,10 +151,9 @@ export class Root {
 
 `getExpoPushToken(projectId?)` asks the notification permission first (see
 [permissions](/packages/expo/permissions)) and resolves to `null` rather than throwing when it is
-refused, or when `expo-notifications` is not installed - the same "inert, not broken" contract
-every service in this package follows. Refused or missing are the only two things it swallows: a
-real failure, such as no EAS project configured or the device being offline, still rejects the
-promise, so wrap the call in `try`/`catch` if you want to retry rather than surface it.
+refused. A refusal is the only thing it swallows: a real failure, such as no EAS project configured
+or the device being offline, still rejects the promise, so wrap the call in `try`/`catch` if you
+want to retry rather than surface it.
 
 If your backend talks to APNs or FCM directly instead of through Expo's push service, use
 `getDevicePushToken()` for the raw native token:

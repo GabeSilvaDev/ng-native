@@ -11,7 +11,7 @@
  * platform does not say is null, and so is everything from a module that is not installed.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 export type DeviceKind = 'phone' | 'tablet' | 'desktop' | 'tv' | 'unknown';
 
@@ -47,10 +47,14 @@ export class AppInfo {
   /** Overridden in a test to be any app on any phone. */
   static readonly SOURCE = new InjectionToken<NativeAppInfo>('angular-native.appInfoSource', {
     factory: () => ({
-      application: optional(
+      application: expoModule(
+        'expo-application',
         () => require('expo-application') as NonNullable<NativeAppInfo['application']>,
       ),
-      device: optional(() => require('expo-device') as NonNullable<NativeAppInfo['device']>),
+      device: expoModule(
+        'expo-device',
+        () => require('expo-device') as NonNullable<NativeAppInfo['device']>,
+      ),
     }),
   });
 

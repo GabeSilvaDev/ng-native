@@ -57,9 +57,14 @@ The change listener lives as long as the app does and is removed when the app is
 is mounted and unmounted - by a test's `unmount()`, a reload, or a host that embeds it - gets a
 fresh listener each time and leaves none behind.
 
-## Without the module installed
+## Without the module
 
-`changes` stays at `0`. `read()` resolves to an empty string. `write()` resolves without doing
+On iOS and Android, a missing `expo-clipboard` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `changes` stays at `0`. `read()` resolves to an empty string. `write()` resolves without doing
 anything.
 
 ## Reference

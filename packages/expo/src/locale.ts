@@ -19,7 +19,7 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule, optional } from './native.ts';
 
 /** The subset worth naming. The module's own `Locale` carries the rest and is passed through. */
 export interface LocaleLike {
@@ -48,7 +48,8 @@ export class Locale {
   /** Overridden in a test to switch language without Settings. */
   static readonly SOURCE = new InjectionToken<NativeLocale | null>('angular-native.localeSource', {
     factory: () => {
-      const expo = optional(
+      const expo = expoModule(
+        'expo-localization',
         () => require('expo-localization') as typeof import('expo-localization'),
       );
       const rn = optional(() => require('react-native') as typeof import('react-native'));

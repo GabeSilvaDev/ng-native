@@ -22,7 +22,7 @@
  * over one class, for the same reason the sensors are.
  */
 import { InjectionToken, computed, signal, type Signal, type WritableSignal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** What both `AsyncStorage` and `SecureStore` offer, reduced to the three verbs. */
 export interface NativeStore {
@@ -240,7 +240,8 @@ function decode(raw: string): unknown {
 }
 
 const plain = (): NativeStore | null => {
-  const module = optional(
+  const module = expoModule(
+    '@react-native-async-storage/async-storage',
     () =>
       require('@react-native-async-storage/async-storage') as {
         default: typeof import('@react-native-async-storage/async-storage').default;
@@ -256,7 +257,10 @@ const plain = (): NativeStore | null => {
 };
 
 const secure = (): NativeStore | null => {
-  const expo = optional(() => require('expo-secure-store') as typeof import('expo-secure-store'));
+  const expo = expoModule(
+    'expo-secure-store',
+    () => require('expo-secure-store') as typeof import('expo-secure-store'),
+  );
   if (!expo) return null;
   return {
     get: (key) => expo.getItemAsync(key),

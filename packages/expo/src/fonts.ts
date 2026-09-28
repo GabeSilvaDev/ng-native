@@ -21,7 +21,7 @@
  * here would be copying out its internals rather than using it.
  */
 import { InjectionToken, computed, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** A face a stylesheet declared, as the compiler collected it. */
 export interface FontFace {
@@ -64,7 +64,7 @@ export function registrationsFor(faces: readonly FontFace[]): Record<string, unk
 }
 
 export function expoFonts(): NativeFonts | null {
-  const expo = optional(() => require('expo-font') as typeof import('expo-font'));
+  const expo = expoModule('expo-font', () => require('expo-font') as typeof import('expo-font'));
   if (!expo) return null;
   return {
     loadAsync: (map) => expo.loadAsync(map as Parameters<typeof expo.loadAsync>[0]),

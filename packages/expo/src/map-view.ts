@@ -52,7 +52,7 @@ import {
 } from '@angular/core';
 import { Engine, type EngineNode, type NativeSyntheticEvent } from '@ng-native/fabric';
 import type { AppleMaps, CameraMoveEvent, Coordinates, GoogleMaps } from 'expo-maps';
-import { optional } from './native.ts';
+import { expoModule, optional } from './native.ts';
 import { registerExpoView } from './register-expo-view.ts';
 
 /** `expo-maps`' types with its enums as their string values, so no import of the module is needed. */
@@ -190,7 +190,10 @@ export class MapView {
           core?.requireOptionalNativeModule<{
             ViewPrototypes?: Record<string, MapViewFunctions>;
           }>(module)?.ViewPrototypes?.[module];
-        return functions('ExpoAppleMaps') ?? functions('ExpoGoogleMaps') ?? null;
+        return expoModule(
+          'expo-maps',
+          () => functions('ExpoAppleMaps') ?? functions('ExpoGoogleMaps'),
+        );
       },
     },
   );

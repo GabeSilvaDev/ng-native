@@ -6,7 +6,7 @@
  * expects. `expo-haptics`'s JavaScript adds none of that, which is why `./haptics.ts` skips it.
  */
 import { DestroyRef, InjectionToken, Service, inject, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** The slice of `expo-clipboard` this needs. */
 export interface NativeClipboard {
@@ -33,7 +33,10 @@ export class Clipboard {
     'angular-native.clipboardSource',
     {
       factory: () => {
-        const expo = optional(() => require('expo-clipboard') as typeof import('expo-clipboard'));
+        const expo = expoModule(
+          'expo-clipboard',
+          () => require('expo-clipboard') as typeof import('expo-clipboard'),
+        );
         if (!expo) return null;
         return {
           getStringAsync: () => expo.getStringAsync(),

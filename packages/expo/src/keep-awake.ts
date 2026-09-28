@@ -11,7 +11,7 @@
  * Tags are how two screens can each hold it without either releasing the other's.
  */
 import { InjectionToken, Service, computed, inject, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 export interface NativeKeepAwake {
   activate(tag: string): Promise<void>;
@@ -27,7 +27,10 @@ export class KeepAwake {
     'angular-native.keepAwakeSource',
     {
       factory: () => {
-        const expo = optional(() => require('expo-keep-awake') as typeof import('expo-keep-awake'));
+        const expo = expoModule(
+          'expo-keep-awake',
+          () => require('expo-keep-awake') as typeof import('expo-keep-awake'),
+        );
         if (!expo) return null;
         return {
           activate: (tag) => expo.activateKeepAwakeAsync(tag),

@@ -18,7 +18,7 @@
  * identifier.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 import { Permission, type PermissionResponse } from './permissions.ts';
 
 type Expo = typeof import('expo-tracking-transparency');
@@ -40,7 +40,13 @@ export class Tracking {
   /** Overridden in a test to answer a tracking prompt nobody was shown. */
   static readonly SOURCE = new InjectionToken<NativeTracking | null>(
     'angular-native.trackingSource',
-    { factory: () => optional(() => require('expo-tracking-transparency') as Expo) },
+    {
+      factory: () =>
+        expoModule(
+          'expo-tracking-transparency',
+          () => require('expo-tracking-transparency') as Expo,
+        ),
+    },
   );
 
   private readonly native = inject(Tracking.SOURCE);

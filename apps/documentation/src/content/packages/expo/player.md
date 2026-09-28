@@ -110,8 +110,12 @@ Audio has no view: `expo-audio` plays through the device's audio session, not a 
 
 ## Without the module installed
 
-`videoPlayer()` and `audioPlayer()` throw `[angular-native] expo-video is not installed` (or
-`expo-audio`) rather than returning a player that does nothing - there is no sensible default
-state for a player object with no underlying native side. An `<expo-video>` with no `expo-video`
-installed commits as `UnimplementedNativeView` rather than throwing, since the element is
-registered independently of whether the JavaScript module was ever asked for a player.
+`videoPlayer()` and `audioPlayer()` throw a `MissingModuleError` when `expo-video` (or
+`expo-audio`) is missing - never installed, or installed without the app being rebuilt since - on
+iOS, Android and the web alike, rather than returning a player that does nothing: there is no
+sensible default state for a player object with no native side. Its message names the module and
+the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed). An
+`<expo-video>` with no `expo-video` installed commits as `UnimplementedNativeView` rather than
+throwing, since the element is registered independently of whether the JavaScript module was ever
+asked for a player.

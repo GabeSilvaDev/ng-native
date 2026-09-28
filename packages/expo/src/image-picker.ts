@@ -11,7 +11,7 @@
  * unwrap, and `capture()` asks for the camera before opening it, where Expo's would reject.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 import { Permission, type PermissionResponse } from './permissions.ts';
 
 export type PickerOptions = import('expo-image-picker').ImagePickerOptions;
@@ -45,7 +45,9 @@ export class ImagePicker {
   static readonly SOURCE = new InjectionToken<NativeImagePicker | null>(
     'angular-native.imagePickerSource',
     {
-      factory: () => optional(() => require('expo-image-picker') as NativeImagePicker) ?? null,
+      factory: () =>
+        expoModule('expo-image-picker', () => require('expo-image-picker') as NativeImagePicker) ??
+        null,
     },
   );
 

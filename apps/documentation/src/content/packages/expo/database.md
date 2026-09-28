@@ -100,11 +100,14 @@ not delete stored data. The next call to
 `ready()` reopens the database; most apps can leave the connection open. To remove data on
 sign-out, delete the rows or the database file explicitly - closing the connection is not that.
 
-## Without the module installed
+## Without the module
 
-`ready()` rejects with `[angular-native] expo-sqlite is not installed`. There is no value to fall
-back to for a query that has not been asked yet, so a database an app relies on fails loudly
-rather than pretending to hold data it does not have.
+`ready()` rejects with a `MissingModuleError` when `expo-sqlite` is missing - never installed, or
+installed without the app being rebuilt since - on iOS, Android and the web alike. Its message
+names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed). There
+is no value to fall back to for a query that has not been asked yet, so a database an app relies
+on fails loudly rather than pretending to hold data it does not have.
 
 ## Working offline
 

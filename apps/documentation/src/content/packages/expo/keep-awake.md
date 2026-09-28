@@ -51,9 +51,14 @@ export class Recording {
 
 Releasing the same hold twice does nothing the second time.
 
-## Without the module installed
+## Without the module
 
-`hold()` still tracks the tag in `holders` and `active`, but nothing on the device changes and
+On iOS and Android, a missing `expo-keep-awake` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `hold()` still tracks the tag in `holders` and `active`, but nothing on the device changes and
 `stop` calls into a module that is not there safely.
 
 ## Reference

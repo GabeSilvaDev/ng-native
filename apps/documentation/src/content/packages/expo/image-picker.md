@@ -85,7 +85,12 @@ Android's permissions are added automatically by the module's config plugin.
 
 ## Without the module
 
-Every method behaves as though the person refused: `pick()` and `capture()` resolve to an empty
+On iOS and Android, a missing `expo-image-picker` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, every method behaves as though the person refused: `pick()` and `capture()` resolve to an empty
 list, and both permissions report `denied` with `canAskAgain: false` rather than throwing.
 
 ## Reference

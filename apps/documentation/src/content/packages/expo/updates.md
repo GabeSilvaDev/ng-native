@@ -66,9 +66,14 @@ does not - not mid-form, not mid-upload, usually on next foreground.
   available" banner here rather than show one that can never resolve; `check()` itself is a no-op
   and resolves `false` when this is false, so it is safe to call unconditionally.
 
-## Without the module installed
+## Without the module
 
-`enabled` is `false` and `check()` resolves `false` without doing anything, the same behaviour as
+On iOS and Android, a missing `expo-updates` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `enabled` is `false` and `check()` resolves `false` without doing anything, the same behaviour as
 running in Expo Go. `apply()` does nothing, since `state()` can never reach `'ready'`.
 
 ## Reference

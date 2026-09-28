@@ -56,10 +56,14 @@ export class Status {
   False whenever the level is unknown, since "I cannot tell" and "almost flat" are not the same
   answer and only one of them is a reason to degrade.
 
-## Without the module installed
+## Without the module
 
-`level` reads `1`, `known` is `false`, `state` is `'unknown'`, `saving` and `low` are `false`.
-Nothing throws.
+On iOS and Android, a missing `expo-battery` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `level` reads `1`, `known` is `false`, `state` is `'unknown'`, `saving` and `low` are `false`.
 
 ## Reference
 

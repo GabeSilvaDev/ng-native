@@ -89,8 +89,13 @@ export class FamilyPicker {
 - **`load(map)`** - register faces by name directly, for a font that did not come from a
   stylesheet. `loadSheet(...sheets)` is what `loadFonts()` calls underneath.
 
-## Without the module installed
+## Without the module
 
-`loadFonts()` resolves without registering anything, so text renders in the platform's fallback
+On iOS and Android, a missing `expo-font` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when `Fonts` first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `loadFonts()` resolves without registering anything, so text renders in the platform's fallback
 face rather than failing to mount. `Fonts.available` is `false`, `families()` is empty, and
 `has()` is always `false`.

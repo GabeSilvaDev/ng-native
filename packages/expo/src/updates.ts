@@ -15,7 +15,7 @@
  * a moment the user will not lose anything at. Nothing here does it on its own.
  */
 import { InjectionToken, Service, computed, inject, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 export interface NativeUpdates {
   readonly enabled: boolean;
@@ -33,7 +33,10 @@ export class Updates {
     'angular-native.updatesSource',
     {
       factory: () => {
-        const expo = optional(() => require('expo-updates') as typeof import('expo-updates'));
+        const expo = expoModule(
+          'expo-updates',
+          () => require('expo-updates') as typeof import('expo-updates'),
+        );
         if (!expo) return null;
         return {
           // False in development and in Expo Go, where the bundle comes from Metro. A banner shown

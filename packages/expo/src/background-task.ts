@@ -33,7 +33,7 @@ import type {
   BackgroundTaskResult as ExpoResult,
   BackgroundTaskStatus as ExpoStatus,
 } from 'expo-background-task';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 type Expo = typeof import('expo-background-task');
 
@@ -67,7 +67,10 @@ export class BackgroundTask {
   /** Overridden in a test to register tasks the platform never runs. */
   static readonly SOURCE = new InjectionToken<NativeBackgroundTask | null>(
     'angular-native.backgroundTaskSource',
-    { factory: () => optional(() => require('expo-background-task') as Expo) },
+    {
+      factory: () =>
+        expoModule('expo-background-task', () => require('expo-background-task') as Expo),
+    },
   );
 
   private readonly native = inject(BackgroundTask.SOURCE);

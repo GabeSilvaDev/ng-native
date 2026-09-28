@@ -18,7 +18,7 @@
  * and an app usually has exactly one. Opening is deferred until something asks: a database opened
  * at startup is a file handle and a WAL journal for an app that may never read from it.
  */
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** Enough of `SQLiteDatabase` to own it. Queries go through the database itself. */
 export interface NativeDatabase {
@@ -118,7 +118,11 @@ export class Database<T extends NativeDatabase> {
 /** A database, opened on first use and migrated before the first query sees it. */
 export function database(name: string, migrations: readonly Migration[] = []) {
   return new Database<import('expo-sqlite').SQLiteDatabase>(async () => {
-    const expo = optional(() => require('expo-sqlite') as typeof import('expo-sqlite'));
+    const expo = expoModule(
+      'expo-sqlite',
+      () => require('expo-sqlite') as typeof import('expo-sqlite'),
+      ['ios', 'android', 'web'],
+    );
     if (!expo) throw new Error('[angular-native] expo-sqlite is not installed');
     return expo.openDatabaseAsync(name);
   }, migrations);

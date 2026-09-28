@@ -12,7 +12,7 @@
  * installed, `pick()` answers with no files.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 type Expo = typeof import('expo-document-picker');
 
@@ -27,7 +27,10 @@ export class DocumentPicker {
   /** Overridden in a test to pick files without a file system. */
   static readonly SOURCE = new InjectionToken<NativeDocumentPicker | null>(
     'angular-native.documentPickerSource',
-    { factory: () => optional(() => require('expo-document-picker') as Expo) },
+    {
+      factory: () =>
+        expoModule('expo-document-picker', () => require('expo-document-picker') as Expo),
+    },
   );
 
   private readonly native = inject(DocumentPicker.SOURCE);

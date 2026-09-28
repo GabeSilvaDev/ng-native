@@ -10,7 +10,7 @@
  * to be installed - that is what links the native side.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule, optional } from './native.ts';
 
 /** How hard the collision felt. `rigid` and `soft` are iOS 13+. */
 export type ImpactStyle = 'light' | 'medium' | 'heavy' | 'rigid' | 'soft';
@@ -45,7 +45,9 @@ export class Haptics {
         const core = optional(
           () => require('expo-modules-core') as typeof import('expo-modules-core'),
         );
-        return core?.requireOptionalNativeModule<NativeHaptics>('ExpoHaptics') ?? null;
+        return expoModule('expo-haptics', () =>
+          core?.requireOptionalNativeModule<NativeHaptics>('ExpoHaptics'),
+        );
       },
     },
   );

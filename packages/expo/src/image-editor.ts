@@ -34,7 +34,7 @@ import type {
   SaveFormat as ExpoSaveFormat,
   SaveOptions,
 } from 'expo-image-manipulator';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 type Expo = typeof import('expo-image-manipulator');
 
@@ -63,7 +63,10 @@ export class ImageEditor {
   /** Overridden in a test to edit images without decoding any. */
   static readonly SOURCE = new InjectionToken<NativeImageEditor | null>(
     'angular-native.imageEditorSource',
-    { factory: () => optional(() => require('expo-image-manipulator') as Expo) },
+    {
+      factory: () =>
+        expoModule('expo-image-manipulator', () => require('expo-image-manipulator') as Expo),
+    },
   );
 
   private readonly native = inject(ImageEditor.SOURCE);

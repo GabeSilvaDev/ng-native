@@ -68,8 +68,13 @@ holding the splash is the first thing an entry file does, ahead of `bootstrapApp
 anything else. `inject(SplashScreen)` also works, for code that already has an injection context
 and wants the same instance; both resolve to the one `Splash` the module created.
 
-## Without the module installed
+## Without the module
 
-`available` is `false`. `hold()`, `hide()` and `hideWhenReady()` all resolve without touching
+On iOS and Android, a missing `expo-splash-screen` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when `hold()` first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `available` is `false`. `hold()`, `hide()` and `hideWhenReady()` all resolve without touching
 anything - the app starts as though the module hides itself instantly, which is what actually
 happens: with no `expo-splash-screen`, the native splash hides itself on the first frame anyway.

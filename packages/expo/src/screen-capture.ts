@@ -18,7 +18,7 @@
  * stays at zero.
  */
 import { DestroyRef, InjectionToken, Service, inject, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 import { Permission, type PermissionResponse } from './permissions.ts';
 
 type Expo = typeof import('expo-screen-capture');
@@ -44,7 +44,10 @@ export class ScreenCapture {
   /** Overridden in a test to take screenshots nobody took. */
   static readonly SOURCE = new InjectionToken<NativeScreenCapture | null>(
     'angular-native.screenCaptureSource',
-    { factory: () => optional(() => require('expo-screen-capture') as Expo) },
+    {
+      factory: () =>
+        expoModule('expo-screen-capture', () => require('expo-screen-capture') as Expo),
+    },
   );
 
   private readonly native = inject(ScreenCapture.SOURCE);

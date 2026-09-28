@@ -67,6 +67,11 @@ load answer the first's.
 An app that wants assets warmed before there is an injector at all - during bootstrap, say - calls
 `Asset.loadAsync` from `expo-asset` directly; there is nothing here to add for that case.
 
-## Without the module installed
+## Without the module
 
-The resource resolves to an empty list rather than throwing or rejecting.
+On iOS and Android, a missing `expo-asset` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when `assets()` first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, the resource resolves to an empty list rather than throwing or rejecting.

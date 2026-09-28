@@ -91,7 +91,12 @@ not depend on it.
 
 ## Without the module
 
-`open()` and `signIn()` resolve without opening anything - `signIn()` resolves to null, as though
+On iOS and Android, a missing `expo-web-browser` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `open()` and `signIn()` resolve without opening anything - `signIn()` resolves to null, as though
 the person had closed the page immediately.
 
 ## Reference

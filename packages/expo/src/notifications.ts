@@ -41,7 +41,7 @@ import type {
   NotificationResponse,
   SchedulableTriggerInputTypes,
 } from 'expo-notifications';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 import { Permission, type PermissionResponse } from './permissions.ts';
 
 type Expo = typeof import('expo-notifications');
@@ -117,7 +117,9 @@ export class Notifications {
   /** Overridden in a test to deliver a notification nobody sent. */
   static readonly SOURCE = new InjectionToken<NativeNotifications | null>(
     'angular-native.notificationsSource',
-    { factory: () => optional(() => require('expo-notifications') as Expo) },
+    {
+      factory: () => expoModule('expo-notifications', () => require('expo-notifications') as Expo),
+    },
   );
 
   private readonly native = inject(Notifications.SOURCE);

@@ -62,9 +62,14 @@ calendar change happens in Settings, outside the app. So `Locale` re-reads when 
 to the foreground, which is exactly when the answer can have changed - a public API (`AppState`)
 rather than a path into a build directory.
 
-## Without the module installed
+## Without the module
 
-`locales` and `calendars` are empty arrays, `locale` is null, `rtl` is `false`, `tag` is
+On iOS and Android, a missing `expo-localization` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `locales` and `calendars` are empty arrays, `locale` is null, `rtl` is `false`, `tag` is
 `undefined`.
 
 ## Reference

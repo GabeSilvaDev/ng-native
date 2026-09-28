@@ -78,7 +78,12 @@ by the module's config plugin.
 
 ## Without the module
 
-`permission` reports `denied` with `canAskAgain: false`. `current()` resolves to null and
+On iOS and Android, a missing `expo-location` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `permission` reports `denied` with `canAskAgain: false`. `current()` resolves to null and
 `start()` to a stop function that does nothing, exactly as though the permission had been refused.
 
 ## Reference

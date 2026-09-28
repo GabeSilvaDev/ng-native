@@ -41,7 +41,7 @@ import type {
   MediaType as ExpoMediaType,
   Query,
 } from 'expo-media-library';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 import { Permission, type PermissionResponse } from './permissions.ts';
 
 type Expo = typeof import('expo-media-library');
@@ -94,7 +94,9 @@ export class MediaLibrary {
   /** Overridden in a test to save photos to a library that is not there. */
   static readonly SOURCE = new InjectionToken<NativeMediaLibrary | null>(
     'angular-native.mediaLibrarySource',
-    { factory: () => optional(() => require('expo-media-library') as Expo) },
+    {
+      factory: () => expoModule('expo-media-library', () => require('expo-media-library') as Expo),
+    },
   );
 
   private readonly native = inject(MediaLibrary.SOURCE);

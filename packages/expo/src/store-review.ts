@@ -15,7 +15,7 @@
  * installed, every question answers no and `request()` does nothing.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 type Expo = typeof import('expo-store-review');
 
@@ -30,7 +30,7 @@ export class StoreReview {
   /** Overridden in a test to ask for a review nobody will be shown. */
   static readonly SOURCE = new InjectionToken<NativeStoreReview | null>(
     'angular-native.storeReviewSource',
-    { factory: () => optional(() => require('expo-store-review') as Expo) },
+    { factory: () => expoModule('expo-store-review', () => require('expo-store-review') as Expo) },
   );
 
   private readonly native = inject(StoreReview.SOURCE);

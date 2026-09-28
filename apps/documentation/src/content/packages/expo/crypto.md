@@ -66,9 +66,14 @@ AES encryption is not part of the service. `aesEncryptAsync` and `aesDecryptAsyn
 sealed data that only the module's own `AESEncryptionKey` and `AESSealedData` classes make, so code
 that encrypts imports `expo-crypto` directly.
 
-## Without the module installed
+## Without the module
 
-Every method throws, or rejects for the promise-returning ones, with an error naming
+On iOS and Android, a missing `expo-crypto` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, every method throws, or rejects for the promise-returning ones, with an error naming
 `expo-crypto`.
 
 ## Reference

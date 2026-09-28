@@ -56,9 +56,14 @@ export class BoardingPass {
 - **`restore()`** - puts the system's brightness back at once, whatever is still set. Available
   directly if a screen needs to put the brightness back without waiting for teardown.
 
-## Without the module installed
+## Without the module
 
-`level` stays at `1`. `set()` and `restore()` do nothing and do not throw.
+On iOS and Android, a missing `expo-brightness` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `level` stays at `1`. `set()` and `restore()` do nothing and do not throw.
 
 ## Reference
 

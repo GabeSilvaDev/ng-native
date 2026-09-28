@@ -3,7 +3,7 @@
  */
 import { InjectionToken, Service, computed, inject, type Signal } from '@angular/core';
 import { observed, observedFrom, type Observed } from './observed.ts';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** What the battery is doing. `unknown` is a real answer on a simulator. */
 export type BatteryState = 'unknown' | 'unplugged' | 'charging' | 'full';
@@ -21,7 +21,10 @@ export class Battery {
   /** Overridden in a test to drain a battery that is not there. */
   static readonly SOURCE = new InjectionToken<BatterySources>('angular-native.batterySource', {
     factory: () => {
-      const expo = optional(() => require('expo-battery') as typeof import('expo-battery'));
+      const expo = expoModule(
+        'expo-battery',
+        () => require('expo-battery') as typeof import('expo-battery'),
+      );
       if (!expo) return NOTHING;
 
       /**

@@ -18,7 +18,7 @@
  * would have the second screen's load answer the first's. An app that wants assets warmed before
  * there is an injector at all calls `Asset.loadAsync` itself - there is nothing here to add.
  */
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 import { resource, type Injector, type ResourceRef } from '@angular/core';
 
@@ -53,7 +53,7 @@ export function assetResource(
 }
 
 function expoAssets(): NativeAssets | null {
-  const expo = optional(() => require('expo-asset') as typeof import('expo-asset'));
+  const expo = expoModule('expo-asset', () => require('expo-asset') as typeof import('expo-asset'));
   if (!expo) return null;
   return { load: async (modules) => expo.Asset.loadAsync(modules as number[] | string[]) };
 }

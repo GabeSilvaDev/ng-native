@@ -24,7 +24,7 @@ import type {
   CryptoDigestAlgorithm as ExpoDigestAlgorithm,
   CryptoEncoding as ExpoEncoding,
 } from 'expo-crypto';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 type Expo = typeof import('expo-crypto');
 
@@ -65,7 +65,7 @@ export const CryptoEncoding = {
 export class Crypto {
   /** Overridden in a test to hand out identifiers that are not random. */
   static readonly SOURCE = new InjectionToken<NativeCrypto | null>('angular-native.cryptoSource', {
-    factory: () => optional(() => require('expo-crypto') as Expo),
+    factory: () => expoModule('expo-crypto', () => require('expo-crypto') as Expo),
   });
 
   private readonly native = inject(Crypto.SOURCE);

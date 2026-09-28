@@ -8,7 +8,7 @@
  */
 import { InjectionToken, Service, computed, inject, type Signal } from '@angular/core';
 import { observed, observedFrom, type Observed } from './observed.ts';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 export type ConnectionType =
   'wifi' | 'cellular' | 'ethernet' | 'bluetooth' | 'vpn' | 'other' | 'none' | 'unknown';
@@ -40,7 +40,10 @@ export class Network {
     'angular-native.networkSource',
     {
       factory: () => {
-        const expo = optional(() => require('expo-network') as typeof import('expo-network'));
+        const expo = expoModule(
+          'expo-network',
+          () => require('expo-network') as typeof import('expo-network'),
+        );
         if (!expo) return null;
 
         const read = (

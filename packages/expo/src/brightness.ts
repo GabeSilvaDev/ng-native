@@ -8,7 +8,7 @@
  * Expo's own API rather than to reach through a convenience here.
  */
 import { InjectionToken, Service, inject, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 export interface NativeBrightness {
   get(): Promise<number>;
@@ -23,7 +23,10 @@ export class Brightness {
     'angular-native.brightnessSource',
     {
       factory: () => {
-        const expo = optional(() => require('expo-brightness') as typeof import('expo-brightness'));
+        const expo = expoModule(
+          'expo-brightness',
+          () => require('expo-brightness') as typeof import('expo-brightness'),
+        );
         if (!expo) return null;
         return {
           get: () => expo.getBrightnessAsync(),

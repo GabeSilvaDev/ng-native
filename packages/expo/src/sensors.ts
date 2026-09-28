@@ -20,7 +20,7 @@
  * never idles.
  */
 import { InjectionToken, signal, type Signal } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /** What a three-axis sensor reports. Barometer and light report their own shapes. */
 export interface Vector {
@@ -112,7 +112,7 @@ type Sensors = typeof import('expo-sensors');
 function sensorToken<T>(pick: (expo: Sensors) => unknown, zero: T, name: string) {
   return new InjectionToken<Sensor<T>>(`angular-native.${name}`, {
     factory: () => {
-      const expo = optional(() => require('expo-sensors') as Sensors);
+      const expo = expoModule('expo-sensors', () => require('expo-sensors') as Sensors);
       return new Sensor<T>(expo ? (pick(expo) as NativeSensor<T>) : null, zero);
     },
   });

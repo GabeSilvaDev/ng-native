@@ -56,9 +56,14 @@ export class Banner {
   the same as offline. An offline banner that treats null as false flashes on every cold start,
   before the platform has had the chance to say either way.
 
-## Without the module installed
+## Without the module
 
-Everything reads as offline and unknown: `connected` is `false`, `type` is `'unknown'`, `reachable`
+On iOS and Android, a missing `expo-network` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, everything reads as offline and unknown: `connected` is `false`, `type` is `'unknown'`, `reachable`
 is `null`.
 
 ## Working offline

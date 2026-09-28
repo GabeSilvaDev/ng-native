@@ -6,7 +6,7 @@
  * name lands in and hands the file back.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /**
  * A file. Structural on purpose: this is Expo's `File`, described in terms a test can satisfy, so
@@ -51,7 +51,8 @@ export class FileSystem {
     'angular-native.fileSystemSource',
     {
       factory: () => {
-        const expo = optional(
+        const expo = expoModule(
+          'expo-file-system',
           () => require('expo-file-system') as typeof import('expo-file-system'),
         );
         if (!expo) return null;

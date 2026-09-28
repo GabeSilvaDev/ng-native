@@ -58,9 +58,14 @@ export class Attach {
     leaves the platform's own reference, which only some readers understand.
   - `base64` - on the web, whether each `uri` is the file's contents as base64. On by default.
 
-## Without the module installed
+## Without the module
 
-`pick()` resolves to an empty list.
+On iOS and Android, a missing `expo-document-picker` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `pick()` resolves to an empty list.
 
 ## Reference
 

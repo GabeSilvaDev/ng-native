@@ -31,7 +31,7 @@ import type {
   AppleAuthenticationCredentialState as ExpoCredentialState,
   AppleAuthenticationScope as ExpoScope,
 } from 'expo-apple-authentication';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 type Expo = typeof import('expo-apple-authentication');
 
@@ -88,7 +88,14 @@ export class AppleSignIn {
   /** Overridden in a test to sign in without Apple. */
   static readonly SOURCE = new InjectionToken<NativeAppleAuthentication | null>(
     'angular-native.appleSignInSource',
-    { factory: () => optional(() => require('expo-apple-authentication') as Expo) },
+    {
+      factory: () =>
+        expoModule(
+          'expo-apple-authentication',
+          () => require('expo-apple-authentication') as Expo,
+          ['ios'],
+        ),
+    },
   );
 
   private readonly native = inject(AppleSignIn.SOURCE);

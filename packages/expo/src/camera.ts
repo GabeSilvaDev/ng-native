@@ -24,7 +24,7 @@
  */
 import { Directive, ElementRef, InjectionToken, inject } from '@angular/core';
 import { Engine, type EngineNode } from '@ng-native/fabric';
-import { optional } from './native.ts';
+import { expoModule, optional } from './native.ts';
 
 export type PictureOptions = Omit<
   import('expo-camera').CameraPictureOptions,
@@ -47,9 +47,11 @@ export class Camera {
         const core = optional(
           () => require('expo-modules-core') as typeof import('expo-modules-core'),
         );
-        const module = core?.requireOptionalNativeModule<{
-          ViewPrototypes?: Record<string, CameraViewFunctions>;
-        }>('ExpoCamera');
+        const module = expoModule('expo-camera', () =>
+          core?.requireOptionalNativeModule<{
+            ViewPrototypes?: Record<string, CameraViewFunctions>;
+          }>('ExpoCamera'),
+        );
         // The camera is the module's first view, so its functions are under the module's name.
         return module?.ViewPrototypes?.['ExpoCamera'] ?? null;
       },

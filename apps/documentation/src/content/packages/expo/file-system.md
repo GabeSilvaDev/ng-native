@@ -62,11 +62,17 @@ exist, then writes - text or bytes - replacing whatever was there.
 this.files.write(this.files.cache('thumb.jpg'), imageBytes);
 ```
 
-## Without the module installed
+## Without the module
 
-Unlike most services in this package, `FileSystem` does not fall back to reporting nothing:
-`cache()`, `document()` and `write()` throw `[angular-native] expo-file-system is not installed`.
-A file that silently failed to write is worse than an error that says why.
+On iOS and Android, a missing `expo-file-system` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `FileSystem` still does not fall back to reporting
+nothing, unlike most services in this package: `cache()`, `document()` and `write()` throw
+`[angular-native] expo-file-system is not installed`. A file that silently failed to write is
+worse than an error that says why.
 
 ## Reference
 

@@ -52,9 +52,14 @@ export class WorkoutDone {
 - **`storeUrl()`** - that store page, for a "rate us" link that opens the store directly. Null when
   the app config sets none.
 
-## Without the module installed
+## Without the module
 
-`available()` and `hasAction()` resolve to `false`, `storeUrl()` is `null`, and `request()` resolves
+On iOS and Android, a missing `expo-store-review` - never installed, or installed without the app
+being rebuilt since - throws a `MissingModuleError` when the service first reaches for it. Its
+message names the module and the commands that fix it; see
+[Using a module](/packages/expo/using-a-module#what-happens-without-the-module-installed).
+
+On the web, and in a test that provides no fake, `available()` and `hasAction()` resolve to `false`, `storeUrl()` is `null`, and `request()` resolves
 without doing anything.
 
 ## Reference

@@ -24,7 +24,7 @@ import {
   signal,
   type Signal,
 } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 /**
  * What `expo-local-llm` reports, plus `notInstalled` for an app without the module or a build
@@ -129,7 +129,15 @@ export class LanguageModel {
     'angular-native.languageModelSource',
     {
       factory: () => {
-        const llm = optional(() => require('expo-local-llm') as typeof import('expo-local-llm'));
+        // The package loads without its native half, so that half is what decides.
+        const llm = expoModule(
+          'expo-local-llm',
+          () => {
+            const loaded = require('expo-local-llm') as typeof import('expo-local-llm');
+            return loaded.ExpoLocalLlmModule ? loaded : null;
+          },
+          ['ios'],
+        );
         const module = llm?.ExpoLocalLlmModule;
         if (!llm || !module) return null;
         return {

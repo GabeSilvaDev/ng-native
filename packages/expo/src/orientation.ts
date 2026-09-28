@@ -8,7 +8,7 @@
  */
 import { InjectionToken, Service, computed, inject, type Signal } from '@angular/core';
 import { observed, observedFrom, type Observed } from './observed.ts';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 export type Orientation =
   'unknown' | 'portrait' | 'portrait-upside-down' | 'landscape-left' | 'landscape-right';
@@ -35,7 +35,8 @@ export class DeviceOrientation {
     'angular-native.orientationSource',
     {
       factory: () => {
-        const expo = optional(
+        const expo = expoModule(
+          'expo-screen-orientation',
           () => require('expo-screen-orientation') as typeof import('expo-screen-orientation'),
         );
         if (!expo) return NOTHING;

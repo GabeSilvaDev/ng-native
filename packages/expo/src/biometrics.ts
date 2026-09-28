@@ -10,7 +10,7 @@
  * it is asked for; `expo-local-authentication`'s config plugin writes it.
  */
 import { InjectionToken, Service, inject } from '@angular/core';
-import { optional } from './native.ts';
+import { expoModule } from './native.ts';
 
 export type BiometricKind = 'fingerprint' | 'face' | 'iris';
 
@@ -42,7 +42,10 @@ export class Biometrics {
     'angular-native.biometricsSource',
     {
       factory: () =>
-        optional(() => require('expo-local-authentication') as NativeBiometrics) ?? null,
+        expoModule(
+          'expo-local-authentication',
+          () => require('expo-local-authentication') as NativeBiometrics,
+        ) ?? null,
     },
   );
 
