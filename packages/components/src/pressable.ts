@@ -113,11 +113,14 @@ export abstract class TouchableBase extends ViewBase {
   /** Android: a native ripple on press. */
   readonly androidRipple = input<AndroidRipple>(undefined, { alias: 'android_ripple' });
 
-  /** The touch lifted inside the press area. Not fired after a long press. */
+  /** The touch lifted inside the press area. Not fired after a `(longPress)` that has a listener. */
   readonly press = output<PressEvent>();
   readonly pressIn = output<PressEvent>();
   readonly pressOut = output<PressEvent>();
-  /** The touch has been held for `delayLongPress`. */
+  /**
+   * The touch has been held for `delayLongPress`. With no listener there is no long press, as in
+   * React Native, so a slow tap is still a `press`.
+   */
   readonly longPress = output<PressEvent>();
 
   /** Whether a press is in progress, for the pressed look. */
@@ -183,10 +186,31 @@ export abstract class TouchableBase extends ViewBase {
   private size: { width: number; height: number } | null = null;
   private cancelled = false;
   private longPressed = false;
+  /** How many `(longPress)` listeners there are; the long-press clock only runs with one. */
+  private longPressListeners = 0;
   private pressedAt = 0;
   private pressInTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private pressOutTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    super();
+    // output() has to be a member's own initializer for the compiler to see it, so its listeners
+    // are counted here, through its public subscribe.
+    const subscribe = this.longPress.subscribe.bind(this.longPress);
+    this.longPress.subscribe = (callback) => {
+      this.longPressListeners++;
+      const subscription = subscribe(callback);
+      let open = true;
+      return {
+        unsubscribe: () => {
+          if (open) this.longPressListeners--;
+          open = false;
+          subscription.unsubscribe();
+        },
+      };
+    };
+  }
 
   /** Called as a press starts and ends, for a subclass that shows it natively. `Text` does. */
   protected pressedChanged(_pressed: boolean): void {}
@@ -348,6 +372,7 @@ export abstract class TouchableBase extends ViewBase {
     this.pressed.set(true);
     this.pressedChanged(true);
     this.pressIn.emit(event);
+    if (!this.longPressListeners) return;
     this.longPressTimer = setTimeout(() => {
       this.longPressTimer = null;
       this.longPressed = true;

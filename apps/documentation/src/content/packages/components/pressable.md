@@ -15,6 +15,10 @@ claim it. This package builds `press`, `pressIn`, `pressOut` and `longPress` on 
 negotiation, the way React Native's own `Pressability` does, rather than on plain touch listeners
 that could not express any of it.
 
+A touch held for `delayLongPress` fires `longPress` instead of `press`, but only when something
+listens to `(longPress)`. Without a listener there is no long press, so a slow tap is still a
+`press`, as in React Native.
+
 ## Pressable
 
 `<pressable>` is the bare version of this: it renders a view and nothing else, but adds the press

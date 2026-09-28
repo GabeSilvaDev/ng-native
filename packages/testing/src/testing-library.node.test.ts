@@ -205,6 +205,19 @@ class Controls {
   }
 }
 
+@Component({
+  selector: 'x-press-only',
+  imports: [Pressable, Text],
+  template: `
+    <pressable accessibilityRole="button" (press)="presses = presses + 1"
+      ><text>Go</text></pressable
+    >
+  `,
+})
+class PressOnly {
+  presses = 0;
+}
+
 describe('events', () => {
   const field = (): FakeFabricNode => screen.getByPlaceholderText('Name');
 
@@ -221,6 +234,12 @@ describe('events', () => {
     assert.deepEqual(instance.events, ['longPress']);
     await userEvent.setup().longPress(screen.getByRole('button'), { duration: 0 });
     assert.deepEqual(instance.events, ['longPress', 'press'], 'released at once, it is a press');
+  });
+
+  it('still presses after a long hold when nothing listens for a long press', async () => {
+    const { instance } = await render(PressOnly);
+    await userEvent.longPress(screen.getByRole('button'), { duration: 800 });
+    assert.equal(instance.presses, 1);
   });
 
   it('changes text with the next eventCount, at or under the node given', async () => {
