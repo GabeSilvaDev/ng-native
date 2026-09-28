@@ -23,12 +23,21 @@ import { lucideMenu, lucideMoon, lucideSun, lucideX } from '@ng-icons/lucide';
 import { LINKS } from './landing/content.ts';
 import { LandingMark } from './landing/mark.ts';
 import { SECTIONS, type NavItem } from './navigation.ts';
+import { DocsSearch } from './search.ts';
 import { GITHUB_REPO } from './site.ts';
 import { DocsTheme } from './theme.ts';
 
 @Component({
   selector: 'app-root',
-  imports: [LandingMark, NgIcon, NgTemplateOutlet, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [
+    DocsSearch,
+    LandingMark,
+    NgIcon,
+    NgTemplateOutlet,
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+  ],
   providers: [provideIcons({ lucideMenu, lucideMoon, lucideSun, lucideX })],
   template: `
     @if (home()) {
@@ -87,6 +96,7 @@ import { DocsTheme } from './theme.ts';
               routerLink="/sponsor"
               >Sponsor</a
             >
+            <docs-search />
             <button
               type="button"
               class="inline-flex size-8 items-center justify-center rounded-md text-fg-tertiary transition-colors hover:bg-surface-raised hover:text-fg"

@@ -44,7 +44,8 @@ function titleFor(title: string): string {
       </div>
     } @else if (doc(); as page) {
       <div class="flex gap-x-12">
-        <article class="min-w-0 flex-1">
+        <!-- The one part of the site the search index reads: see src/search.ts. -->
+        <article class="min-w-0 flex-1" data-pagefind-body>
           <div class="max-w-3xl">
             @if (page.headings.length > 1) {
               <!--
@@ -53,7 +54,10 @@ function titleFor(title: string): string {
                 because a list of headings above the prose it describes is a worse first screen than
                 the prose itself. It sits above the title, so it never crowds the lead.
               -->
-              <div class="mb-8 rounded-lg border border-border-subtle xl:hidden">
+              <div
+                class="mb-8 rounded-lg border border-border-subtle xl:hidden"
+                data-pagefind-ignore
+              >
                 <button
                   type="button"
                   class="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-medium text-fg"
@@ -95,7 +99,7 @@ function titleFor(title: string): string {
             @let parts = split(page.blocks);
             <doc-content [blocks]="parts.lead" />
             @if (parts.references.length) {
-              <doc-usage [references]="parts.references" />
+              <doc-usage [references]="parts.references" data-pagefind-ignore />
             }
             <!--
               Its own prose block, so the paragraph rhythm does not reach across from the lead:
@@ -108,7 +112,10 @@ function titleFor(title: string): string {
                 Two fixed halves: Previous always on the left and Next always on the right, so
                 either one keeps its place and its size when the other is missing.
               -->
-              <nav class="mt-16 grid grid-cols-2 gap-4 border-t border-border-subtle pt-6">
+              <nav
+                class="mt-16 grid grid-cols-2 gap-4 border-t border-border-subtle pt-6"
+                data-pagefind-ignore
+              >
                 @if (previous(); as item) {
                   <a
                     [routerLink]="'/' + item.path"
