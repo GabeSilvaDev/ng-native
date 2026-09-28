@@ -27,6 +27,7 @@ import { Clipboard } from '@ng-native/expo/clipboard';
 import { LanguageModel } from '@ng-native/expo/language-model';
 import { Locale } from '@ng-native/expo/locale';
 import { Network } from '@ng-native/expo/network';
+import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
 import { DeviceOrientation } from '@ng-native/expo/orientation';
 import { compileFixture } from './compile.ts';
@@ -107,6 +108,16 @@ const cases: readonly { name: string; service: Type<unknown>; providers: Provide
           addPushTokenListener: () => ({ remove: listen() }),
           getLastNotificationResponseAsync: async () => null,
         },
+      },
+    ],
+  },
+  {
+    name: 'AppleSignIn',
+    service: AppleSignIn,
+    providers: [
+      {
+        provide: AppleSignIn.SOURCE,
+        useValue: { addRevokeListener: () => ({ remove: listen() }) },
       },
     ],
   },

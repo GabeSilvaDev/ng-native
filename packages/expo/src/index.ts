@@ -55,6 +55,21 @@ export {
 } from './expo-ui-components.ts';
 export { ExpoImage, type ExpoImageContentFit, type ExpoImageSource } from './expo-image.ts';
 export {
+  ExpoGlass,
+  ExpoGlassContainer,
+  liquidGlassAvailable,
+  type GlassEffectStyleConfig,
+  type GlassStyle,
+} from './glass.ts';
+export {
+  ExpoSymbol,
+  type SymbolAnimationSpec,
+  type SymbolResizeMode,
+  type SymbolScale,
+  type SymbolType,
+  type SymbolWeight,
+} from './symbol.ts';
+export {
   SegmentedControl,
   type SegmentedControlChangeEvent,
   type SegmentedControlFont,

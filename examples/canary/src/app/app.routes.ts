@@ -211,6 +211,10 @@ export const routes: Routes = [
     path: 'expo-ui',
     loadComponent: () => import('./expo/expo-ui.ts').then((m) => m.ExpoUiPage),
   },
+  {
+    path: 'native-views',
+    loadComponent: () => import('./expo/native-views.ts').then((m) => m.NativeViewsPage),
+  },
   { path: 'forms', loadComponent: () => import('./forms/forms.ts').then((m) => m.FormsPage) },
   {
     path: 'gestures',

@@ -226,6 +226,11 @@ export class Home {
       title: 'SwiftUI controls',
       blurb: '@expo/ui views, driven by the engine rather than React',
     },
+    {
+      path: '/native-views',
+      title: 'Native views',
+      blurb: 'Liquid Glass, SF Symbols and Sign in with Apple',
+    },
     { path: '/forms', title: 'Signal forms', blurb: 'binding and validation over native controls' },
     { path: '/gestures', title: 'Gestures', blurb: 'responder system, capture, scroll blocking' },
     { path: '/list', title: 'Virtual list', blurb: '1000 rows, mixed heights, commit stats' },

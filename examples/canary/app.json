@@ -6,7 +6,8 @@
     "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "dev.angularnative.canary",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "dev.angularnative.canary"

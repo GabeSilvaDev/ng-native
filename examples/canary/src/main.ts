@@ -5,7 +5,7 @@ import { AppRegistry, Image, Platform, processColor } from 'react-native';
 import { mount } from '@ng-native/platform';
 import { currentConditions, deviceTokens, watchConditions } from '@ng-native/device';
 import { getFabricUIManager, registerPlatformComponents, styleSheetOf } from '@ng-native/fabric';
-import { registerExpoUiViews, registerExpoView } from '@ng-native/expo';
+import { registerExpoUiViews, registerExpoView, registerExpoViews } from '@ng-native/expo';
 import { registerExpoMap } from '@ng-native/expo/map-view';
 import { App } from './app/app.ts';
 import { appConfig } from './app/app.config.ts';
@@ -18,6 +18,8 @@ registerPlatformComponents(Platform.OS);
 // expo-image's Fabric view, under an element name of our choosing. Its React component is
 // skipped entirely; the props the component would have computed are written in the template.
 registerExpoView('expo-image', 'ExpoImage');
+// Liquid Glass, SF Symbols and the Sign in with Apple button, for their typed components.
+registerExpoViews('expo-glass', 'expo-glass-container', 'expo-symbol', 'apple-sign-in-button');
 // The SwiftUI and Compose controls, by name. Names and defaults rather than a component per
 // view: an Angular wrapper for each would be a second place for every prop to be wrong.
 registerExpoUiViews(Platform.OS as 'ios' | 'android');

@@ -92,12 +92,16 @@ export const EXPO_VIEWS: Readonly<Record<string, [string, ExpoViewOptions?]>> = 
    * iOS, after the Swift class, and commits as nothing on Android. `Camera` takes its pictures.
    */
   'expo-camera': ['ExpoCamera'],
+  /** `expo-apple-authentication`: Apple's Sign in with Apple button. iOS only. */
+  'apple-sign-in-button': ['ExpoAppleAuthentication'],
   /** `expo-symbols`: SF Symbols, iOS only, and the reason `icons` is not needed for them. */
   'expo-symbol': ['SymbolModule', { defaultProps: { type: 'monochrome' } }],
   /** `expo-gl`, whose context is reached through an event rather than a prop. */
   'expo-gl': ['ExpoGL'],
   /** `expo-glass-effect`: the iOS 26 material. Renders as a plain view where it is unavailable. */
   'expo-glass': ['ExpoGlassEffect', { viewName: 'GlassView' }],
+  /** Glass views that merge into one another when they come within `spacing` points. */
+  'expo-glass-container': ['ExpoGlassEffect', { viewName: 'GlassContainer' }],
   /** `expo-mesh-gradient`: the one gradient CSS cannot express, because it has no CSS spelling. */
   'expo-mesh-gradient': ['ExpoMeshGradient', { viewName: 'MeshGradientView' }],
   /** `expo-live-photo`, iOS only. */

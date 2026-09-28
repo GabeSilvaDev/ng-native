@@ -70,9 +70,11 @@ have to look each one up:
 | `expo-blur`                            | `ExpoBlurView`                          | A blur of what is _behind_ a view - the one thing CSS cannot express.  |
 | `expo-video`                           | `ExpoVideo` (`VideoView`)               | The player is a shared object the module hands out; this is its view.  |
 | `expo-camera`                          | `ExpoCamera`                            | The module's default view. See [Camera](/packages/expo/camera).        |
+| `apple-sign-in-button`                 | `ExpoAppleAuthentication`               | See [Sign in with Apple](/packages/expo/apple-sign-in). iOS only.      |
 | `expo-symbol`                          | `SymbolModule`                          | SF Symbols, iOS only.                                                  |
 | `expo-gl`                              | `ExpoGL`                                | Its context is reached through an event rather than a prop.            |
 | `expo-glass`                           | `ExpoGlassEffect` (`GlassView`)         | The iOS 26 material. Renders as a plain view where unavailable.        |
+| `expo-glass-container`                 | `ExpoGlassEffect` (`GlassContainer`)    | Glass views inside merge when they come within `spacing` points.       |
 | `expo-mesh-gradient`                   | `ExpoMeshGradient` (`MeshGradientView`) | The one gradient with no CSS spelling.                                 |
 | `expo-live-photo`                      | `ExpoLivePhoto` (`LivePhotoView`)       | iOS only.                                                              |
 | `expo-maps-google` / `expo-maps-apple` | `ExpoGoogleMaps` / `ExpoAppleMaps`      | Two modules, one view each. Typed as one: [Maps](/packages/expo/maps). |
@@ -81,6 +83,43 @@ Registering one you have not installed does not error at registration time; it p
 that commits as nothing (`UnimplementedNativeView`), which is why elements are named one at a time
 rather than all at once - finding out at startup which modules are actually present is not
 something JavaScript can do without importing them all.
+
+## Typed components
+
+A registered element takes whatever props it is given. For the views an app reaches for most, a
+component over the same element gives it typed inputs, so a template is checked against the props
+native reads, and does in Angular what the module's React component does first. Import the
+component and keep registering the element:
+
+| Component            | Element                | What it adds                                                                                              |
+| -------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| `ExpoImage`          | `expo-image`           | `source` and `contentFit` typed.                                                                          |
+| `ExpoGlass`          | `expo-glass`           | `glassEffectStyle` (`regular`, `clear`, `none`), `tintColor`, `isInteractive`, `colorScheme`.             |
+| `ExpoGlassContainer` | `expo-glass-container` | `spacing`.                                                                                                |
+| `ExpoSymbol`         | `expo-symbol`          | `name`, `type` (`monochrome` unless set), `weight`, `scale`, `colors`, a `size` in points, 24 unless set. |
+| `AppleSignInButton`  | `apple-sign-in-button` | `buttonType` and `buttonStyle` by name. See [Sign in with Apple](/packages/expo/apple-sign-in).           |
+
+```ts
+import { Component } from '@angular/core';
+import { ExpoGlass, ExpoSymbol, registerExpoViews } from '@ng-native/expo';
+
+registerExpoViews('expo-glass', 'expo-symbol'); // once, before the app mounts
+
+@Component({
+  selector: 'app-like',
+  imports: [ExpoGlass, ExpoSymbol],
+  template: `
+    <expo-glass class="size-14 items-center justify-center rounded-full" isInteractive>
+      <expo-symbol name="heart.fill" [size]="24" tintColor="#ff2d55" />
+    </expo-glass>
+  `,
+})
+export class Like {}
+```
+
+A glass view's corners are its own `border-radius`. Where Liquid Glass is unavailable - before iOS
+26, and on Android - `<expo-glass>` renders as a plain view, and `liquidGlassAvailable()` says
+which it will be, so a fallback background can be set for the rest.
 
 ## Community views
 

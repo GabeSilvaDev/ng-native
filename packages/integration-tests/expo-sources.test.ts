@@ -23,6 +23,7 @@ import { Clipboard } from '@ng-native/expo/clipboard';
 import { FileSystem } from '@ng-native/expo/file-system';
 import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
+import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
 import { DeviceOrientation } from '@ng-native/expo/orientation';
 import { Locale } from '@ng-native/expo/locale';
@@ -365,6 +366,25 @@ describe('the storage sources', () => {
   it('is inert with no expo-secure-store installed', () => {
     const store = withModules({}, () => defaultSource(SecureStorage));
     assert.equal(store.signal('token', '')(), '');
+  });
+});
+
+describe('the Sign in with Apple source', () => {
+  it('is expo-apple-authentication itself', () => {
+    const expoAppleAuthentication = { isAvailableAsync: async () => true };
+    assert.equal(
+      withModules({ 'expo-apple-authentication': expoAppleAuthentication }, () =>
+        defaultSource(AppleSignIn.SOURCE),
+      ),
+      expoAppleAuthentication,
+    );
+  });
+
+  it('is inert with no expo-apple-authentication installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(AppleSignIn.SOURCE)),
+      null,
+    );
   });
 });
 

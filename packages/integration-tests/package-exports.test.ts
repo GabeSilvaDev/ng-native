@@ -97,6 +97,7 @@ describe('the entry points Metro has to resolve', () => {
   it('maps every per-module entry point into src, which is where the file is', () => {
     // One per Expo module, so importing haptics does not make an app install the video player.
     for (const name of [
+      'apple-sign-in',
       'assets',
       'battery',
       'brightness',
