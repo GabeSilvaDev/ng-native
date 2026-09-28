@@ -23,6 +23,18 @@ export class TabSearch {
   marker = 'search';
 }
 
+/** A tab page that throws while it is built. */
+@Component({
+  selector: 'x-tab-broken',
+  imports: [Text],
+  template: `<text>broken</text>`,
+})
+export class TabBroken {
+  constructor() {
+    throw new Error('the broken tab threw while it was built');
+  }
+}
+
 /** A tab page with an input, for the binding `withComponentInputBinding()` turns on. */
 @Component({
   selector: 'x-tab-titled',

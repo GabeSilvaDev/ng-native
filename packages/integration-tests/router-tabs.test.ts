@@ -9,7 +9,13 @@
 import assert from 'node:assert/strict';
 import { after, afterEach, before, beforeEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { EnvironmentInjector, inject, type ComponentRef, type Type } from '@angular/core';
+import {
+  EnvironmentInjector,
+  ErrorHandler,
+  inject,
+  type ComponentRef,
+  type Type,
+} from '@angular/core';
 import {
   ActivatedRoute,
   ChildrenOutletContexts,
@@ -67,6 +73,10 @@ describe('native tabs outlet', () => {
   let navigated: string[];
   /** What the next navigation resolves to: false is a guard saying no. */
   let navigationResult: boolean;
+  /** What the next navigation fails with, as a tab whose page throws while it is built does. */
+  let navigationError: unknown;
+  /** What reached the app's ErrorHandler. */
+  let reported: unknown[];
   /** Whether the app asked for `withComponentInputBinding()`, as `Router` reports it. */
   let inputBinding: boolean;
   /** Just enough of `Router.events` for the outlet to follow navigations. */
@@ -115,6 +125,8 @@ describe('native tabs outlet', () => {
   beforeEach(async () => {
     navigated = [];
     navigationResult = true;
+    navigationError = undefined;
+    reported = [];
     inputBinding = true;
     const listeners = new Set<(event: unknown) => void>();
     routerEvents = {
@@ -152,9 +164,15 @@ describe('native tabs outlet', () => {
             getCurrentNavigation: () => null,
             navigateByUrl: (url: string) => (
               navigated.push(url),
-              Promise.resolve(navigationResult)
+              navigationError === undefined
+                ? Promise.resolve(navigationResult)
+                : Promise.reject(navigationError)
             ),
           },
+        },
+        {
+          provide: ErrorHandler,
+          useValue: { handleError: (error: unknown) => reported.push(error) },
         },
       ],
     });
@@ -407,6 +425,47 @@ describe('native tabs outlet', () => {
       { selectedScreenKey: 'library', baseProvenance: 4 },
       'native already switched, so it has to be asked back or the bar shows a tab nobody is on',
     );
+  });
+
+  it('reports a tap whose navigation fails, and puts native back on the tab in front', async () => {
+    outlet.activateWith(routeFor(library), env);
+    await settle();
+
+    const host = () =>
+      flatten(fabric.committed).find((node) => node.viewName === 'RNSTabsHostIOS')!;
+    navigationError = new Error('the search page threw while it was built');
+    await fireEvent(host(), 'tabSelected', { selectedScreenKey: 'search', provenance: 4 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    assert.deepEqual(reported, [navigationError], 'a tab that will not open says why');
+    assert.equal(outlet.selectedKey, 'library');
+    assert.deepEqual(host().props['navStateRequest'], {
+      selectedScreenKey: 'library',
+      baseProvenance: 4,
+    });
+  });
+
+  it('reports a page that throws while it is built once, not again when the navigation fails', async () => {
+    outlet.activateWith(routeFor(library), env);
+    await settle();
+
+    let thrown: unknown;
+    try {
+      outlet.activateWith(
+        routeFor({ path: 'search', component: mod['TabBroken'] as Type<unknown> }),
+        env,
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    assert.ok(thrown instanceof Error);
+    // The router fails the navigation with what activation threw, and the tap sees that failure.
+    navigationError = thrown;
+    const host = flatten(fabric.committed).find((node) => node.viewName === 'RNSTabsHostIOS')!;
+    await fireEvent(host, 'tabSelected', { selectedScreenKey: 'search', provenance: 4 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    assert.deepEqual(reported, [thrown]);
   });
 
   it('carries the provenance it last acknowledged, so native can spot a stale request', async () => {

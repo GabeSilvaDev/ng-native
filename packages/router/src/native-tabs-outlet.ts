@@ -114,6 +114,8 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
   /** Optional so the outlet can be driven through `RouterOutletContract` directly, as tests do. */
   private readonly router = inject(Router, { optional: true });
   private readonly errors = inject(ErrorHandler);
+  /** What activation has reported already, so the failed navigation it causes is not reported again. */
+  private readonly reported = new WeakSet<object>();
   /** The app's `withTabDefaults`, for whatever the outlet does not bind itself. */
   protected readonly defaults = inject(NATIVE_TAB_DEFAULTS);
 
@@ -250,6 +252,7 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
     } catch (error) {
       this.abandon(entry, ref, content);
       this.errors.handleError(error);
+      if (error !== null && typeof error === 'object') this.reported.add(error);
       throw error;
     }
 
@@ -434,9 +437,16 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
 
     // Returning to a tab returns to the url it was last on, which is the whole point of keeping
     // it mounted. A tab never visited starts at its own path.
+    // A navigation that fails is reported, unless activation reported it already: a page that
+    // does not load, caught here, would otherwise leave nothing but a tab that will not open.
     void this.router?.navigateByUrl(entry.url || this.pathOf(entry)).then(
       (arrived) => this.revertUnless(arrived),
-      () => this.revertUnless(false),
+      (error: unknown) => {
+        if (error === null || typeof error !== 'object' || !this.reported.has(error)) {
+          this.errors.handleError(error);
+        }
+        this.revertUnless(false);
+      },
     );
   }
 
