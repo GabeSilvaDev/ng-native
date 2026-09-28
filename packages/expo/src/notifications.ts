@@ -40,7 +40,10 @@ export interface NotificationLike {
 
 export interface NotificationResponseLike {
   readonly notification: NotificationLike;
+  /** The action button tapped, or the platform's default identifier for a tap on the body. */
   readonly actionIdentifier: string;
+  /** What the user typed, when the action is a text input (`textInput` in its category). */
+  readonly userText?: string;
 }
 
 /** A push token as the platform hands it over: `expo` for Expo's service, `ios`/`android` native. */

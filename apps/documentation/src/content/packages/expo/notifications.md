@@ -287,6 +287,80 @@ For a device push token instead, send through APNs or FCM's own HTTP API directl
 service has no part in that path. _Both the curl example and a real send have not been run against
 a device for this change; verify the token format and response shape before relying on them._
 
+## Action buttons and replies
+
+Buttons on a notification are a category, set once with `expo-notifications` directly. A
+notification opts in with `categoryIdentifier`. A tap on a button arrives as a response like any
+other, with the button's `identifier` as `actionIdentifier`, and a button with `textInput` carries
+what the user typed as `userText`:
+
+```ts
+import * as Expo from 'expo-notifications';
+
+await Expo.setNotificationCategoryAsync('message', [
+  {
+    identifier: 'reply',
+    buttonTitle: 'Reply',
+    textInput: { submitButtonTitle: 'Send', placeholder: 'Message' },
+  },
+  {
+    identifier: 'mark-read',
+    buttonTitle: 'Mark as read',
+    options: { opensAppToForeground: false },
+  },
+]);
+```
+
+```ts
+const tapped = this.notifications.take();
+if (tapped?.actionIdentifier === 'reply' && tapped.userText) {
+  this.chat.send(tapped.notification.request.identifier, tapped.userText);
+}
+```
+
+`take()` keys a response by its notification and its action, so a tap on the body and a tap on a
+button of the same notification are two responses, each handed over once.
+
+## Background notifications
+
+A task that handles a notification while the app is in the background, or not running at all,
+runs through `expo-task-manager`. It loads the app's bundle and evaluates its entry module, but
+does not run the app, so Angular is never bootstrapped: `main.ts` registers the app with
+`AppRegistry.registerRunnable`, and only a launch with a screen runs that. The task therefore goes
+at the top level of `main.ts`, beside that registration, and works without Angular - no
+components, and no services from `inject()`:
+
+```ts
+// main.ts
+import * as TaskManager from 'expo-task-manager';
+import * as Expo from 'expo-notifications';
+
+TaskManager.defineTask<Expo.NotificationTaskPayload>('notification-task', async ({ data }) => {
+  // Plain functions and modules only: store the payload, sync, update the badge.
+  return Expo.BackgroundNotificationResult.NewData;
+});
+void Expo.registerTaskAsync('notification-task');
+
+AppRegistry.registerRunnable('main', ({ rootTag }) => {
+  // mount(...) as before
+});
+```
+
+Importing the `@ng-native/*` packages has no native side effects, so the task can share plain
+modules - a storage wrapper, an API client - with the app, as long as they do not need an injector.
+Remote pushes need push credentials (APNs, FCM) and a development build; Expo Go cannot receive
+them on Android.
+
+## Custom notification UI
+
+What a notification looks like when expanded, and changing a push before it is shown (attaching an
+image, decrypting it), are native app extensions on iOS - a Notification Content Extension and a
+Notification Service Extension - and custom layouts on Android. They run in their own process,
+outside the app, where neither Angular nor React Native runs, so they are written in Swift or
+Kotlin and added to the native project with an Expo config plugin. Everything the app itself does
+with notifications - scheduling, channels, categories, badges, reacting to arrivals and taps - is
+the module and this service.
+
 ## Reference
 
 <!-- api: Notifications -->

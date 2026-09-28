@@ -115,6 +115,14 @@ describe('notifications', () => {
     assert.equal(notifications.take(), null);
   });
 
+  it('hands over the text typed into a reply action', () => {
+    const native = platform();
+    const notifications = serviceWith(Notifications.SOURCE, native, () => new Notifications());
+    native.emit('response', { ...responseTo('chat', 'reply'), userText: 'On my way' });
+    const reply: string | undefined = notifications.take()?.userText;
+    assert.equal(reply, 'On my way');
+  });
+
   it('hands over a second tap on the same notification', () => {
     // Same notification, tapped again after the app was backgrounded. It is a new instruction.
     const native = platform();
