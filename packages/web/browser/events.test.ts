@@ -46,9 +46,12 @@ describe('a pressable, from the keyboard', () => {
     await userEvent.keyboard('[Space>]');
     await settle();
     expect(events()).toEqual(['pressIn']);
+    // Held past minPressDuration (130ms), so pressOut is not deferred and fires on release ahead
+    // of press, as React Native orders them. A shorter hold would race the runner's speed.
+    await new Promise((resolve) => setTimeout(resolve, 200));
     await userEvent.keyboard('[/Space]');
-    await waitFor(() => events().includes('pressOut'), 'the press to end');
-    expect(events()).toEqual(['pressIn', 'press', 'pressOut']);
+    await waitFor(() => events().includes('press'), 'the press to end');
+    expect(events()).toEqual(['pressIn', 'pressOut', 'press']);
   });
 });
 
