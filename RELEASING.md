@@ -5,12 +5,12 @@ one version. `.github/workflows/release.yml` does it, run by hand from the Actio
 
 ## Once, before the first release
 
-1. **Own the npm scope.** Create the `ng-native` organisation on npmjs.com. Every package publishes
+1. **Own the npm scope.** Create the `ng-native` organization on npmjs.com. Every package publishes
    as `@ng-native/*`, and a publish to a scope you do not own fails.
 2. **Publish a placeholder of each package.** npm only lets a trusted publisher be configured on a
    package that already exists, so each one first went out by hand as an empty `0.0.1`.
 3. **Configure trusted publishing** on each package's settings page on npmjs.com: GitHub Actions,
-   organisation `ng-native`, repository `ng-native`, workflow `release.yml`. The release publishes
+   organization `ng-native`, repository `ng-native`, workflow `release.yml`. The release publishes
    through OIDC and no npm token is stored anywhere. The first release must be above `0.0.1`:
    `0.1.0`, or a `minor` bump.
 
@@ -59,6 +59,9 @@ each, installing with npm. Once all of those pass, it runs the same gate CI does
   (`0.2.0-rc.0`) would go out under that suffix's dist-tag instead, so `latest` never moves to it.
 - The commit and tag are pushed, and a GitHub release is created with the changelog entry as its
   notes.
+- The documentation site is built from the tag and deployed to production (`docs.yml`), so
+  ng-native.com documents what is on npm, not what is on `main`. A documentation-only fix can go
+  live sooner by running **Docs** by hand on `main`.
 
 If it fails before publishing, nothing has left the runner: fix it and run it again. If it fails part
 way through publishing, run it again with the same exact version (not a bump): packages already on

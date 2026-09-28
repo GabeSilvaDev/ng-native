@@ -1,13 +1,25 @@
 name: Docs
 
-# The documentation site on Cloudflare Pages: main is production, and every pull request gets a
-# preview of its own, linked from a comment on the pull request that each push updates.
+# The documentation site on Cloudflare Pages. Production is what was last released: release.yml
+# calls this with the release tag, so the site never documents code that is not on npm yet. Every
+# pull request gets a preview of its own, linked from a comment on the pull request that each push
+# updates. Run it by hand on main to deploy production on its own: a documentation-only fix before
+# the next release, or, with a tag as `ref`, a released version again.
 on:
-  push:
-    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit to build, the release tag
+        type: string
+        required: true
   workflow_dispatch:
+    inputs:
+      ref:
+        description: The tag or commit to build (empty for the branch it runs on)
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -28,6 +40,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - uses: ./.github/actions/setup
 
