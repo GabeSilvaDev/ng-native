@@ -42,6 +42,7 @@
     "./locale": "./src/locale.ts",
     "./location": "./src/location.ts",
     "./map-view": "./src/map-view.ts",
+    "./media-library": "./src/media-library.ts",
     "./network": "./src/network.ts",
     "./notifications": "./src/notifications.ts",
     "./orientation": "./src/orientation.ts",
@@ -164,6 +165,10 @@
         "types": "./dist/map-view.d.ts",
         "default": "./dist/map-view.js"
       },
+      "./media-library": {
+        "types": "./dist/media-library.d.ts",
+        "default": "./dist/media-library.js"
+      },
       "./network": {
         "types": "./dist/network.d.ts",
         "default": "./dist/network.js"
@@ -257,6 +262,7 @@
     "expo-localization": "^57.0.0",
     "expo-location": "^57.0.0",
     "expo-maps": "^57.0.0",
+    "expo-media-library": "^57.0.0",
     "expo-modules-core": "^57.0.0",
     "expo-network": "^57.0.0",
     "expo-notifications": "^57.0.0",
@@ -386,6 +392,9 @@
       "optional": true
     },
     "expo-maps": {
+      "optional": true
+    },
+    "expo-media-library": {
       "optional": true
     },
     "expo-network": {

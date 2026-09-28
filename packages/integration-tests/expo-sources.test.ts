@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { MediaLibrary } from '@ng-native/expo/media-library';
 import { ImageEditor } from '@ng-native/expo/image-editor';
 import { ScreenCapture } from '@ng-native/expo/screen-capture';
 import { BackgroundTask } from '@ng-native/expo/background-task';
@@ -540,6 +541,25 @@ describe('the image editor source', () => {
   it('is inert with no expo-image-manipulator installed', () => {
     assert.equal(
       withModules({}, () => defaultSource(ImageEditor.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the media library source', () => {
+  it('is expo-media-library itself, whose functions the service calls by their own names', () => {
+    const expoMediaLibrary = { getPermissionsAsync: async () => ({ granted: true }) };
+    assert.equal(
+      withModules({ 'expo-media-library': expoMediaLibrary }, () =>
+        defaultSource(MediaLibrary.SOURCE),
+      ),
+      expoMediaLibrary,
+    );
+  });
+
+  it('is inert with no expo-media-library installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(MediaLibrary.SOURCE)),
       null,
     );
   });

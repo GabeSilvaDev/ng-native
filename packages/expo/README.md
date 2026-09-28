@@ -326,6 +326,9 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
 - **`ImageEditor`** (`image-editor.ts`): `edit(uri, actions, options)` over
   `expo-image-manipulator`, resolving to the saved file and releasing the native context and
   image it made, and `manipulate(uri)` for the module's own context.
+- **`MediaLibrary`** (`media-library.ts`): `save(uri, album)`, which asks for write-only access
+  itself, `assets(query)` and `metadata(query)` over the module's own `Query`, albums, the read
+  and write permissions, and `watch()` for changes, which starts listening only when called.
 
 ## The rest
 
