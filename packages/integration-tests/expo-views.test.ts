@@ -74,6 +74,10 @@ describe('the typed native views', () => {
     const plain = byId('default').props;
     assert.equal(plain['width'], 24, 'the wrapper s default size');
     assert.equal(plain['height'], 24);
+
+    const unsized = byId('unsized').props;
+    assert.equal(unsized['width'], 24, 'a size bound to undefined is the default too');
+    assert.deepEqual(unsized['colors'], ['red'], 'one colour is a list of one');
   });
 
   it('gives the Apple button its type and style as native s numbers, and reports a press', async () => {
@@ -83,6 +87,9 @@ describe('the typed native views', () => {
     assert.equal(apple.props['buttonType'], 1, 'continue');
     assert.equal(apple.props['buttonStyle'], 2, 'black');
     assert.equal(apple.props['cornerRadius'], 8);
+    const plain = byId('plain-apple').props;
+    assert.equal(plain['buttonType'], 0, 'sign-in unless set');
+    assert.equal(plain['buttonStyle'], 2, 'black unless set');
 
     fabric.emit(apple, 'topButtonPress', {});
     app.applicationRef.tick();

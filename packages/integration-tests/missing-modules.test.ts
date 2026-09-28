@@ -160,7 +160,14 @@ function fixes(module: string, platform: Platform) {
     assert.ok(error instanceof MissingModuleError, `a MissingModuleError, not ${String(error)}`);
     assert.equal(error.module, module);
     assert.match(error.message, new RegExp(`npx expo install ${module.replace(/[/@]/g, '\\$&')}`));
-    if (platform !== 'web') assert.match(error.message, new RegExp(`npx expo run:${platform}`));
+    if (platform === 'web') {
+      assert.match(error.message, /restart the dev server/);
+      assert.doesNotMatch(
+        error.message,
+        /npx expo run:/,
+        'there is no native build to redo on the web',
+      );
+    } else assert.match(error.message, new RegExp(`npx expo run:${platform}`));
     return true;
   };
 }

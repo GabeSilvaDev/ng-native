@@ -21,6 +21,8 @@ import { ExpoSymbol } from '../../expo/src/symbol.ts';
       [animationSpec]="{ effect: { type: 'bounce' } }"
     />
     <expo-symbol nativeID="default" name="star" />
+    <expo-symbol nativeID="unsized" name="star" [size]="unset" colors="red" />
+    <apple-sign-in-button nativeID="plain-apple" />
     <apple-sign-in-button
       nativeID="apple"
       buttonType="continue"
@@ -32,4 +34,5 @@ import { ExpoSymbol } from '../../expo/src/symbol.ts';
 })
 export class ExpoViewsFixture {
   readonly presses = signal(0);
+  readonly unset: number | undefined = undefined;
 }
