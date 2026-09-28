@@ -1,0 +1,67 @@
+---
+title: Document picker
+summary: Pick files with the system's own picker, and get nothing back when it is cancelled.
+---
+
+# Document picker
+
+`DocumentPicker` opens the system's file picker, bound to `expo-document-picker`: the Files app's
+browser on iOS and the storage access framework on Android.
+
+The options are the module's own, passed through unchanged. A cancelled picker answers with no
+files rather than a result to unwrap, and the system picker needs no permission, so none is asked
+for.
+
+## Install
+
+```sh
+npx expo install expo-document-picker
+```
+
+```ts
+import { DocumentPicker } from '@ng-native/expo/document-picker';
+```
+
+## The smallest useful example
+
+```ts
+import { Component, inject, signal } from '@angular/core';
+import { DocumentPicker } from '@ng-native/expo/document-picker';
+
+@Component({
+  selector: 'app-attach',
+  template: `
+    <pressable (press)="attach()"><text>Attach a PDF</text></pressable>
+    <text>{{ attached() }}</text>
+  `,
+})
+export class Attach {
+  private readonly documents = inject(DocumentPicker);
+  protected readonly attached = signal('');
+
+  protected async attach(): Promise<void> {
+    const [file] = await this.documents.pick({ type: 'application/pdf' });
+    if (file) this.attached.set(file.name);
+  }
+}
+```
+
+## What it does
+
+- **`pick(options?)`** - opens the picker and resolves to the files chosen, empty if the user
+  cancelled. Each is the module's own `DocumentPickerAsset`: `uri`, `name`, `mimeType`, `size` and
+  `lastModified`.
+  - `type` - a MIME type such as `'image/*'`, or a list of them. Everything by default.
+  - `multiple` - allow more than one file.
+  - `copyToCacheDirectory` - on by default: each file is copied into the app's cache, so
+    [the file system](/packages/expo/file-system) and other Expo modules can read its `uri`. Off
+    leaves the platform's own reference, which only some readers understand.
+  - `base64` - on the web, whether each `uri` is the file's contents as base64. On by default.
+
+## Without the module installed
+
+`pick()` resolves to an empty list.
+
+## Reference
+
+<!-- api: DocumentPicker -->

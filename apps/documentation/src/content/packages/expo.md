@@ -79,6 +79,7 @@ is organised into one entry point per module.
 ### Media and camera
 
 - [Image picker](/packages/expo/image-picker) - pick a photo from the library, or take one with the system camera.
+- [Document picker](/packages/expo/document-picker) - pick files with the system's own picker.
 - [Camera](/packages/expo/camera) - `<expo-camera>` on screen, and a picture taken from it.
 - [Player](/packages/expo/player) - a video or audio player with readable, releasable state.
 

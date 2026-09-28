@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { DocumentPicker } from '@ng-native/expo/document-picker';
 import { Tracking } from '@ng-native/expo/tracking';
 import { StoreReview } from '@ng-native/expo/store-review';
 import { DeviceOrientation } from '@ng-native/expo/orientation';
@@ -442,6 +443,25 @@ describe('the tracking source', () => {
   it('is inert with no expo-tracking-transparency installed', () => {
     assert.equal(
       withModules({}, () => defaultSource(Tracking.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the document picker source', () => {
+  it('is expo-document-picker itself, whose functions the service calls by their own names', () => {
+    const expoDocumentPicker = { getDocumentAsync: async () => ({ canceled: true }) };
+    assert.equal(
+      withModules({ 'expo-document-picker': expoDocumentPicker }, () =>
+        defaultSource(DocumentPicker.SOURCE),
+      ),
+      expoDocumentPicker,
+    );
+  });
+
+  it('is inert with no expo-document-picker installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(DocumentPicker.SOURCE)),
       null,
     );
   });

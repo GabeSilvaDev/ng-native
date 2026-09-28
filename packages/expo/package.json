@@ -27,6 +27,7 @@
     "./camera": "./src/camera.ts",
     "./clipboard": "./src/clipboard.ts",
     "./database": "./src/database.ts",
+    "./document-picker": "./src/document-picker.ts",
     "./dom-component": "./src/dom-component.ts",
     "./expo-ui-components": "./src/expo-ui-components.ts",
     "./file-system": "./src/file-system.ts",
@@ -98,6 +99,10 @@
       "./database": {
         "types": "./dist/database.d.ts",
         "default": "./dist/database.js"
+      },
+      "./document-picker": {
+        "types": "./dist/document-picker.d.ts",
+        "default": "./dist/document-picker.js"
       },
       "./dom-component": {
         "types": "./dist/dom-component.d.ts",
@@ -218,6 +223,7 @@
     "expo-camera": "^57.0.0",
     "expo-clipboard": "^57.0.0",
     "expo-device": "^57.0.0",
+    "expo-document-picker": "^57.0.0",
     "expo-file-system": "^57.0.0",
     "expo-font": "^57.0.0",
     "expo-haptics": "^57.0.0",
@@ -314,6 +320,9 @@
       "optional": true
     },
     "expo-device": {
+      "optional": true
+    },
+    "expo-document-picker": {
       "optional": true
     },
     "expo-file-system": {

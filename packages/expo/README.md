@@ -312,6 +312,8 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
   not a prompt that was shown.
 - **`Tracking`** (`tracking.ts`): App Tracking Transparency's `permission`, `available()` and
   `advertisingId()`, which is null until tracking is allowed.
+- **`DocumentPicker`** (`document-picker.ts`): `pick(options)`, resolving to the files picked,
+  empty if they cancelled.
 
 ## The rest
 
