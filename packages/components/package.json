@@ -73,7 +73,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/components#readme",
+  "homepage": "https://ng-native.com/packages/components",
   "bugs": {
     "url": "https://github.com/ng-native/ng-native/issues"
   },

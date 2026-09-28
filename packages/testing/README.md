@@ -57,10 +57,10 @@ have been sent.
 
 ## Docs
 
-- [Testing](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/testing.md)
-- [Setup](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/testing/setup.md),
-  [writing a test](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/testing/writing-a-test.md) and the
-  [API reference](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/testing/api.md)
+- [Testing](https://ng-native.com/packages/testing)
+- [Setup](https://ng-native.com/packages/testing/setup),
+  [writing a test](https://ng-native.com/packages/testing/writing-a-test) and the
+  [API reference](https://ng-native.com/packages/testing/api)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
   [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)
 

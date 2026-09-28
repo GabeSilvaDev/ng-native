@@ -35,7 +35,7 @@ cd projects/native && ng generate component profile-card   # <view>, <text>, and
 
 ## Docs
 
-- [Angular CLI](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/schematics.md)
+- [Angular CLI](https://ng-native.com/packages/schematics)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md)
 
 ## License

@@ -67,7 +67,7 @@ export class App {
 
 ## Docs
 
-- [Router](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/router.md)
+- [Router](https://ng-native.com/packages/router)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
   [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)
 

@@ -35,7 +35,7 @@ In a workspace whose root package is scoped, the project is `@org/mobile`.
 
 ## Docs
 
-- [Nx](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/nx.md)
+- [Nx](https://ng-native.com/packages/nx)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md)
 
 ## License

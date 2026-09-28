@@ -39,7 +39,7 @@
     "test": "node --test \"*.test.ts\" \"{init,application}/*.test.ts\""
   },
   "license": "MIT",
-  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/nx#readme",
+  "homepage": "https://ng-native.com/packages/nx",
   "bugs": {
     "url": "https://github.com/ng-native/ng-native/issues"
   },

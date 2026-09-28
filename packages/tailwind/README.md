@@ -53,9 +53,9 @@ in preflight, a browser reset that means nothing on a phone.
 
 ## Docs
 
-- [Tailwind](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/tailwind.md)
-- [Variants](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/tailwind/variants.md) and
-  [safe area and hairlines](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/tailwind/utilities.md)
+- [Tailwind](https://ng-native.com/packages/tailwind)
+- [Variants](https://ng-native.com/packages/tailwind/variants) and
+  [safe area and hairlines](https://ng-native.com/packages/tailwind/utilities)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
   [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)
 

@@ -90,7 +90,7 @@
     "test": "node --import ./runner/register.mjs --test \"src/**/*.node.test.ts\" && vitest run"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/testing#readme",
+  "homepage": "https://ng-native.com/packages/testing",
   "bugs": {
     "url": "https://github.com/ng-native/ng-native/issues"
   },

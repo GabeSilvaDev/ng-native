@@ -89,13 +89,13 @@ to native styles at build time.
 
 ## Documentation
 
-- [Getting started](apps/documentation/src/content/guide/getting-started.md)
-- [Adding it to an existing app](apps/documentation/src/content/guide/manual-setup.md)
-- [Theming and Tailwind](apps/documentation/src/content/guide/theming.md)
-- [Build a form](apps/documentation/src/content/guide/forms.md)
-- [Shipping to a device and the store](apps/documentation/src/content/guide/shipping.md)
-- [How it compares](apps/documentation/src/content/guide/comparison.md)
-- [Known limitations](apps/documentation/src/content/guide/limitations.md)
+- [Getting started](https://ng-native.com/guide/getting-started)
+- [Adding it to an existing app](https://ng-native.com/guide/manual-setup)
+- [Theming and Tailwind](https://ng-native.com/guide/theming)
+- [Build a form](https://ng-native.com/guide/forms)
+- [Shipping to a device and the store](https://ng-native.com/guide/shipping)
+- [How it compares](https://ng-native.com/guide/comparison)
+- [Known limitations](https://ng-native.com/guide/limitations)
 - [Architecture](ARCHITECTURE.md)
 
 The [examples](examples) are complete apps: a bank (`wallet`), a habit tracker (`habits`), a music
@@ -127,7 +127,7 @@ Angular 22, Expo SDK 57 and React Native 0.86 with the New Architecture, on Node
 
 Angular Native is in alpha, so APIs can change between `0.x` releases. Many of the platform
 services are unit-tested and typechecked but have not run on hardware, and Android is checked less
-often than iOS. The [known limitations](apps/documentation/src/content/guide/limitations.md) list
+often than iOS. The [known limitations](https://ng-native.com/guide/limitations) list
 every gap with its workaround.
 
 ## Contributing

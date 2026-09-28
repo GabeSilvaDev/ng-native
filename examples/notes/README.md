@@ -1,7 +1,7 @@
 # Notes
 
 An offline-first notes app: write and edit while offline, and every change syncs once there is a
-connection again, following the pattern in [Working offline](../../apps/documentation/src/content/guide/offline.md).
+connection again, following the pattern in [Working offline](https://ng-native.com/guide/offline).
 
 | Screen                                    | What it shows                                                                                                |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ |

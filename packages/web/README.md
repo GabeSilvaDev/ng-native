@@ -68,10 +68,10 @@ Or from code, `mount(element, Wallet, { injector })` with an injector from the a
 
 ## Docs
 
-- [Web](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/web.md):
+- [Web](https://ng-native.com/packages/web):
   setting up a browser app, with Tailwind
-- [Native and web](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/guide/native-and-web.md)
-- [Islands](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/web/islands.md):
+- [Native and web](https://ng-native.com/guide/native-and-web)
+- [Islands](https://ng-native.com/packages/web/islands):
   Angular Native components inside an existing Angular web app
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
   [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)

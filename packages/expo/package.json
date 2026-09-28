@@ -230,7 +230,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/expo#readme",
+  "homepage": "https://ng-native.com/packages/expo",
   "bugs": {
     "url": "https://github.com/ng-native/ng-native/issues"
   },

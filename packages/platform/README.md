@@ -46,9 +46,9 @@ AppRegistry.registerRunnable('main', ({ rootTag }) => {
 
 ## Docs
 
-- [Platform](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/platform.md)
-- [Bootstrapping](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/platform/bootstrapping.md) and
-  [renderer](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/platform/renderer.md)
+- [Platform](https://ng-native.com/packages/platform)
+- [Bootstrapping](https://ng-native.com/packages/platform/bootstrapping) and
+  [renderer](https://ng-native.com/packages/platform/renderer)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
   [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)
 

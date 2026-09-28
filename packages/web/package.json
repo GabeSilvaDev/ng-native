@@ -95,7 +95,7 @@
     "test:browser": "vitest run"
   },
   "license": "MIT",
-  "homepage": "https://github.com/ng-native/ng-native/tree/main/packages/web#readme",
+  "homepage": "https://ng-native.com/packages/web",
   "bugs": {
     "url": "https://github.com/ng-native/ng-native/issues"
   },

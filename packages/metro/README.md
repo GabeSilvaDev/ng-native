@@ -48,8 +48,8 @@ module.exports = withAngularNative(getDefaultConfig(__dirname), {
 
 ## Docs
 
-- [Metro](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/metro.md)
-- [Configuration](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/metro/configuration.md)
+- [Metro](https://ng-native.com/packages/metro)
+- [Configuration](https://ng-native.com/packages/metro/configuration)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
   [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)
 

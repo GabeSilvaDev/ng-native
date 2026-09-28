@@ -58,20 +58,20 @@ package under Node (tests, tooling).
 
 ## Docs
 
-- [Components](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components.md)
-- [Layout](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/layout.md),
-  [scroll view](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/scroll-view.md),
-  [keyboard-avoiding view](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/keyboard-avoiding-view.md),
-  [lists](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/lists.md),
-  [text](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/text.md),
-  [image](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/image.md),
-  [activity indicator](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/activity-indicator.md),
-  [text input](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/input.md),
-  [switch](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/switch.md),
-  [pressable](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/pressable.md),
-  [gestures](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/gestures.md),
-  [modal](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/modal.md) and
-  [animation](https://github.com/ng-native/ng-native/blob/main/apps/documentation/src/content/packages/components/animation.md)
+- [Components](https://ng-native.com/packages/components)
+- [Layout](https://ng-native.com/packages/components/layout),
+  [scroll view](https://ng-native.com/packages/components/scroll-view),
+  [keyboard-avoiding view](https://ng-native.com/packages/components/keyboard-avoiding-view),
+  [lists](https://ng-native.com/packages/components/lists),
+  [text](https://ng-native.com/packages/components/text),
+  [image](https://ng-native.com/packages/components/image),
+  [activity indicator](https://ng-native.com/packages/components/activity-indicator),
+  [text input](https://ng-native.com/packages/components/input),
+  [switch](https://ng-native.com/packages/components/switch),
+  [pressable](https://ng-native.com/packages/components/pressable),
+  [gestures](https://ng-native.com/packages/components/gestures),
+  [modal](https://ng-native.com/packages/components/modal) and
+  [animation](https://ng-native.com/packages/components/animation)
 - [Root README](https://github.com/ng-native/ng-native/blob/main/README.md) and
   [ARCHITECTURE.md](https://github.com/ng-native/ng-native/blob/main/ARCHITECTURE.md)
 
