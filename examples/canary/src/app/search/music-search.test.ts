@@ -13,7 +13,7 @@ import {
 import { describe, expect, test } from 'vitest';
 import { App } from '../app.ts';
 import { routes } from '../app.routes.ts';
-import { StoreSearch } from './catalogue.ts';
+import { StoreSearch, matches } from './catalogue.ts';
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -51,6 +51,16 @@ async function boot() {
 
 const heading = (fabric: FakeFabric, prefix: string) =>
   JSON.stringify(fabric.committed).match(new RegExp(`${prefix}[^"]*`))?.[0];
+
+describe('the library filter', () => {
+  test('finds an item by its subtitle as well as its title, in any case', () => {
+    const album = { id: 'a', kind: 'album', title: 'Blue', subtitle: 'Joni Mitchell' } as const;
+    expect(matches(album, 'JONI', 'all')).toBe(true);
+    expect(matches(album, 'blue', 'album')).toBe(true);
+    expect(matches(album, 'blue', 'song')).toBe(false);
+    expect(matches(album, 'miles', 'all')).toBe(false);
+  });
+});
 
 describe('music search', () => {
   test('filters the library as the user types', async () => {

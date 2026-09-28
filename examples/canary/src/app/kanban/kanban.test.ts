@@ -74,6 +74,15 @@ describe('kanban', () => {
     expect(screen.queryByRole('button', { name: 'Move to Review' })).toBeNull();
   });
 
+  test('the move bar offers every column but the one the card is in', async () => {
+    const { fabric } = await boot();
+    gestureOf(cardNode(fabric, 'Onboarding illustrations'), 'Tap').callbacks['onEnd']!();
+    await screen.findByRole('button', { name: 'Move to Review' });
+    expect(screen.getByRole('button', { name: 'Move to Doing' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Move to Done' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Move to Backlog' })).toBeNull();
+  });
+
   test('a card held and dragged over another column drops into it', async () => {
     const { fabric } = await boot();
     const pan = gestureOf(cardNode(fabric, 'Crash when a photo is huge'), 'Pan');

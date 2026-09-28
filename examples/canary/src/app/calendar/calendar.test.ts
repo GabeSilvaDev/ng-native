@@ -73,6 +73,25 @@ describe('calendar', () => {
     await screen.findByLabelText('New event, 10:00 to 11:00');
   });
 
+  test('next month turns the grid and the title to the month after', async () => {
+    await boot();
+    const month = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' });
+    const now = new Date();
+    await screen.findAllByText(month.format(now));
+    await userEvent.press(screen.getByRole('button', { name: 'Next month' }));
+    await screen.findAllByText(month.format(new Date(now.getFullYear(), now.getMonth() + 1, 1)));
+  });
+
+  test('a day says how many events it has, one and none included', async () => {
+    await boot();
+    const labels = screen
+      .getAllByRole('button')
+      .map((node) => String(node.props['accessibilityLabel']));
+    expect(labels.some((label) => label.endsWith(', 1 event'))).toBe(true);
+    expect(labels.some((label) => label.endsWith(', 0 events'))).toBe(true);
+    expect(labels.some((label) => label.endsWith(', 1 events'))).toBe(false);
+  });
+
   test('an event is drawn by holding on the timeline and dragging down', async () => {
     const { fabric } = await boot();
     const drawing = flatten(fabric.committed)

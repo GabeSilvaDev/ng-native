@@ -10,8 +10,10 @@ appId: dev.angularnative.canary
 - inputText: 'Groceries'
 - tapOn: 'Paragraph 1.*'
 - inputText: '[] Milk'
-- assertVisible: 'Milk'
+# The shortcut made a checklist item, and return carries the list on.
+- assertVisible: 'Checklist 1.*'
 - pressKey: Enter
+- assertVisible: 'Checklist 2.*'
 - inputText: 'Eggs'
 - tapOn: 'Done'
 - assertVisible: 'Milk'

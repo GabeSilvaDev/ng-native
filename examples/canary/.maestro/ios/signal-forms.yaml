@@ -10,4 +10,5 @@ appId: dev.angularnative.canary
 - assertVisible: '1 validation error\(s\)'
 - inputText: 'cdefgh'
 - assertVisible: 'valid'
-- assertVisible: '.*abcdefgh.*'
+# The model preview, not the field: only the JSON has the quotes.
+- assertVisible: '.*"name":"abcdefgh".*'

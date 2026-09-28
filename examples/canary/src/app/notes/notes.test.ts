@@ -50,6 +50,12 @@ async function open() {
 }
 
 describe('the note editor', () => {
+  test('keeps the title typed into it', async () => {
+    const { notes, id } = await open();
+    await userEvent.type(screen.getByLabelText('Title'), 'Groceries');
+    expect(notes.get(id)!.title).toBe('Groceries');
+  });
+
   test('a shortcut makes a checklist, and return carries the list on', async () => {
     const { notes, id } = await open();
     await userEvent.type(screen.getByLabelText('Paragraph 1'), '[] milk');

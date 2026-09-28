@@ -4,7 +4,16 @@ import { render, screen, userEvent } from '@ng-native/testing';
 import { describe, expect, test } from 'vitest';
 import { App } from '../app.ts';
 import { routes } from '../app.routes.ts';
-import { PRODUCTS, added, changed, price, saving } from './shop-model.ts';
+import {
+  Basket,
+  FREE_DELIVERY,
+  PRODUCTS,
+  added,
+  changed,
+  price,
+  saving,
+  type Product,
+} from './shop-model.ts';
 
 describe('the shop model', () => {
   test('prices whole pounds without pence, and pence when there are some', () => {
@@ -24,6 +33,23 @@ describe('the shop model', () => {
     expect(twice).toHaveLength(1);
     expect(twice[0]!.quantity).toBe(2);
     expect(added(twice, shoe, '10')).toHaveLength(2);
+  });
+
+  test('counts every item for the badge, not every line', () => {
+    const basket = new Basket();
+    basket.add(PRODUCTS[1]!, 'M');
+    basket.add(PRODUCTS[1]!, 'M');
+    expect(basket.count()).toBe(2);
+  });
+
+  test('delivers free from exactly the threshold, and charges a penny under it', () => {
+    const at = (pence: number) => {
+      const basket = new Basket();
+      basket.add({ ...PRODUCTS[2]!, price: pence } satisfies Product, null);
+      return basket.delivery();
+    };
+    expect(at(FREE_DELIVERY)).toBe(0);
+    expect(at(FREE_DELIVERY - 1)).toBeGreaterThan(0);
   });
 
   test('takes a line out when its quantity reaches nothing', () => {
