@@ -260,7 +260,8 @@ export class DocPage {
         const path = this.path();
         this.seo.apply({
           title: titleFor(page.attributes.title ?? path),
-          description: page.attributes.summary ?? DEFAULT_DESCRIPTION,
+          // A summary's inline code is markup here, where search results and link previews show it raw.
+          description: page.attributes.summary?.replaceAll('`', '') ?? DEFAULT_DESCRIPTION,
           path: `/${path}`,
           type: 'article',
           breadcrumbs: breadcrumbsFor(path),

@@ -13,9 +13,10 @@
  * Chromium renders this site exactly as a reader's browser would - including the parts of it that
  * only a real layout engine can produce.
  *
- * The output is `dist/<route>/index.html`, which is what a static host resolves `/<route>` to. The
- * home page overwrites `dist/index.html`, which stays the SPA fallback for anything unmatched, and
- * this also writes `dist/404.html`, `dist/sitemap.xml` and `dist/robots.txt` - see the bottom of
+ * The output is `dist/<route>.html`, which Cloudflare Pages serves at `/<route>` itself. A
+ * `dist/<route>/index.html` would be served at `/<route>/` instead, with a 308 from the slashless
+ * address every canonical URL, sitemap entry and internal link uses. The home page overwrites
+ * `dist/index.html`, which stays the SPA fallback for anything unmatched, and this also writes `dist/404.html`, `dist/sitemap.xml` and `dist/robots.txt` - see the bottom of
  * this file.
  *
  * Three things are deliberately not in a snapshot:
@@ -127,7 +128,7 @@ function routes(): readonly RouteEntry[] {
  *
  * A path with an extension is a file; everything else is a route and gets the shell. That is
  * ordinary SPA fallback, and it also makes the run immune to its own output - a snapshot written
- * to `dist/packages/components/touch/index.html` cannot become the shell a later route boots from.
+ * to `dist/packages/components/touch.html` cannot become the shell a later route boots from.
  * It is also how `dist/404.html` gets rendered: nothing on this site routes to `/__not-found__`, so
  * the client router falls through to `doc-page`'s own not-found branch, the same as a reader
  * mistyping a URL would see.
@@ -252,7 +253,7 @@ function escapeXml(text: string): string {
 
 async function writeSnapshot(route: string, snapshot: string): Promise<void> {
   if (snapshot.includes('data-rn-root')) throw new Error(`${route} kept an island`);
-  const file = route === '/' ? path.join(dist, 'index.html') : path.join(dist, route, 'index.html');
+  const file = route === '/' ? path.join(dist, 'index.html') : path.join(dist, `${route}.html`);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, snapshot);
 }

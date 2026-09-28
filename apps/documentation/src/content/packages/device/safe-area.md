@@ -1,9 +1,9 @@
 ---
-title: Safe area
+title: Safe area insets
 summary: The insets `SafeArea` reports, and how `<safe-area-provider>` feeds them in.
 ---
 
-# Safe area
+# Safe area insets
 
 `SafeArea` reports how much of each edge belongs to the system: the notch, the status bar, the home
 indicator, a rounded corner, and on Android the display cutout and the navigation bar.

@@ -35,17 +35,12 @@ const workspaceRoot = path.resolve(dirname, '../..');
 const dist = path.resolve(dirname, 'dist');
 
 /**
- * `vite preview`, taught the one lookup a static host does and it does not.
+ * `vite preview`, taught the one lookup Cloudflare Pages does and it does not.
  *
- * `build/prerender.ts` writes each route's snapshot to `dist/<route>/index.html`, which is where
- * Angular's own prerender puts them and what nginx's `try_files $uri $uri/` and every static host
- * resolve `/<route>` to. Vite's preview server is the exception: its fallback checks `<route>.html`
- * and `<route>/index.html` only when the request already ends in a slash, so `/packages/components/touch`
- * misses both and lands on the SPA fallback - the home page, for every route, which looks exactly
- * like prerendering having silently failed.
- *
- * Rewriting the request rather than emitting a second copy of every page, because a duplicate at
- * `<route>.html` would be a second URL serving the same document.
+ * `build/prerender.ts` writes each route's snapshot to `dist/<route>.html`, which Pages serves at
+ * `/<route>`. Vite's preview server only tries `<route>.html` when the request ends in a slash, so
+ * `/packages/components/touch` would land on the SPA fallback - the home page, for every route,
+ * which looks exactly like prerendering having silently failed.
  */
 function previewPrerendered(): Plugin {
   return {
@@ -53,8 +48,9 @@ function previewPrerendered(): Plugin {
     configurePreviewServer(server) {
       server.middlewares.use((request, _response, next) => {
         const [route = '/', search] = (request.url ?? '/').split('?');
-        if (!path.extname(route) && fs.existsSync(path.join(dist, route, 'index.html'))) {
-          request.url = `${route.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
+        const file = `${route.replace(/\/$/, '')}.html`;
+        if (!path.extname(route) && fs.existsSync(path.join(dist, file))) {
+          request.url = `${file}${search ? `?${search}` : ''}`;
         }
         next();
       });

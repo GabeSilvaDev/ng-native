@@ -1,5 +1,6 @@
 ---
 title: Theming and Tailwind
+summary: Tailwind and your own CSS on native views, through a real cascade with no className interop layer.
 ---
 
 # Theming and Tailwind

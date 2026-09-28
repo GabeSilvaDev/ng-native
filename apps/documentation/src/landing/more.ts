@@ -3,7 +3,8 @@
  *
  * Every section ends the same way, so the words stay the same and the section says what it is
  * about. A screen reader gets the topic too - `Learn more about Tailwind` - because a page of
- * links all named "Learn more" is a list of the same link, read aloud.
+ * links all named "Learn more" is a list of the same link, read aloud. The topic is visually
+ * hidden text rather than an `aria-label`, so crawlers read it as the link's text as well.
  */
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -12,12 +13,8 @@ import { RouterLink } from '@angular/router';
   selector: 'landing-more',
   imports: [RouterLink],
   template: `
-    <a
-      class="landing-link landing-more"
-      [routerLink]="link()"
-      [attr.aria-label]="'Learn more about ' + topic()"
-    >
-      Learn more
+    <a class="landing-link landing-more" [routerLink]="link()">
+      Learn more<span class="sr-only"> about {{ topic() }}</span>
       <svg viewBox="0 0 16 16" class="size-4" aria-hidden="true">
         <path
           d="M3 8h9.5M9 4.5 12.5 8 9 11.5"
