@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { ImageEditor } from '@ng-native/expo/image-editor';
 import { ScreenCapture } from '@ng-native/expo/screen-capture';
 import { BackgroundTask } from '@ng-native/expo/background-task';
 import { Crypto } from '@ng-native/expo/crypto';
@@ -520,6 +521,25 @@ describe('the screen capture source', () => {
   it('is inert with no expo-screen-capture installed', () => {
     assert.equal(
       withModules({}, () => defaultSource(ScreenCapture.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the image editor source', () => {
+  it('is expo-image-manipulator itself, whose functions the service calls by their own names', () => {
+    const expoImageManipulator = { ImageManipulator: { manipulate: () => ({}) } };
+    assert.equal(
+      withModules({ 'expo-image-manipulator': expoImageManipulator }, () =>
+        defaultSource(ImageEditor.SOURCE),
+      ),
+      expoImageManipulator,
+    );
+  });
+
+  it('is inert with no expo-image-manipulator installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(ImageEditor.SOURCE)),
       null,
     );
   });

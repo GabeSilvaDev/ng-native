@@ -109,6 +109,7 @@ describe('the entry points Metro has to resolve', () => {
       'file-system',
       'fonts',
       'haptics',
+      'image-editor',
       'keep-awake',
       'locale',
       'network',

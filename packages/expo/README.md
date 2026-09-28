@@ -323,6 +323,9 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
   bootstrapping Angular.
 - **`ScreenCapture`** (`screen-capture.ts`): `prevent(key)` and `allow(key)`, which stay
   prevented while any key is held, and a `screenshots` signal counting the screenshots taken.
+- **`ImageEditor`** (`image-editor.ts`): `edit(uri, actions, options)` over
+  `expo-image-manipulator`, resolving to the saved file and releasing the native context and
+  image it made, and `manipulate(uri)` for the module's own context.
 
 ## The rest
 
