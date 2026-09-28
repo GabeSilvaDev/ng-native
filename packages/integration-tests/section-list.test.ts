@@ -141,6 +141,17 @@ describe('section list', () => {
     app.unmount();
   });
 
+  it('fires endReached again after scrolling away from the end, so a failed load can retry', async () => {
+    const { fabric, app, instance } = await boot();
+    await scrollTo(fabric, 20 * SECTION - 400);
+    await scrollTo(fabric, 20 * SECTION - 380);
+    assert.equal(instance.ended, 1, 'once while it stays near the end');
+    await scrollTo(fabric, 0);
+    await scrollTo(fabric, 20 * SECTION - 400);
+    assert.equal(instance.ended, 2);
+    app.unmount();
+  });
+
   it('scrolls to a location, allowing for the pinned header', async () => {
     const { fabric, app, instance } = await boot();
     instance.list().scrollToLocation({ sectionIndex: 2, itemIndex: 1 });

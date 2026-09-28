@@ -291,7 +291,10 @@ export class VirtualList<T> extends ScrollViewProps {
   /** How much of a row must be on screen to count as viewable. RN's default is 0, meaning any. */
   readonly itemVisiblePercentThreshold = input(0, { transform: numberAttribute });
 
-  /** The scroll position is within `endReachedThreshold` of the end. Once per item count. */
+  /**
+   * The scroll position is within `endReachedThreshold` of the end: once per item count, and again
+   * after the list has scrolled away from the end and come back.
+   */
   readonly endReached = output<{ distanceFromEnd: number }>();
 
   /** Which rows are on screen, and what changed since last time. */
@@ -307,7 +310,7 @@ export class VirtualList<T> extends ScrollViewProps {
   private readonly headerHeight = signal(0);
   /** What native reported the content measures along the axis, once it has. */
   private contentSize = 0;
-  /** The item count `endReached` last fired for, so it fires once per load. */
+  /** The item count `endReached` last fired for, cleared once the list is away from the end. */
   private endReachedFor = -1;
 
   /** Slot styles are cached so a scroll does not hand Fabric new prop objects for stable rows. */
@@ -1195,10 +1198,16 @@ export class VirtualList<T> extends ScrollViewProps {
   private checkEnd(y: number): void {
     const count = this.items().length;
     const viewport = this.viewport();
-    if (!count || !viewport || this.endReachedFor === count) return;
+    if (!count || !viewport) return;
     const total = this.contentSize || this.headerHeight() + this.extent();
     const distanceFromEnd = total - (y + viewport);
-    if (distanceFromEnd > this.endReachedThreshold() * viewport) return;
+    // Away from the end again re-arms it, as React Native does, so a load that failed is retried
+    // the next time the user comes back down.
+    if (distanceFromEnd > this.endReachedThreshold() * viewport) {
+      this.endReachedFor = -1;
+      return;
+    }
+    if (this.endReachedFor === count) return;
     this.endReachedFor = count;
     this.endReached.emit({ distanceFromEnd });
   }

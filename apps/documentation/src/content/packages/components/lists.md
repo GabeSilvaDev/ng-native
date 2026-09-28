@@ -134,7 +134,8 @@ over its trailing edge once its height is known:
 ```
 
 `endReached` fires once per change in item count, when the scroll position comes within
-`endReachedThreshold` viewport-heights of the end - the hook for loading another page.
+`endReachedThreshold` viewport-heights of the end - the hook for loading another page. Scrolling
+away from the end and back fires it again, so a page that failed to load is retried.
 `viewableItemsChanged` reports which rows are currently on screen by
 `itemVisiblePercentThreshold`.
 
