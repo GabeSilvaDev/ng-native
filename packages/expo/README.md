@@ -314,6 +314,9 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
   `advertisingId()`, which is null until tracking is allowed.
 - **`DocumentPicker`** (`document-picker.ts`): `pick(options)`, resolving to the files picked,
   empty if they cancelled.
+- **`Crypto`** (`crypto.ts`): `randomUUID()`, `digestString()`, `digest()`, `randomBytes()` and
+  `randomValues()`. The one service that throws without its module, since an empty identifier or
+  hash is a wrong answer that looks right.
 
 ## The rest
 

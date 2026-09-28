@@ -102,6 +102,7 @@ describe('the entry points Metro has to resolve', () => {
       'battery',
       'brightness',
       'clipboard',
+      'crypto',
       'database',
       'document-picker',
       'file-system',

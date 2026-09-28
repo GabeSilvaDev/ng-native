@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { Crypto } from '@ng-native/expo/crypto';
 import { DocumentPicker } from '@ng-native/expo/document-picker';
 import { Tracking } from '@ng-native/expo/tracking';
 import { StoreReview } from '@ng-native/expo/store-review';
@@ -462,6 +463,23 @@ describe('the document picker source', () => {
   it('is inert with no expo-document-picker installed', () => {
     assert.equal(
       withModules({}, () => defaultSource(DocumentPicker.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the crypto source', () => {
+  it('is expo-crypto itself, whose functions the service calls by their own names', () => {
+    const expoCrypto = { randomUUID: () => 'id' };
+    assert.equal(
+      withModules({ 'expo-crypto': expoCrypto }, () => defaultSource(Crypto.SOURCE)),
+      expoCrypto,
+    );
+  });
+
+  it('is null with no expo-crypto installed, which the service refuses to answer without', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(Crypto.SOURCE)),
       null,
     );
   });

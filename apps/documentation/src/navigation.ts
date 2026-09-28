@@ -204,6 +204,7 @@ export const PACKAGES: NavSection = {
         { path: 'packages/expo/biometrics', title: 'Biometrics' },
         { path: 'packages/expo/apple-sign-in', title: 'Sign in with Apple' },
         { path: 'packages/expo/tracking', title: 'Tracking' },
+        { path: 'packages/expo/crypto', title: 'Crypto' },
         { path: 'packages/expo/browser', title: 'Browser' },
         { path: 'packages/expo/language-model', title: 'On-device AI', group: 'Intelligence' },
         { path: 'packages/expo/fonts', title: 'Fonts', group: 'App lifecycle' },

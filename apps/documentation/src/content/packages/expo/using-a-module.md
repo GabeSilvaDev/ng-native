@@ -47,6 +47,8 @@ device that does not have the thing.
 Going inert means the service falls back to reporting nothing, rather than throwing: a level of
 `1`, a status of `'unknown'`, an `available` signal of `null`, a method that resolves to `null` or
 an empty list. Each module's own page says exactly what its "without the module" behaviour is.
+[Crypto](/packages/expo/crypto) is the exception: an empty identifier or hash is a wrong answer
+that looks right, so without `expo-crypto` it throws instead.
 
 ## What is on the bare import
 
