@@ -5,6 +5,9 @@ summary: Create an Expo app, render your first Angular component as native views
 
 # Getting started
 
+Angular Native is in alpha. Every effort has gone into making it stable and accurate, but you may
+still hit bugs. If you do, please [open an issue](https://github.com/ng-native/ng-native/issues/new/choose).
+
 ## Create the app
 
 ```sh
