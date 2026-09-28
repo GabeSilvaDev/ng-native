@@ -20,6 +20,7 @@
     "./app-info": "./src/app-info.ts",
     "./apple-sign-in": "./src/apple-sign-in.ts",
     "./assets": "./src/assets.ts",
+    "./background-task": "./src/background-task.ts",
     "./battery": "./src/battery.ts",
     "./biometrics": "./src/biometrics.ts",
     "./brightness": "./src/brightness.ts",
@@ -72,6 +73,10 @@
       "./assets": {
         "types": "./dist/assets.d.ts",
         "default": "./dist/assets.js"
+      },
+      "./background-task": {
+        "types": "./dist/background-task.d.ts",
+        "default": "./dist/background-task.js"
       },
       "./battery": {
         "types": "./dist/battery.d.ts",
@@ -223,6 +228,7 @@
     "expo-application": "^57.0.0",
     "expo-asset": "^57.0.0",
     "expo-audio": "^57.0.0",
+    "expo-background-task": "^57.0.0",
     "expo-battery": "^57.0.0",
     "expo-brightness": "^57.0.0",
     "expo-camera": "^57.0.0",
@@ -311,6 +317,9 @@
       "optional": true
     },
     "expo-audio": {
+      "optional": true
+    },
+    "expo-background-task": {
       "optional": true
     },
     "expo-battery": {

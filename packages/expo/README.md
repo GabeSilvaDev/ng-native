@@ -317,6 +317,10 @@ Pair it with `Permission.of(getPermissionsAsync, requestPermissionsAsync)` from 
 - **`Crypto`** (`crypto.ts`): `randomUUID()`, `digestString()`, `digest()`, `randomBytes()` and
   `randomValues()`. The one service that throws without its module, since an empty identifier or
   hash is a wrong answer that looks right.
+- **`BackgroundTask`** (`background-task.ts`): `status()`, `register(name, options)`,
+  `unregister(name)` and `triggerForTesting()`. The task itself is defined with
+  `expo-task-manager` at the top level of `main.ts`, since the platform runs it without
+  bootstrapping Angular.
 
 ## The rest
 

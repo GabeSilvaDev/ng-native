@@ -25,6 +25,7 @@ import { LanguageModel } from '@ng-native/expo/language-model';
 import { Network } from '@ng-native/expo/network';
 import { AppleSignIn } from '@ng-native/expo/apple-sign-in';
 import { Notifications } from '@ng-native/expo/notifications';
+import { BackgroundTask } from '@ng-native/expo/background-task';
 import { Crypto } from '@ng-native/expo/crypto';
 import { DocumentPicker } from '@ng-native/expo/document-picker';
 import { Tracking } from '@ng-native/expo/tracking';
@@ -480,6 +481,25 @@ describe('the crypto source', () => {
   it('is null with no expo-crypto installed, which the service refuses to answer without', () => {
     assert.equal(
       withModules({}, () => defaultSource(Crypto.SOURCE)),
+      null,
+    );
+  });
+});
+
+describe('the background task source', () => {
+  it('is expo-background-task itself, whose functions the service calls by their own names', () => {
+    const expoBackgroundTask = { registerTaskAsync: async () => {} };
+    assert.equal(
+      withModules({ 'expo-background-task': expoBackgroundTask }, () =>
+        defaultSource(BackgroundTask.SOURCE),
+      ),
+      expoBackgroundTask,
+    );
+  });
+
+  it('is inert with no expo-background-task installed', () => {
+    assert.equal(
+      withModules({}, () => defaultSource(BackgroundTask.SOURCE)),
       null,
     );
   });

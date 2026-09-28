@@ -99,6 +99,7 @@ describe('the entry points Metro has to resolve', () => {
     for (const name of [
       'apple-sign-in',
       'assets',
+      'background-task',
       'battery',
       'brightness',
       'clipboard',

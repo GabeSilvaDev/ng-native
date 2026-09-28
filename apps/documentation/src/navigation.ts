@@ -210,6 +210,7 @@ export const PACKAGES: NavSection = {
         { path: 'packages/expo/fonts', title: 'Fonts', group: 'App lifecycle' },
         { path: 'packages/expo/splash-screen', title: 'Splash screen' },
         { path: 'packages/expo/updates', title: 'Updates' },
+        { path: 'packages/expo/background-task', title: 'Background task' },
         { path: 'packages/expo/native-views', title: 'Native views', group: 'Native views' },
         { path: 'packages/expo/expo-ui', title: 'Expo UI' },
         { path: 'packages/expo/dom-components', title: 'DOM components', group: 'Web interop' },

@@ -102,6 +102,7 @@ is organised into one entry point per module.
 - [Fonts](/packages/expo/fonts) - register custom faces with the platform before the first frame.
 - [Splash screen](/packages/expo/splash-screen) - hold the native splash until the app is ready.
 - [Updates](/packages/expo/updates) - check for and apply an over-the-air update.
+- [Background task](/packages/expo/background-task) - register work for the platform to run while the app is in the background.
 
 ### Native views
 
