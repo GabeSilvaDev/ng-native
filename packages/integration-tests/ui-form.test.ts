@@ -83,6 +83,23 @@ describe('a date picker in a form', () => {
     );
   });
 
+  it('reads numbers and switches written as static attributes', async () => {
+    await render(mod['UiStatic'] as Type<unknown>);
+    const props = (id: string) => screen.getByTestId(id).props;
+    assert.equal(props('column')['spacing'], 8);
+    assert.equal(props('row')['spacing'], 4);
+    assert.deepEqual(
+      ['value', 'min', 'max', 'steps'].map((key) => props('slider')[key]),
+      [2, 0, 10, 5],
+    );
+    assert.deepEqual(
+      ['value', 'min', 'max', 'step'].map((key) => props('stepper')[key]),
+      [1, 0, 9, 2],
+    );
+    assert.equal(props('progress')['value'], 0.5);
+    assert.equal(props('toggle')['isOn'], true);
+  });
+
   it('is disabled by a bare disabled attribute, outside a form', async () => {
     await render(mod['UiDisabled'] as Type<unknown>);
     for (const id of ['bare-date', 'bare-room']) {

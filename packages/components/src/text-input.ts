@@ -2,6 +2,7 @@ import {
   Directive,
   type SimpleChanges,
   afterRenderEffect,
+  booleanAttribute,
   computed,
   inject,
   input,
@@ -145,9 +146,9 @@ export class TextInput extends ViewBase {
   /** Refuse input, though still announced as enabled. Wins over `editable`. */
   readonly readonly = input(undefined, { transform: optionalBoolean });
   /** Published as `data-invalid`; nothing native reads it. */
-  readonly invalid = input(false);
+  readonly invalid = input(false, { transform: booleanAttribute });
   /** Published as `data-touched`; nothing native reads it. */
-  readonly touched = input(false);
+  readonly touched = input(false, { transform: booleanAttribute });
 
   /** Allow more than one line. */
   readonly multiline = input(undefined, { transform: optionalBoolean });

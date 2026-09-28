@@ -21,6 +21,8 @@ import { TextInput, View } from '../../components/src/index.ts';
         autoCapitalize="none"
       />
       <text-input nativeID="notes" [multiline]="true" textAlignVertical="top" />
+      <text-input nativeID="said-invalid" invalid touched />
+      <text-input nativeID="said-valid" invalid="false" touched />
     </view>
   `,
 })

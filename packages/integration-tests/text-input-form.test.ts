@@ -68,6 +68,15 @@ describe('a text input as a Signal Forms control', () => {
     assert.equal(field('email').props['borderTopColor'], undefined);
   });
 
+  it('reads invalid and touched written as static attributes', () => {
+    assert.equal(field('said-invalid').props['borderTopColor'], 'rgb(9, 9, 9)');
+    assert.equal(
+      field('said-valid').props['borderTopColor'],
+      undefined,
+      'invalid="false" is valid',
+    );
+  });
+
   it('marks the field touched when native focus leaves it', async () => {
     // Signal Forms marks a field touched from the control's `touch` output. There is no DOM blur
     // here, so without the native one forwarded a required field stays untouched forever.

@@ -8,6 +8,7 @@
  */
 import { Component, input, output } from '@angular/core';
 import type { NativeSyntheticEvent } from '@ng-native/fabric';
+import { optionalBoolean, optionalNumber } from './transforms.ts';
 
 /** The font the segments' titles are drawn in. */
 export interface SegmentedControlFont {
@@ -41,17 +42,19 @@ export type SegmentedControlChangeEvent = NativeSyntheticEvent<{
 })
 export class SegmentedControl {
   readonly values = input<readonly string[]>();
-  readonly selectedIndex = input<number>();
-  readonly enabled = input<boolean>();
+  readonly selectedIndex = input<number>(undefined, { transform: optionalNumber });
+  readonly enabled = input<boolean>(undefined, { transform: optionalBoolean });
   /** Segments do not stay selected: each is a button. */
-  readonly momentary = input<boolean>();
+  readonly momentary = input<boolean>(undefined, { transform: optionalBoolean });
   /** The selected segment's colour. */
   readonly tintColor = input<string>();
   readonly backgroundColor = input<string>();
   readonly fontStyle = input<SegmentedControlFont>();
   readonly activeFontStyle = input<SegmentedControlFont>();
   /** Each segment as wide as its title rather than all equal. */
-  readonly apportionsSegmentWidthsByContent = input<boolean>();
+  readonly apportionsSegmentWidthsByContent = input<boolean>(undefined, {
+    transform: optionalBoolean,
+  });
   readonly accessibilityLabel = input<string>();
   readonly change = output<SegmentedControlChangeEvent>();
 }

@@ -6,6 +6,7 @@
  */
 import { Component, input, output } from '@angular/core';
 import type { NativeSyntheticEvent } from '@ng-native/fabric';
+import { optionalNumber } from './transforms.ts';
 
 /** One image `source` entry, as `expo-image` passes them to its view. */
 export interface ExpoImageSource {
@@ -41,7 +42,7 @@ export class ExpoImage {
   readonly contentFit = input<ExpoImageContentFit>();
   readonly contentPosition = input<string | Readonly<Record<string, number | string>>>();
   readonly transition = input<number | { readonly duration?: number; readonly effect?: string }>();
-  readonly blurRadius = input<number>();
+  readonly blurRadius = input<number>(undefined, { transform: optionalNumber });
   readonly tintColor = input<string>();
   readonly cachePolicy = input<'none' | 'disk' | 'memory' | 'memory-disk'>();
   readonly priority = input<'low' | 'normal' | 'high'>();

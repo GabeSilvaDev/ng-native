@@ -1,6 +1,16 @@
 import { Component, signal } from '@angular/core';
 import { FormField, disabled, form, required } from '@angular/forms/signals';
-import { UiDatePicker, UiHost, UiPicker } from '../../expo/src/expo-ui-components.ts';
+import {
+  UiDatePicker,
+  UiHost,
+  UiHStack,
+  UiPicker,
+  UiProgress,
+  UiSlider,
+  UiStepper,
+  UiToggle,
+  UiVStack,
+} from '../../expo/src/expo-ui-components.ts';
 
 /** A booking form: a date and a choice, both Signal Forms fields on SwiftUI controls. */
 @Component({
@@ -47,6 +57,24 @@ export class UiForm {
 export class UiDisabled {
   readonly rooms = [{ value: 'single', label: 'Single' }];
 }
+
+/** Numbers and switches written as static attributes, which arrive as strings. */
+@Component({
+  selector: 'x-ui-static',
+  imports: [UiHost, UiHStack, UiProgress, UiSlider, UiStepper, UiToggle, UiVStack],
+  template: `
+    <ui-host>
+      <ui-vstack nativeID="column" spacing="8">
+        <ui-slider nativeID="slider" value="2" min="0" max="10" steps="5" />
+        <ui-stepper nativeID="stepper" value="1" min="0" max="9" step="2" />
+        <ui-toggle nativeID="toggle" isOn label="Wi-Fi" />
+        <ui-progress nativeID="progress" value="0.5" />
+        <ui-hstack nativeID="row" spacing="4" />
+      </ui-vstack>
+    </ui-host>
+  `,
+})
+export class UiStatic {}
 
 /** Hosts sized to their SwiftUI content, both ways and one way. */
 @Component({

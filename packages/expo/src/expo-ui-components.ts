@@ -37,6 +37,7 @@ import {
   type NativeSyntheticEvent,
   nativePlatform,
 } from '@ng-native/fabric';
+import { optionalBoolean, optionalNumber } from './transforms.ts';
 
 /** One SwiftUI modifier, as `@expo/ui`'s modifier functions build them: `{ $type: 'frame', ... }`. */
 export interface UiModifier {
@@ -74,7 +75,7 @@ export class UiHost {
     return typeof match === 'object' ? match.horizontal : match;
   });
   readonly ignoreSafeArea = input<'all' | 'keyboard' | 'container'>();
-  readonly useViewportSizeMeasurement = input<boolean>();
+  readonly useViewportSizeMeasurement = input<boolean>(undefined, { transform: optionalBoolean });
 }
 
 /** A SwiftUI `Menu`. Its trigger is the `label` or a `<ui-slot name="label">`; its items are children. */
@@ -187,11 +188,11 @@ export type UiSliderChangeEvent = NativeSyntheticEvent<{ readonly value: number 
   },
 })
 export class UiSlider {
-  readonly value = input<number>();
-  readonly min = input<number>();
-  readonly max = input<number>();
+  readonly value = input<number>(undefined, { transform: optionalNumber });
+  readonly min = input<number>(undefined, { transform: optionalNumber });
+  readonly max = input<number>(undefined, { transform: optionalNumber });
   /** How many steps the range is divided into; none moves the thumb continuously. */
-  readonly steps = input<number>();
+  readonly steps = input<number>(undefined, { transform: optionalNumber });
   readonly modifiers = input<readonly UiModifier[]>();
   readonly valueChanged = output<UiSliderChangeEvent>();
 }
@@ -208,7 +209,7 @@ export class UiSlider {
 })
 export class UiVStack {
   readonly alignment = input<'leading' | 'center' | 'trailing'>();
-  readonly spacing = input<number>();
+  readonly spacing = input<number>(undefined, { transform: optionalNumber });
   readonly modifiers = input<readonly UiModifier[]>();
 }
 
@@ -227,7 +228,7 @@ export class UiVStack {
 export class UiImage {
   readonly systemName = input<string>();
   readonly uiImage = input<string>();
-  readonly size = input<number>();
+  readonly size = input<number>(undefined, { transform: optionalNumber });
   readonly color = input<string>();
   readonly modifiers = input<readonly UiModifier[]>();
 }
@@ -436,7 +437,7 @@ export type UiToggleChangeEvent = NativeSyntheticEvent<{ readonly isOn: boolean 
   host: { '[isOn]': 'isOn()', '[label]': 'label()', '[modifiers]': 'modifiers()' },
 })
 export class UiToggle {
-  readonly isOn = input<boolean>();
+  readonly isOn = input<boolean>(undefined, { transform: optionalBoolean });
   readonly label = input<string>();
   readonly modifiers = input<readonly UiModifier[]>();
   readonly isOnChange = output<UiToggleChangeEvent>();
@@ -459,10 +460,10 @@ export type UiStepperChangeEvent = NativeSyntheticEvent<{ readonly value: number
   },
 })
 export class UiStepper {
-  readonly value = input<number>();
-  readonly min = input<number>();
-  readonly max = input<number>();
-  readonly step = input<number>();
+  readonly value = input<number>(undefined, { transform: optionalNumber });
+  readonly min = input<number>(undefined, { transform: optionalNumber });
+  readonly max = input<number>(undefined, { transform: optionalNumber });
+  readonly step = input<number>(undefined, { transform: optionalNumber });
   readonly label = input<string>();
   readonly modifiers = input<readonly UiModifier[]>();
   readonly valueChange = output<UiStepperChangeEvent>();
@@ -508,7 +509,7 @@ export type UiColorChangeEvent = NativeSyntheticEvent<{ readonly value: string }
 export class UiColorPicker {
   readonly selection = input<string>();
   readonly label = input<string>();
-  readonly supportsOpacity = input<boolean>();
+  readonly supportsOpacity = input<boolean>(undefined, { transform: optionalBoolean });
   readonly modifiers = input<readonly UiModifier[]>();
   readonly selectionChange = output<UiColorChangeEvent>();
 }
@@ -529,9 +530,9 @@ export class UiColorPicker {
   },
 })
 export class UiGauge {
-  readonly value = input<number>();
-  readonly min = input<number>();
-  readonly max = input<number>();
+  readonly value = input<number>(undefined, { transform: optionalNumber });
+  readonly min = input<number>(undefined, { transform: optionalNumber });
+  readonly max = input<number>(undefined, { transform: optionalNumber });
   readonly type = input<string>();
   readonly currentValueLabel = input<string>();
   readonly minimumValueLabel = input<string>();
@@ -546,7 +547,7 @@ export class UiGauge {
   host: { '[value]': 'value()', '[modifiers]': 'modifiers()' },
 })
 export class UiProgress {
-  readonly value = input<number>();
+  readonly value = input<number>(undefined, { transform: optionalNumber });
   readonly modifiers = input<readonly UiModifier[]>();
 }
 
@@ -562,7 +563,7 @@ export class UiProgress {
 })
 export class UiHStack {
   readonly alignment = input<'top' | 'center' | 'bottom' | 'firstTextBaseline'>();
-  readonly spacing = input<number>();
+  readonly spacing = input<number>(undefined, { transform: optionalNumber });
   readonly modifiers = input<readonly UiModifier[]>();
 }
 
