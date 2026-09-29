@@ -78,12 +78,14 @@ export { SafeAreaView, type SafeAreaEdgeMode } from './safe-area-view.ts';
 export { type KeyboardShouldPersistTaps } from './keyboard-taps.ts';
 export { ScrollView } from './scroll-view.ts';
 export {
+  SectionEdgeSeparator,
   SectionFooter,
   SectionHeader,
   SectionItem,
   SectionList,
   SectionSeparator,
   type SectionContext,
+  type SectionEdgeSeparatorContext,
   type SectionItemContext,
   type SectionListSection,
   type SectionRow,
