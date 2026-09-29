@@ -8,7 +8,7 @@
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { Injector, type Provider, type Type } from '@angular/core';
+import { ErrorHandler, Injector, type Provider, type Type } from '@angular/core';
 import {
   COMPACT_WIDTH,
   Accessibility,
@@ -207,6 +207,86 @@ describe('deep links', () => {
 
     assert.deepEqual(router, ['/users/7'], 'the router was still listening');
     assert.equal(links.initialUrl(), null);
+  });
+
+  it('delivers the launch url to a function subscribed twice after one of them stops', async () => {
+    const platform = source('canary://users/7');
+    const links = build(DeepLinks, [{ provide: DeepLinks.SOURCE, useValue: platform.value }]);
+
+    const seen: string[] = [];
+    const follow = (path: string) => seen.push(path);
+    links.subscribe(follow);
+    const stop = links.subscribe(follow);
+    stop();
+    await settle();
+
+    assert.deepEqual(seen, ['/users/7'], 'the first subscription was still listening');
+  });
+
+  it('delivers the launch url to every listener when one of them throws', async () => {
+    const platform = source('canary://users/7');
+    const errors: unknown[] = [];
+    const links = build(DeepLinks, [
+      { provide: DeepLinks.SOURCE, useValue: platform.value },
+      { provide: ErrorHandler, useValue: { handleError: (error: unknown) => errors.push(error) } },
+    ]);
+
+    const failure = new Error('the app could not handle it');
+    const router: string[] = [];
+    links.subscribe(() => {
+      throw failure;
+    });
+    links.subscribe((path) => router.push(path));
+    await settle();
+
+    assert.deepEqual(router, ['/users/7'], 'the router was listening too');
+    assert.deepEqual(errors, [failure], 'the error is reported, not swallowed');
+  });
+
+  it('delivers the launch url to every listener when the ErrorHandler rethrows', async (t) => {
+    const logged = t.mock.method(console, 'error', () => {});
+    const platform = source('canary://users/7');
+    const links = build(DeepLinks, [
+      { provide: DeepLinks.SOURCE, useValue: platform.value },
+      {
+        provide: ErrorHandler,
+        useValue: {
+          handleError: (error: unknown) => {
+            throw error;
+          },
+        },
+      },
+    ]);
+
+    const failure = new Error('the app could not handle it');
+    const router: string[] = [];
+    links.subscribe(() => {
+      throw failure;
+    });
+    links.subscribe((path) => router.push(path));
+    await settle();
+
+    assert.deepEqual(router, ['/users/7'], 'the router was listening too');
+    assert.equal(logged.mock.callCount(), 1, 'the error is still reported');
+    assert.equal(logged.mock.calls[0]?.arguments[0], failure);
+  });
+
+  it("does not need the app's ErrorHandler until a listener throws", () => {
+    // An app's handler that injects the router reaches DeepLinks through the location, so
+    // DeepLinks asking for the handler as it is made would be a cycle at boot.
+    const platform = source(null);
+    const injector = Injector.create({
+      providers: [
+        { provide: DeepLinks.SOURCE, useValue: platform.value },
+        { provide: DeepLinks, useClass: DeepLinks, deps: [] },
+        {
+          provide: ErrorHandler,
+          useFactory: (links: DeepLinks) => ({ links, handleError: () => {} }),
+          deps: [DeepLinks],
+        },
+      ],
+    });
+    assert.doesNotThrow(() => injector.get(ErrorHandler));
   });
 
   it('passes a link that arrives later through as a path', async () => {

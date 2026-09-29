@@ -1,7 +1,7 @@
 /**
  * Links that arrive from outside the app: a `canary://` url, a universal link, a notification.
  */
-import { InjectionToken, Service, inject } from '@angular/core';
+import { ErrorHandler, InjectionToken, Injector, Service, inject } from '@angular/core';
 import { reactNative } from './react-native.ts';
 
 export interface DeepLinkSource {
@@ -90,6 +90,7 @@ export class DeepLinks {
   });
 
   private readonly source = inject(DeepLinks.SOURCE);
+  private readonly injector = inject(Injector);
   private launch: string | null = null;
   private readonly listeners = new Set<(path: string) => void>();
 
@@ -97,7 +98,7 @@ export class DeepLinks {
     void this.source.launchUrl().then((url) => {
       const path = pathOf(url);
       if (!path || path === '/') return;
-      if (this.listeners.size) this.listeners.forEach((listener) => listener(path));
+      if (this.listeners.size) this.listeners.forEach((listener) => this.deliver(listener, path));
       else this.launch = path;
     });
   }
@@ -109,15 +110,38 @@ export class DeepLinks {
 
   /** Links that arrive while the app is running, as paths. Returns an unsubscribe. */
   subscribe(listener: (path: string) => void): () => void {
-    this.listeners.add(listener);
+    // Each subscription is its own entry, so the same function subscribed twice stops once.
+    const subscription = (path: string) => listener(path);
+    this.listeners.add(subscription);
     const unsubscribe = this.source.subscribe((url) => {
       const path = pathOf(url);
       if (path) listener(path);
     });
     return () => {
-      this.listeners.delete(listener);
+      this.listeners.delete(subscription);
       unsubscribe();
     };
+  }
+
+  /**
+   * One listener throwing is reported, and does not keep the launch url from the rest. The
+   * `ErrorHandler` is looked up when that happens rather than when this is made: an app's handler
+   * that injects the router reaches `DeepLinks` through the location, and would be a cycle at boot.
+   */
+  private deliver(listener: (path: string) => void, path: string): void {
+    try {
+      listener(path);
+    } catch (error) {
+      // A handler that rethrows, as some apps' do, would otherwise stop the listeners after this.
+      try {
+        const errors = this.injector.get(ErrorHandler, null);
+        if (errors) errors.handleError(error);
+        else console.error(error);
+      } catch (reporting) {
+        if (reporting === error) console.error(error);
+        else console.error(error, reporting);
+      }
+    }
   }
 
   /** Hand a url to whatever else on the device handles it: a browser, Maps, another app. */
