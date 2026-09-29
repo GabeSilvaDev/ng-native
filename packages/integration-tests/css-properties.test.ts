@@ -563,6 +563,26 @@ describe('what it refuses, and how it says so', () => {
     );
   });
 
+  it('drops only the selector it cannot match from a list, and keeps the rest', () => {
+    // lightningcss merges neighbouring rules with the same declarations into one list, so a
+    // `group-hover:` beside `data-[state=on]:` of the same colour arrives as one rule, and
+    // refusing the whole list silently took the variant that was fine with it.
+    const dropped: string[] = [];
+    const sheet = compileCss('.a:hover, .b, .c:has(.d) { color: red }', 'list.css', {
+      onUnsupported: (message: string) => dropped.push(message),
+    });
+    assert.deepEqual(
+      sheet.rules.map(
+        (rule: { compounds: { classes: string[] }[] }) => rule.compounds.at(-1)!.classes,
+      ),
+      [['b']],
+    );
+    assert.equal((sheet.rules[0] as { order: number }).order, 1, 'ordered as it was in the list');
+    assert.equal(dropped.length, 2);
+    assert.match(dropped[0]!, /^list\.css:1: dropped a selector: ':hover'/);
+    assert.match(dropped[1]!, /^list\.css:1: dropped a selector: ':has\(\)'/);
+  });
+
   it('names the line of a dropped rule before saying it was dropped', () => {
     // `app.tailwind.css: dropped a rule: app.tailwind.css:430: ...`, the line in the middle.
     const dropped: string[] = [];
@@ -626,6 +646,87 @@ describe('colours nested inside a style value', () => {
         inset: false,
       },
     ]);
+  });
+});
+
+describe('a colour token made of channel tokens', () => {
+  // `--ring: rgba(var(--ring-rgb), var(--ring-alpha))`: Bootstrap writes its colours this way, and
+  // Tailwind 3's `ring-opacity-50` needs it, since a ring's colour is a token the ring reads. The
+  // colour is settled where the token is defined, from the tokens in scope there.
+  const resolve = (css: string, parentClasses: string[], classes: string[]) => {
+    const target = (parent: StyleTarget | null, own: string[]): StyleTarget => ({
+      name: 'view',
+      parent,
+      classes: new Set(own),
+      props: {},
+      sheet: null,
+      hostSheet: null,
+      styleCache: null,
+      styleDirty: true,
+    });
+    const resolver = new StyleResolver(compileCss(css), {
+      width: 400,
+      height: 800,
+      colorScheme: 'light',
+    });
+    const parent = target(null, parentClasses);
+    resolver.resolve(parent, 1);
+    return resolver.resolve(target(parent, classes), 1).style;
+  };
+  const css = `
+    .blue { --ring-rgb: 59, 130, 246; --ring-alpha: 1; --ring: rgba(var(--ring-rgb), var(--ring-alpha, 1)) }
+    .faded { --ring-alpha: 0.5 }
+    .fixed { --ring-rgb: 1, 2, 3; --ring: rgba(var(--ring-rgb), 0.25) }
+    .paint { background-color: var(--ring) }
+  `;
+
+  it('takes its alpha from a token', () => {
+    assert.equal(resolve(css, [], ['blue', 'paint'])['backgroundColor'], 'rgb(59, 130, 246)');
+    assert.equal(
+      resolve(css, [], ['blue', 'faded', 'paint'])['backgroundColor'],
+      'rgba(59, 130, 246, 0.5)',
+    );
+  });
+
+  it('takes an alpha written beside the channels', () => {
+    assert.equal(resolve(css, [], ['fixed', 'paint'])['backgroundColor'], 'rgba(1, 2, 3, 0.25)');
+  });
+
+  it('is what an alias to it resolves to, as an hsl() token is', () => {
+    const aliased = `
+      .a { --rgb: 1, 2, 3; --base: rgba(var(--rgb), 0.5); --semantic: var(--base) }
+      .h { --hue: 0; --base: hsl(var(--hue), 100%, 50%); --semantic: var(--base) }
+      .paint { background-color: var(--semantic) }
+    `;
+    assert.equal(resolve(aliased, [], ['a', 'paint'])['backgroundColor'], 'rgba(1, 2, 3, 0.5)');
+    assert.equal(resolve(aliased, [], ['h', 'paint'])['backgroundColor'], 'rgb(255, 0, 0)');
+  });
+
+  it("takes its channels' fallback when the channels token is unset", () => {
+    const fallback = `
+      .t { --c: rgba(var(--rgb, 1, 2, 3), 0.5) }
+      .paint { background-color: var(--c) }
+      .direct { background-color: rgba(var(--rgb, 4, 5, 6), 0.25) }
+    `;
+    assert.equal(resolve(fallback, [], ['t', 'paint'])['backgroundColor'], 'rgba(1, 2, 3, 0.5)');
+    assert.equal(resolve(fallback, [], ['direct'])['backgroundColor'], 'rgba(4, 5, 6, 0.25)');
+  });
+
+  it('leaves the colour unset when its alpha names a token nothing set, as CSS does', () => {
+    const missing = `
+      .t { --rgb: 1, 2, 3; --c: rgba(var(--rgb), var(--missing)) }
+      .paint { background-color: var(--c) }
+      .direct { --rgb: 1, 2, 3; background-color: rgba(var(--rgb), var(--missing)) }
+    `;
+    assert.equal(resolve(missing, [], ['t', 'paint'])['backgroundColor'], undefined);
+    assert.equal(resolve(missing, [], ['direct'])['backgroundColor'], undefined);
+  });
+
+  it('is inherited as the colour it was settled to', () => {
+    assert.equal(
+      resolve(css, ['blue', 'faded'], ['paint'])['backgroundColor'],
+      'rgba(59, 130, 246, 0.5)',
+    );
   });
 });
 
@@ -789,6 +890,15 @@ describe('messages for things that are refused', () => {
 });
 
 describe('the rest of the selector and unit surface', () => {
+  it('writes a negative zero as zero', () => {
+    // `-translate-x-0` is `-0px`. JSON has no negative zero, so the module Metro writes held 0
+    // where the sheet compiled in memory held -0, and the two were not the same sheet.
+    const [rule] = compileCss('.a { margin-left: -0px; --x: -0rem; --y: -0px }').rules;
+    assert.ok(Object.is(rule!.declarations['marginLeft'], 0));
+    assert.ok(Object.is((rule!.tokens!['--x'] as { length: number }).length, 0));
+    assert.ok(Object.is((rule!.tokens!['--y'] as { length: number }).length, 0));
+  });
+
   it('supports the remaining attribute operators', () => {
     const rule = (s: string) => compileCss(`${s} { color: red }`).rules[0];
     assert.equal(rule('view[data-x~="b"]').compounds[0].attributes[0].operator, 'includes');

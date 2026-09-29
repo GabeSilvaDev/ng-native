@@ -139,3 +139,48 @@ would apply the ratio to the descendant's size, so set `leading-*` on the text i
 `focus-visible:` variants the preset adds and why native gives them different meanings than the
 web. [Safe area and hairlines](/packages/tailwind/utilities) covers the two utility families this
 package adds that Tailwind has no reason to ship on its own.
+
+## Tailwind 3
+
+An app on Tailwind 3.4.1 or later uses the same package on native. Tailwind 3 takes its preset
+from `tailwind.config.js` rather than from a stylesheet, so the preset is `preset.cjs`:
+
+```sh
+npm install @ng-native/tailwind tailwindcss@3
+```
+
+```js
+// tailwind.config.js
+module.exports = {
+  presets: [require('@ng-native/tailwind/preset.cjs')],
+  content: ['./src/**/*.{ts,html}'],
+};
+```
+
+```css
+/* src/styles.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+`metro.config.js` and `main.ts` are the same as above. `withTailwind` reads the app's
+`tailwindcss` version and runs Tailwind 3's own CLI, which ships inside `tailwindcss`, so there is
+no `@tailwindcss/cli` to install.
+
+The preset turns preflight off, so `@tailwind base` brings only the reset that gives each `--tw-*`
+property its default on every element. That reset is what lets utilities combine: `transform
+rotate-45 translate-x-2`, `shadow ring-2 ring-offset-2`, `bg-blue-500 bg-opacity-50`,
+`android:blur android:grayscale` and `bg-gradient-to-r from-rose-500 via-white to-blue-500` are
+settled per element on the device, the way a browser settles them, rather than once for the whole
+sheet at build time. It supplies the same variants and utilities as `native.css`: the platform
+variants, `dark:` following a `.dark` class, the touch meanings of `hover:` and `focus-visible:`
+(for `group-*:` and `peer-*:` as well), and the safe-area and hairline utilities.
+
+Every Tailwind 3 utility is held to the same sweep as Tailwind 4's, and what it draws is compared
+with Chrome. Each one takes effect or is refused with a build warning, except a few that only set a
+value another utility reads, where that utility is the one refused: `snap-mandatory` and
+`snap-proximity`, read by `snap-x` and `snap-y`, and `placeholder-opacity-*`, read by a
+`placeholder-*` colour. Those do nothing, as the utility they feed does nothing.
+
+The web host is Tailwind 4 only.

@@ -135,6 +135,9 @@ function splitOnce(inside) {
   return { name: inside, fallback: undefined };
 }
 
+/** A rule that resets every `--tw-*` slot on every node: Tailwind's `*, ::before, ::after`. */
+const RESET = /(^|,)\s*\*\s*(,|$)/;
+
 /**
  * Custom properties the device supplies at runtime, which no build step can know.
  *
@@ -221,7 +224,9 @@ const RESOLVED_PER_NODE =
  * `ring-offset-2` the width it is pushed out by, `ring-inset` whether it is inset. A drop shadow
  * keeps its shape in `--tw-drop-shadow-size`, which `drop-shadow-red-500` colours.
  */
-const SHADOW_SLOT = /^--tw-[\w-]*shadow(-size)?$/;
+// Tailwind 3's `--tw-shadow-colored` too: the coloured copy of a shadow, which `shadow-red-500`
+// swaps in and whose colour is a slot of its own.
+const SHADOW_SLOT = /^--tw-[\w-]*shadow(-size|-colored)?$/;
 
 /**
  * Replace `var()` with what it resolves to, repeatedly, because theme values reference each other.
@@ -331,6 +336,9 @@ function dropPseudoElementRules(css) {
     if (!selectors.includes('::')) return whole;
     const all = selectorList(selectors).map((one) => one.trim());
     const kept = all.filter((one) => one && !one.includes('::'));
+    // Tailwind 3's `::backdrop { --tw-...: ... }`, the reset again for a box native never draws: no
+    // author wrote it, so it goes without a word.
+    if (!kept.length && /^\s*(--tw-[\w-]+\s*:[^;{}]*;?\s*)*$/.test(body)) return '';
     return kept.length && kept.length < all.length ? `${kept.join(', ')} {${body}}` : whole;
   });
 }
@@ -507,9 +515,16 @@ function dropRedundantBorderStyles(css) {
  */
 function dropUnreadSlots(css) {
   const read = new Set([...css.matchAll(/var\(\s*(--tw-[\w-]+)/g)].map((match) => match[1]));
-  return css.replace(/(^|[;{])\s*(--tw-[\w-]+)\s*:[^;{}]*;?/g, (whole, before, name) =>
-    read.has(name) ? whole : before,
-  );
+  // Again until nothing changes: a match takes the `;` that ends its declaration, which is the one
+  // the next declaration needs to be found, so one pass leaves every other slot behind.
+  let out = css;
+  for (let before = ''; before !== out;) {
+    before = out;
+    out = out.replace(/(^|[;{])\s*(--tw-[\w-]+)\s*:[^;{}]*;?/g, (whole, start, name) =>
+      read.has(name) ? whole : start,
+    );
+  }
+  return out;
 }
 
 /**
@@ -569,6 +584,106 @@ function expandGradients(css, values) {
   });
 }
 
+/**
+ * Tailwind 3's gradients, rewritten in the shape Tailwind 4 writes them, for `expandGradients`.
+ *
+ * Tailwind 3 puts the direction inline, `linear-gradient(to right, var(--tw-gradient-stops))`, and
+ * builds the stop list inside `from-*` and `via-*` rather than naming each stop: `via-white` is a
+ * whole `--tw-gradient-stops` with `#fff` written into its middle. Each colour class is turned back
+ * into the one stop it names, and each position reset, written as an empty value, into the default
+ * Tailwind 4 gives it with `@property`.
+ */
+function normalizeV3Gradients(css) {
+  return css
+    .replace(
+      /background-image\s*:\s*(linear|radial)-gradient\(\s*([^,()]+),\s*var\(--tw-gradient-stops\)\s*\)/g,
+      '--tw-gradient-position: $2; background-image: $1-gradient(var(--tw-gradient-stops))',
+    )
+    .replace(
+      /--tw-gradient-stops\s*:\s*var\(--tw-gradient-from\),\s*(.+?)\s+var\(--tw-gradient-via-position\),\s*var\(--tw-gradient-to\)/g,
+      '--tw-gradient-via: $1',
+    )
+    .replace(/\s*var\(--tw-gradient-(from|via|to)-position\)/g, '')
+    .replace(/--tw-gradient-(from|via|to)-position\s*:\s*;/g, (_, stop) => {
+      return `--tw-gradient-${stop}-position: ${{ from: '0%', via: '50%', to: '100%' }[stop]};`;
+    });
+}
+
+/** Tailwind 3's colour with a token alpha: `rgb(59 130 246 / var(--tw-bg-opacity, 1))`, or an `hsl()` one. */
+const OPACITY_COLOUR =
+  /([\w-]+)\s*:\s*(rgb|hsl)a?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%?[\s,]+([\d.]+)%?\s*\/\s*var\(\s*(--tw-[\w-]+-opacity)\s*,\s*1\s*\)\s*\)/g;
+
+/**
+ * An `hsl()` colour's channels in sRGB, as a browser gives them when it prints the colour: whole
+ * numbers, since the channels token that carries them is read as an `rgb()`.
+ */
+function hslChannels(h, s, l) {
+  const [hue, sat, light] = [(((h % 360) + 360) % 360) / 360, s / 100, l / 100];
+  const q = light < 0.5 ? light * (1 + sat) : light + sat - light * sat;
+  const p = 2 * light - q;
+  const channel = (t) => {
+    const u = t < 0 ? t + 1 : t > 1 ? t - 1 : t;
+    if (u < 1 / 6) return p + (q - p) * 6 * u;
+    if (u < 1 / 2) return q;
+    if (u < 2 / 3) return p + (q - p) * (2 / 3 - u) * 6;
+    return p;
+  };
+  return [hue + 1 / 3, hue, hue - 1 / 3].map((t) => Math.round(channel(t) * 255));
+}
+
+/**
+ * Tailwind 3's `bg-opacity-50` and friends, as the channels-and-alpha colour the engine resolves.
+ *
+ * `.bg-blue-500` is `rgb(59 130 246 / var(--tw-bg-opacity, 1))`, and `.bg-opacity-50` sets only
+ * the alpha. The engine has no colour made of written channels and a token alpha, but it does have
+ * Bootstrap's `rgba(var(--channels), var(--alpha))`, so the channels move into a token declared
+ * beside the colour. Only for an alpha some other rule sets: where none does, the colour is solid
+ * and is substituted like any other. A ring's colour is left alone, being a token itself.
+ *
+ * @returns the rewritten CSS, and the alpha and channel tokens to leave for the engine
+ */
+function opacityChannels(css) {
+  const setters = new Set();
+  for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (RESET.test(selector.trim())) continue;
+    if (/(rgb|hsl)a?\([^)]*var\(--tw-[\w-]+-opacity/.test(body)) continue;
+    for (const [, name] of body.matchAll(/(--tw-[\w-]+-opacity)\s*:/g)) setters.add(name);
+  }
+  const runtime = new Set();
+  const out = css.replace(OPACITY_COLOUR, (whole, property, space, a, b2, c, alpha) => {
+    if (!setters.has(alpha)) return whole;
+    const [r, g, b] = space === 'hsl' ? hslChannels(+a, +b2, +c) : [a, b2, c];
+    // One per property: `border-color` and `border-top-color` are both faded by
+    // `--tw-border-opacity`, and sharing channels would paint one's colour on the other's sides.
+    const channels = `--tw-rgb-${property.replace(/^--tw-/, '')}`;
+    runtime.add(alpha).add(channels);
+    return `${channels}: ${r}, ${g}, ${b}; ${property}: rgba(var(${channels}), var(${alpha}, 1))`;
+  });
+  return { css: out, runtime };
+}
+
+/**
+ * Tailwind 3's empty slots, read the way Tailwind 4 writes them: `var(--tw-blur,)`.
+ *
+ * Tailwind 3 resets an unused slot to nothing, `--tw-blur:  ;`, and reads it with no fallback, so a
+ * filter or a ring is a row of `var()`s most of which hold nothing. The compiler drops a token with
+ * no value, which left each of those `var()`s unresolved and the whole declaration with it. An
+ * empty fallback says the same thing and is what the engine settles.
+ */
+function emptySlotFallbacks(css) {
+  const empty = new Set();
+  for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!RESET.test(selector.trim())) continue;
+    for (const [, name, value] of body.matchAll(/(--tw-[\w-]+)\s*:([^;{}]*)/g)) {
+      if (!value.trim()) empty.add(name);
+    }
+  }
+  if (!empty.size) return css;
+  return css.replace(/var\(\s*(--tw-[\w-]+)\s*\)/g, (whole, name) =>
+    empty.has(name) ? `var(${name},)` : whole,
+  );
+}
+
 /** A class selector, escapes and all: `.dark`, `.platform-android`, `.md\:p-4`. */
 const CLASS = String.raw`\.(?:\\.|[\w-])+`;
 // A trailing pseudo-class or attribute selector - `:active`, `[data-disabled]`, `:focus` - is what
@@ -576,6 +691,16 @@ const CLASS = String.raw`\.(?:\\.|[\w-])+`;
 const STACKED = new RegExp(
   String.raw`^\s*(${CLASS})\s+:is\((${CLASS})\s+((?:\\.|[^()\\])+)\)([^\s]*)\s*$`,
 );
+
+/**
+ * Tailwind 3's spelling of the same thing, `.dark .platform-ios .x`, which has no `:is()`. Only
+ * the preset's own ancestor classes, so a selector an app wrote is never rewritten.
+ */
+const ANCESTOR = String.raw`\.(?:dark|platform-(?:ios|android|web))`;
+const STACKED_PLAIN_ONE = new RegExp(
+  String.raw`^\s*(${ANCESTOR})\s+(${ANCESTOR})\s+([^\s].*?)\s*$`,
+);
+const STACKED_PLAIN = new RegExp(String.raw`(^|,)\s*${ANCESTOR}\s+${ANCESTOR}\s`);
 
 /**
  * A stacked variant, rewritten as the ancestor tests it means.
@@ -596,13 +721,13 @@ const STACKED = new RegExp(
  */
 function expandStackedVariants(css) {
   return css.replace(/([^{}]+)\{([^{}]*)\}/g, (whole, selectors, body) => {
-    if (!selectors.includes(':is(')) return whole;
+    if (!selectors.includes(':is(') && !STACKED_PLAIN.test(selectors)) return whole;
     let changed = false;
     const expanded = selectorList(selectors).flatMap((selector) => {
-      const match = STACKED.exec(selector);
+      const match = STACKED.exec(selector) ?? STACKED_PLAIN_ONE.exec(selector);
       if (!match) return [selector.trim()];
       changed = true;
-      const [, outer, inner, rest, suffix] = match;
+      const [, outer, inner, rest, suffix = ''] = match;
       const self = `${rest}${suffix}`;
       return [`${outer} ${inner} ${self}`, `${inner} ${outer} ${self}`, `${outer}${inner} ${self}`];
     });
@@ -651,8 +776,26 @@ function flattenTailwind(css) {
   out = rewriteAtRule(out, '@layer', true);
   out = rewriteAtRule(out, '@supports', true);
   out = resetWithoutReverseSlots(out);
+  out = normalizeV3Gradients(out);
+  // Tailwind 3's `space-*` and `divide-*` children: every child after a shown one. Native has no
+  // `hidden`, so that is every child but the first, which the engine answers at once; the sibling
+  // test is matched on every element and walks back through all its earlier siblings, so a long
+  // list paid for it squared on every commit.
+  out = out.replace(/>\s*:not\(\[hidden\]\)\s*~\s*:not\(\[hidden\]\)/g, '> :not(:first-child)');
+  out = emptySlotFallbacks(out);
+  // Tailwind 3's `transform-gpu`: a third dimension that is only a hint to a browser's compositor.
+  out = out.replace(
+    /translate3d\(([^,()]+(?:\([^()]*\))?),\s*([^,()]+(?:\([^()]*\))?),\s*0\)/g,
+    'translate($1, $2)',
+  );
+  // A browser's vendor-prefixed copy of a property whose standard form is beside it, as Tailwind 3
+  // writes `-moz-column-gap` next to `column-gap`. `-webkit-` stays: `-webkit-line-clamp` is how
+  // truncation arrives.
+  out = out.replace(/(^|[;{])\s*-(?:moz|ms|o)-[\w-]+\s*:[^;{}]*;?/gm, '$1');
+  const opacity = opacityChannels(out);
+  out = opacity.css;
   const values = collectVariables(out);
-  const runtime = crossRuleVariables(out);
+  const runtime = new Set([...crossRuleVariables(out), ...opacity.runtime]);
   out = rewriteAtRule(out, '@property', false);
   out = expandGradients(out, values);
   // `via-none` empties the chain, which is how the web takes a `via-*` stop back out. With the

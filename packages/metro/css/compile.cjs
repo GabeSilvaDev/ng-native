@@ -259,10 +259,12 @@ function deferChannels(part, property, context) {
   const [channels, alpha, ...rest] = args;
   if (channels?.type !== 'var' || rest.length || kindOf(property) !== 'color') return null;
 
+  const fallback = varFallback(channels, 'channels', context);
   return {
     props: propsFor(property),
     kind: 'channels',
     reference: channels.value.name.ident,
+    ...(fallback === undefined ? {} : { fallback }),
     ...opacityOf(alpha, context),
   };
 }
@@ -312,6 +314,31 @@ function deferHslToken(parts) {
 
   const [h, s, l, alpha] = channels;
   return { hsl: { h, s, l, ...(alpha === undefined ? {} : { alpha }) } };
+}
+
+/**
+ * `--x: rgba(var(--channels), <alpha>)`: a colour token made of a channels token and an alpha
+ * written beside it or taken from a token of its own. Bootstrap's colours as a token, and how
+ * Tailwind 3's `ring-opacity-50` fades a ring, whose colour is a token the ring reads.
+ *
+ * Settled on the node that defines it, as an hsl() token is: see `resolveAliases` in css.ts.
+ *
+ * @returns `{ deferredColour }`, or null if this is not that shape
+ */
+function deferChannelsToken(parts, context) {
+  if (parts.length !== 1) return null;
+  const deferred = deferChannels(parts[0], 'color', context);
+  if (!deferred) return null;
+  const alpha = deferred.alpha ?? deferred.adjust?.alpha;
+  return {
+    deferredColour: {
+      channels: {
+        reference: deferred.reference,
+        ...(deferred.fallback === undefined ? {} : { fallback: deferred.fallback }),
+      },
+      ...(alpha === undefined ? {} : { alpha }),
+    },
+  };
 }
 
 /**
@@ -1209,7 +1236,10 @@ function addAliased(name, parts, out, deferred, context) {
 
 /** A `--x` definition's value, in every form it can be read as. */
 function customToken(name, parts, context) {
-  const value = deferHslToken(parts) ?? tokenValue(parts, `${context} (${name})`);
+  const value =
+    deferHslToken(parts) ??
+    deferChannelsToken(parts, context) ??
+    tokenValue(parts, `${context} (${name})`);
   if (value === null) {
     throw new CssUnsupported(`${context}: '${name}' has a value native cannot express in any form`);
   }
@@ -1576,12 +1606,29 @@ function assertDrawnEverywhere(declaration, out, tokens, deferred, from, platfor
  * down into the rotation, scale and translation an Android view has, and a view has no skew:
  * `skewX()` is left out, and `skewY()` comes out as a rotation. A skew of 0 draws the same there.
  */
-function skewIn(list) {
+function skewIn(list, tokens = {}) {
   if (!Array.isArray(list)) return null;
   const entry = list.find(
-    (one) => one && ['skewX', 'skewY'].some((key) => key in one && parseFloat(one[key]) !== 0),
+    (one) => one && ['skewX', 'skewY'].some((key) => key in one && skews(one[key], tokens)),
   );
   return entry ? Object.keys(entry)[0] : null;
+}
+
+/**
+ * Whether one skew angle is a skew: a written angle other than 0, or a token the same rule sets to
+ * one, or a fallback that is one. Tailwind 3's every transform reads `var(--tw-skew-x)`, which the reset sets to 0, so a slot
+ * the rule does not set is no skew; `skew-x-12`, which sets it to 12deg, is.
+ */
+function skews(angle, tokens) {
+  const expression = angle?.__calc?.expression;
+  if (expression?.reference === undefined) {
+    return typeof angle !== 'object' && parseFloat(angle) !== 0;
+  }
+  // The rule's own token, or the fallback written beside it, which is what draws where the token
+  // is set nowhere.
+  const token = tokens[expression.reference];
+  const value = token ? (token.angle ?? token.number) : expression.fallback;
+  return value !== undefined && value !== 0;
 }
 
 /**
@@ -1592,10 +1639,10 @@ function assertSkewDrawn(out, tokens, deferred, from, name, platforms, context) 
   if (!platforms.includes('android')) return;
   const pending = deferred
     .slice(from)
-    .filter((one) => one.props?.includes('transform') && skewIn(one.within));
+    .filter((one) => one.props?.includes('transform') && skewIn(one.within, tokens));
   const token = typeof name === 'string' ? skewIn(tokens[name]?.transform) : null;
   const skew =
-    skewIn(out.transform) ?? token ?? (pending.length ? skewIn(pending[0].within) : null);
+    skewIn(out.transform) ?? token ?? (pending.length ? skewIn(pending[0].within, tokens) : null);
   if (!skew) return;
   if (skewIn(out.transform)) delete out.transform;
   if (token) delete tokens[name];
@@ -1753,25 +1800,48 @@ function compileCss(source, context = 'styles', options = {}) {
 
   /** A style rule's selectors and declarations as rules, each at the place `orderOf` gives it. */
   function styleVariant(rule, orderOf, context) {
-    const selectors = rule.value.selectors;
     const groups = new Map();
-    for (const parts of selectors) {
+    for (const parts of rule.value.selectors) {
+      // One selector the engine cannot match is dropped on its own, not with the list it is in:
+      // lightningcss merges neighbouring rules with the same declarations, so a list is often
+      // several unrelated utilities that happen to share a colour.
+      const compiled = selectorOrDropped(parts, context, rule.value.selectors.length === 1);
+      if (!compiled) continue;
       const platforms = rulePlatforms([parts], targets);
       const key = platforms.join();
       if (!groups.has(key)) groups.set(key, { platforms, selectors: [] });
-      groups.get(key).selectors.push(parts);
+      groups.get(key).selectors.push({ parts, compiled });
     }
     for (const { platforms, selectors: group } of groups.values()) {
       const built = buildRule(rule, platforms, context);
       if (!built) continue;
-      for (const parts of group) {
+      for (const { parts, compiled } of group) {
         // One rule per alternative an ancestor test is among; each as specific as the selector
         // written, which is what `:is()` makes all of them.
-        const { specificity } = selector(parts, context);
         for (const one of alternatives(parts)) {
-          rules.push({ ...selector(one, context), specificity, order: orderOf(parts), ...built });
+          const alternative = one === parts ? compiled : selector(one, context);
+          rules.push({
+            ...alternative,
+            specificity: compiled.specificity,
+            order: orderOf(parts),
+            ...built,
+          });
         }
       }
+    }
+  }
+
+  /** One selector compiled, or null and reported when the engine cannot match it. */
+  function selectorOrDropped(parts, context, alone) {
+    if (!onUnsupported) return selector(parts, context);
+    try {
+      return selector(parts, context);
+    } catch (error) {
+      if (!(error instanceof CssUnsupported)) throw error;
+      onUnsupported(
+        reported(context, alone ? 'dropped a rule' : 'dropped a selector', error.message),
+      );
+      return null;
     }
   }
 
