@@ -14,11 +14,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { commands, page, userEvent } from 'vitest/browser';
 import { CascadeApp } from '../src/cascade-app.ts';
+import { injectResetStylesheet } from '../src/mount.ts';
 import { boot, settle, waitFor, type Booted } from './boot.ts';
 
-async function scene(): Promise<Booted> {
+async function scene(options: { asAnAppMounts?: boolean } = {}): Promise<Booted> {
   await page.viewport(1200, 800);
-  const booted = boot(CascadeApp);
+  const booted = boot(CascadeApp, options);
   await settle();
   return booted;
 }
@@ -206,4 +207,57 @@ describe('the Tailwind web preset', () => {
     expect(computed(byId('notched')).paddingTop).toBe('30px');
     expect(computed(byId('unnotched')).paddingTop).toBe('0px');
   });
+});
+
+describe('the reset mount injects by default', () => {
+  // `mount` injects `reset.css` into the head unless told not to, after the app's own stylesheet.
+  // Unlayered, and as specific as a class, it beat every Tailwind utility it shares a property
+  // with: a `border-2` drew nothing, a `flex-row` stacked, a `hidden` showed. In Tailwind's `base`
+  // layer it is below every utility, which is where a reset belongs.
+  afterEach(() => document.getElementById('angular-native-web-reset')?.remove());
+
+  it('leaves every utility above it', async () => {
+    // As an app mounts, with the reset injected by `mount` itself.
+    const { byId } = await scene({ asAnAppMounts: true });
+    expect(document.getElementById('angular-native-web-reset')).not.toBeNull();
+    const framed = computed(byId('tinted-frame'));
+    expect(framed.borderTopWidth).toBe('2px');
+    expect(framed.borderTopColor).toBe('rgb(255, 0, 0)');
+    expect(computed(byId('column').parentElement!).flexDirection).toBe('row');
+  });
+});
+
+describe('the reset, beside utilities that declare no base layer', () => {
+  // The documented Tailwind entry imports theme.css and utilities.css, which declare `theme` and
+  // `utilities` and no `base`. A layer is ordered by where it is first declared, so a reset
+  // declaring `base` after the app's styles came after `utilities` and beat every utility. In a
+  // frame of its own, since this page's stylesheet declares every layer before anything runs.
+  for (const order of ['utilities first', 'reset first'] as const) {
+    it(`stays below the utilities, with the ${order}`, () => {
+      const frame = document.createElement('iframe');
+      document.body.appendChild(frame);
+      try {
+        const doc = frame.contentDocument!;
+        const utilities = doc.createElement('style');
+        utilities.textContent = '@layer utilities { .u-row { flex-direction: row } }';
+        if (order === 'reset first') injectResetStylesheet(doc);
+        doc.head.appendChild(utilities);
+        if (order === 'utilities first') injectResetStylesheet(doc);
+        const probe = (className: string) => {
+          const view = doc.createElement('div');
+          view.setAttribute('data-rn', 'view');
+          view.className = className;
+          doc.body.appendChild(view);
+          return frame.contentWindow!.getComputedStyle(view).flexDirection;
+        };
+        // The reset is there and applies: a view with no utility is a column, as Yoga's is.
+        expect(doc.getElementById('angular-native-web-reset')).not.toBeNull();
+        expect(probe('')).toBe('column');
+        // And a utility beats it.
+        expect(probe('u-row')).toBe('row');
+      } finally {
+        frame.remove();
+      }
+    });
+  }
 });

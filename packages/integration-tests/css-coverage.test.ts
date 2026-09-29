@@ -246,6 +246,44 @@ describe('filter, per platform', () => {
     assert.equal(dropped.length, 1);
   });
 
+  it('reads a filter list made of tokens, one slot each, for the device to fill', () => {
+    // Tailwind's shape: every filter utility sets its own slot and reads all of them, so
+    // `blur-sm grayscale` is one list made of two classes.
+    const sheet = compileCss(
+      '.platform-android .g { --g: grayscale(1); filter: var(--b,) var(--g,) }',
+      'test',
+    );
+    const [rule] = sheet.rules;
+    assert.deepEqual(rule.tokens, { '--g': { filter: [{ grayscale: 1 }] } });
+    assert.deepEqual(rule.deferred, [
+      {
+        props: ['filter'],
+        within: [
+          { __filters: { reference: '--b', fallback: [] } },
+          { __filters: { reference: '--g', fallback: [] } },
+        ],
+      },
+    ]);
+  });
+
+  it('refuses a filter token iOS does not draw where it sets it, and keeps it for Android', () => {
+    const dropped: string[] = [];
+    const sheet = compileCss(
+      '.g { --g: grayscale(1) } .platform-android .h { --g: grayscale(1) } .b { --b: brightness(0.5) }',
+      'test',
+      { onUnsupported: (message: string) => dropped.push(message) },
+    );
+    assert.equal(dropped.length, 1);
+    assert.match(dropped[0]!, /dropped '--g'.*grayscale\(\) is not drawn on iOS/);
+    const tokensOf = (name: string) =>
+      sheet.rules.find((rule: { compounds: { classes: string[] }[] }) =>
+        rule.compounds.some((c) => c.classes.includes(name)),
+      )?.tokens;
+    assert.equal(tokensOf('g'), undefined);
+    assert.deepEqual(tokensOf('h'), { '--g': { filter: [{ grayscale: 1 }] } });
+    assert.deepEqual(tokensOf('b')!['--b']!.filter, [{ brightness: 0.5 }]);
+  });
+
   it('checks a filter whose length is only known on device', () => {
     const dropped: string[] = [];
     const sheet = compileCss('.a { filter: blur(0.5em) }', 'test', {
@@ -264,6 +302,84 @@ describe('filter, per platform', () => {
       platform: 'android',
     });
     assert.deepEqual(sheet.keyframes['fade'][0].declarations, { filter: [{ blur: 4 }] });
+  });
+});
+
+describe('skew, per platform', () => {
+  // React Native on Android breaks a transform down into the rotation, scale and translation an
+  // Android view has, and a view has no skew: skewX() is left out, and skewY() comes out as a
+  // rotation. iOS draws both. A skew compiled for Android was a silent difference.
+
+  it('refuses a skew in a rule that can apply on Android, and names it', () => {
+    for (const fn of ['skewX(12deg)', 'skewY(12deg)']) {
+      assert.throws(
+        () => declarationsOf(`transform: rotate(10deg) ${fn}`),
+        (error: Error) => {
+          assert.match(error.message, /skew[XY]\(\) is not drawn on Android/);
+          assert.match(error.message, /\.platform-ios/, 'says how to keep it for iOS');
+          return true;
+        },
+        fn,
+      );
+    }
+  });
+
+  it('keeps a skew of 0, which draws the same on Android: how a variant takes one back out', () => {
+    assert.deepEqual(declarationsOf('transform: skewX(0deg)'), { transform: [{ skewX: '0deg' }] });
+  });
+
+  it('keeps a skew in a rule scoped to iOS, which is what ios: compiles to', () => {
+    const sheet = compileCss('.platform-ios .a { transform: skewX(12deg) }', 'test');
+    assert.deepEqual(sheet.rules[0].declarations, { transform: [{ skewX: '12deg' }] });
+  });
+
+  it('keeps a skew in an iOS build, and refuses it in an Android one', () => {
+    const css = '.a { transform: skewX(12deg) }';
+    assert.deepEqual(compileCss(css, 'test', { platform: 'ios' }).rules[0].declarations, {
+      transform: [{ skewX: '12deg' }],
+    });
+    assert.throws(() => compileCss(css, 'test', { platform: 'android' }), /not drawn on Android/);
+  });
+
+  it('keeps the rest of the rule, and says what it dropped', () => {
+    const dropped: string[] = [];
+    const sheet = compileCss('.a { opacity: 0.5; transform: skewX(12deg) }', 'test', {
+      onUnsupported: (message: string) => dropped.push(message),
+    });
+    assert.deepEqual(sheet.rules[0].declarations, { opacity: 0.5 });
+    assert.equal(dropped.length, 1);
+    assert.match(dropped[0]!, /dropped 'transform'.*skewX\(\) is not drawn on Android/);
+  });
+
+  it('refuses a skew token where it sets it, and keeps it for iOS', () => {
+    // Tailwind's shape: skew-x-12 sets a slot every transform utility reads.
+    const dropped: string[] = [];
+    const sheet = compileCss(
+      '.s { --s: skewX(12deg) } .platform-ios .t { --s: skewX(12deg) }',
+      'test',
+      { onUnsupported: (message: string) => dropped.push(message) },
+    );
+    assert.equal(dropped.length, 1);
+    assert.match(dropped[0]!, /dropped '--s'.*skewX\(\) is not drawn on Android/);
+    const tokensOf = (name: string) =>
+      sheet.rules.find((rule: { compounds: { classes: string[] }[] }) =>
+        rule.compounds.some((c) => c.classes.includes(name)),
+      )?.tokens;
+    assert.equal(tokensOf('s'), undefined);
+    assert.deepEqual(tokensOf('t'), { '--s': { transform: [{ skewX: '12deg' }] } });
+  });
+
+  it('checks a keyframe, which has no selector to scope it', () => {
+    assert.throws(
+      () => compileCss('@keyframes lean { to { transform: skewX(12deg) } }', 'test'),
+      /skewX\(\) is not drawn on Android/,
+    );
+    const sheet = compileCss('@keyframes lean { to { transform: skewX(12deg) } }', 'test', {
+      platform: 'ios',
+    });
+    assert.deepEqual(sheet.keyframes['lean'][0].declarations, {
+      transform: [{ skewX: '12deg' }],
+    });
   });
 });
 
@@ -346,17 +462,54 @@ describe('names Fabric actually reads', () => {
     assert.deepEqual(declarationsOf('border-inline-end-color: red'), {
       borderEndColor: 'rgb(255, 0, 0)',
     });
+    // One colour for both is left and right, which a later `border-left-color` can override:
+    // Yoga's start and end outrank left and right whatever the order.
     assert.deepEqual(declarationsOf('border-inline-color: red'), {
-      borderStartColor: 'rgb(255, 0, 0)',
-      borderEndColor: 'rgb(255, 0, 0)',
+      borderLeftColor: 'rgb(255, 0, 0)',
+      borderRightColor: 'rgb(255, 0, 0)',
     });
+    assert.deepEqual(declarationsOf('border-inline-color: red blue'), {
+      borderStartColor: 'rgb(255, 0, 0)',
+      borderEndColor: 'rgb(0, 0, 255)',
+    });
+  });
+
+  it('refuses a unitless width in a border or outline shorthand, as a browser drops it', () => {
+    for (const property of [
+      'border',
+      'border-top',
+      'border-left',
+      'border-inline',
+      'border-inline-start',
+      'border-block',
+      'border-block-end',
+      'outline',
+    ]) {
+      assert.throws(() => declarationsOf(`${property}: 3 solid red`), /needs a unit/, property);
+    }
+    assert.deepEqual(declarationsOf('border: 0 solid red').borderTopWidth, 0, 'only 0 may go bare');
+  });
+
+  it('puts a border-inline colour from a token on left and right, as a written one', () => {
+    const sheet = compileCss('.a { --c: red; border-inline-color: var(--c) }', 'test');
+    assert.deepEqual(sheet.rules[0].deferred[0].props, ['borderLeftColor', 'borderRightColor']);
+  });
+
+  it('puts a border-inline width from a token on left and right, as a written one', () => {
+    // So a later border-left overrides it on native as it does on the web, whichever it is.
+    const sheet = compileCss('.a { --w: 3px; border-inline-width: var(--w) }', 'test');
+    assert.deepEqual(sheet.rules[0].deferred[0].props, ['borderLeftWidth', 'borderRightWidth']);
   });
 
   it('takes the inline border widths, which were not mapped at all', () => {
     assert.deepEqual(declarationsOf('border-inline-start-width: 2px'), { borderStartWidth: 2 });
     assert.deepEqual(declarationsOf('border-inline-end-width: 2px'), { borderEndWidth: 2 });
     assert.deepEqual(declarationsOf('border-inline-width: 3px'), {
-      borderStartWidth: 3,
+      borderLeftWidth: 3,
+      borderRightWidth: 3,
+    });
+    assert.deepEqual(declarationsOf('border-inline-width: 1px 3px'), {
+      borderStartWidth: 1,
       borderEndWidth: 3,
     });
   });
@@ -411,7 +564,9 @@ describe('the alignment keywords Yoga reads', () => {
     // lightningcss hands 'baseline' over as the 'first' baseline position.
     assert.deepEqual(declarationsOf('align-items: baseline'), { alignItems: 'baseline' });
     assert.deepEqual(declarationsOf('align-self: first baseline'), { alignSelf: 'baseline' });
-    assert.deepEqual(declarationsOf('align-content: baseline'), { alignContent: 'baseline' });
+    // Neither engine has a baseline for the lines of a wrapping box: CSS falls back to start, and
+    // React Native does not take the word at all, so it is the start it comes to.
+    assert.deepEqual(declarationsOf('align-content: baseline'), { alignContent: 'flex-start' });
     assert.throws(() => declarationsOf('align-items: last baseline'), /last baseline/);
   });
 
@@ -462,9 +617,11 @@ describe('the line styles native can draw', () => {
   });
 
   it('reads a style of none as no line, as the shorthands already did', () => {
-    // CSS computes the width of a line styled none as 0. Native has no none style to send.
-    assert.deepEqual(declarationsOf('border-style: none'), everySide('Width', 0));
-    assert.deepEqual(declarationsOf('border-style: hidden'), everySide('Width', 0));
+    // CSS computes the width of a line styled none as 0. Native has no none style, so the style
+    // is kept only for the engine, which zeroes a width a later rule sets and sends none of it.
+    const none = { ...everySide('Width', 0), borderStyle: 'none' };
+    assert.deepEqual(declarationsOf('border-style: none'), none);
+    assert.deepEqual(declarationsOf('border-style: hidden'), none);
     assert.deepEqual(declarationsOf('outline-style: none'), { outlineWidth: 0 });
   });
 });
