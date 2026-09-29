@@ -125,9 +125,7 @@ Angular 22, Expo SDK 57 and React Native 0.86 with the New Architecture, on Node
 
 ## Status
 
-Angular Native is in alpha, so APIs can change between `0.x` releases. Many of the platform
-services are unit-tested and typechecked but have not run on hardware, and Android is checked less
-often than iOS. The [known limitations](https://ng-native.com/guide/limitations) list
+Angular Native is in alpha, so APIs can change between `0.x` releases. The [known limitations](https://ng-native.com/guide/limitations) list
 every gap with its workaround.
 
 ## Contributing
