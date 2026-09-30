@@ -13,6 +13,7 @@ import {
 import { type HostNode, type NativeSyntheticEvent, nativePlatform } from '@ng-native/fabric';
 import type { Point, Rect, Size } from './events.ts';
 import { type KeyboardShouldPersistTaps, dismissKeyboardOnTap } from './keyboard-taps.ts';
+import { ContentContainer } from './content-container.ts';
 import { RefreshControl } from './refresh-control.ts';
 import { StickyHeaders } from './sticky-headers.ts';
 import { optionalBoolean } from './transforms.ts';
@@ -49,7 +50,7 @@ import { View } from './view.ts';
 @Component({
   selector: 'scroll-view',
   exportAs: 'scrollView',
-  imports: [View],
+  imports: [ContentContainer, View],
   // `collapsable: false` is load-bearing, not a hint. Fabric flattens views whose props are
   // layout-only, and a content container with just padding qualifies: it gets no UIView at all.
   // Touches in its empty areas then land on the scroll view itself, which does not scroll from a
@@ -62,7 +63,14 @@ import { View } from './view.ts';
   // scroll view, and never attach.
   template: `
     <ng-content select="refresh-control" />
-    <view #content [style]="contentStyle()" collapsable="false" (layout)="onContentLayout($event)">
+    <view
+      #content
+      [contentContainerOf]="node"
+      [contentContainerClass]="contentContainerClass()"
+      [style]="contentStyle()"
+      collapsable="false"
+      (layout)="onContentLayout($event)"
+    >
       <ng-content />
     </view>
   `,
@@ -80,6 +88,12 @@ import { View } from './view.ts';
 export class ScrollView extends ScrollViewProps {
   /** Styles for the view that holds the children, e.g. padding and gap. */
   readonly contentContainerStyle = input<Record<string, unknown>>();
+  /**
+   * Classes for the view that holds the children, matched as if the view were written in the
+   * template the scroll view is. See `ContentContainer`. `contentContainerStyle` wins over it, as
+   * an inline style does over a class.
+   */
+  readonly contentContainerClass = input<string>();
 
   /**
    * The content view's style, with the row direction a horizontal scroll view needs.

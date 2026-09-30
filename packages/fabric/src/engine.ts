@@ -1639,6 +1639,22 @@ export class Engine implements HostEngine {
     this.commit();
   }
 
+  /**
+   * A node's component rules are its creating sheet's, so this matches it against `like`'s, or
+   * against the one it was created with once `like` is null.
+   */
+  adoptScope(node: EngineNode, like: EngineNode | null): void {
+    if (like && !this.ownSheets.has(node)) this.ownSheets.set(node, node.sheet);
+    const sheet = like ? like.sheet : this.ownSheets.get(node);
+    if (sheet === undefined || node.sheet === sheet) return;
+    node.sheet = sheet;
+    if (sheet?.structural) this.structuralSheets = true;
+    this.markProps(node);
+  }
+
+  /** The sheet each node given another's scope was created with. */
+  private readonly ownSheets = new WeakMap<EngineNode, StyleSheet | null>();
+
   /** The window's size, from the conditions media queries use. Zero until the platform says. */
   get viewport(): { readonly width: number; readonly height: number } {
     return this.viewportSize;
