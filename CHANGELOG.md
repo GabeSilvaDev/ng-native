@@ -1,3 +1,56 @@
+## 0.2.0 (2026-09-30)
+
+### 🩹 Fixes
+
+- Tailwind's `aria-disabled:`, `aria-checked:`, `aria-busy:`, `aria-expanded:`, `aria-selected:` and `aria-hidden:` variants, and selectors such as `[aria-disabled="true"]`, now match a component carrying that aria input, and a disabled `<text>` publishes `data-disabled`, so `disabled:` and `[data-disabled]` apply to it. ([#105](https://github.com/ng-native/ng-native/pull/105), [#98](https://github.com/ng-native/ng-native/issues/98), [#99](https://github.com/ng-native/ng-native/issues/99))
+
+  These aria attributes are inputs that set the accessibility state, and until now the component consumed them and left nothing on the node for a selector to read, so every `aria-*:` utility compiled and never applied. The component now puts each one back on the node as the attribute it came in as (`aria-disabled="false"` does not match `aria-disabled:`). What VoiceOver and TalkBack are told has not changed, and the attributes are never sent to native.
+
+  `<text>` takes `disabled` from the same base as `<pressable>` and consumed it the same way, so `:disabled` never matched it and nothing else did either. `:disabled` still does not match a text; use `[data-disabled]` or `disabled:`.
+
+- A custom property set on an element to a value with a `var()` inside it, such as `[style.--size]="'calc(var(--gap) * 2)'"` or `style="--fill: hsl(var(--hue) 100% 50%)"`, now resolves where it is set, as the same value in a stylesheet does, and follows a theme or an ancestor that changes the tokens it reads. ([#106](https://github.com/ng-native/ng-native/pull/106), [#100](https://github.com/ng-native/ng-native/issues/100))
+
+  This covers the shapes a stylesheet's custom property takes: `calc()`, `min()` and `max()` of numbers, `px` and `rem` lengths, angles, times and `var()`; `hsl()` with a `var()` for a channel; and `rgb()` or `hsl()` of one channels token, such as `rgba(var(--rgb), 0.5)`, with an alpha written or from a token. A value its tokens make nothing of, such as `calc(var(--word) * 2)`, or one in a cycle, is invalid, so a rule that reads it takes its own fallback.
+
+  A value with a `var()` inside it in any other shape, such as `rgb(var(--r) 0 0)` or `calc(var(--a, var(--b)) * 2)`, which a stylesheet refuses at build time, is now unset on an element as well. Before, a colour function with a `var()` in it was sent to native as it was written.
+
+- An `hsl()` made of tokens now reads a bare saturation or lightness, such as `hsl(var(--h) 100 50)`, as a percentage, as CSS Color 4 does, in a stylesheet and set on an element. ([#112](https://github.com/ng-native/ng-native/pull/112), [#108](https://github.com/ng-native/ng-native/issues/108))
+
+  Before, `100` and `50` were read as 100 and 50 rather than 100% and 50%, and the colour came out wrong. The legacy comma syntax takes a percentage alone, so `hsl(var(--h), 100, 50)` is refused at build time and unset on an element, as a browser makes nothing of it; so is a hue written as a percentage.
+
+  An `hsl()` of tokens also matches a browser at the edges now: a saturation below 0 is none, an alpha outside 0 to 1 is clamped, and a colour past the edge of sRGB is clamped into it rather than printed with channels below 0 or above 255. A hue token in `turn`, `rad` or `grad` is read as the angle it is, and a channel token of the wrong kind, a percentage for a hue or an angle for a saturation, lightness or alpha, makes the colour invalid rather than a wrong one. And a custom property set on an element to a percentage or an angle, such as `--s: 50%` or `--h: 0.5turn`, is read as a fraction or in degrees where a number is wanted, as the same token in a stylesheet is.
+
+- `withAngularNative` now warns when an app's `@ng-native/*` package linked from a workspace folder and a library's installed copy of it are different versions, as it already did for two installed copies. ([#104](https://github.com/ng-native/ng-native/pull/104), [#102](https://github.com/ng-native/ng-native/issues/102))
+
+  The check found a package's copies by the `node_modules` in their paths, and a linked workspace
+  package's real path has none, so an app on a `workspace:` package and a library on a registry
+  version of it bundled both with no warning. Metro's `getPackageForModule` now names the package
+  a file outside `node_modules` belongs to, for imports of `@angular/core` and `@ng-native/*`.
+
+- A disabled `<text>` is now announced as disabled by VoiceOver and TalkBack, as React Native's `Text` is. ([#110](https://github.com/ng-native/ng-native/pull/110), [#107](https://github.com/ng-native/ng-native/issues/107))
+
+  `<text>` consumed `disabled` to stop presses and publish `data-disabled`, but never put it into the accessibility state, so a disabled `<text pressable>` was announced as an active control. It now commits `accessibilityState: { disabled: true }`, merged with any `accessibilityState` the app sets, and clears it when the text is enabled again. As in React Native this applies to every disabled text, pressable or not, nested or not. On the web host the text gets `aria-disabled="true"`. An `aria-disabled` input still takes precedence over `disabled`, as it does on the other controls.
+
+- A `var()` whose fallback is made of other tokens, such as `width: var(--missing, calc(var(--gap) * 2))`, now uses that fallback, worked out from the tokens where it is substituted, in a stylesheet and set on an element. ([#113](https://github.com/ng-native/ng-native/pull/113), [#109](https://github.com/ng-native/ng-native/issues/109))
+
+  Before, the fallback was dropped, so the declaration was unset. This covers a fallback that is `calc()`, `min()` or `max()` of tokens, an `hsl()` or other colour made of tokens, and a fallback that is another `var()` with such a fallback of its own, `var(--a, var(--b, calc(var(--gap) * 2)))`. Inside arithmetic, `calc(var(--missing, var(--gap)) * 2)` and `calc(var(--missing, calc(var(--gap) * 2)) + 1px)` now resolve too, where a stylesheet refused them at build time. A cycle through a fallback, `--x: var(--missing, calc(var(--x) * 2))`, is invalid, as in a browser, so a rule that reads it takes its own fallback.
+
+  Custom properties defined together are also settled as a browser settles them, whatever order they are in. A fallback such as the `1px` in `calc(var(--b, 1px) * 2)` is taken only when `--b` is unset or invalid, never because `--b` is made of other tokens and not yet worked out. A `var()` naming a token that turns out invalid takes its own fallback. And a token read inside its own fallback, `calc(var(--x, 3px) * 2)` as `--x`, is a cycle.
+
+- `ngNative()` in `@ng-native/testing/vitest` now resolves a package a workspace library imports to the app's copy when the library's copy is the same version in another directory, so a test loads one `@ng-native/components`, as the Metro bundle does. ([#103](https://github.com/ng-native/ng-native/pull/103), [#101](https://github.com/ng-native/ng-native/issues/101))
+
+  A library installed after the app can get its own pnpm peer context, and with it a second
+  directory for `@ng-native/components` at the app's version. Vite resolved the library's imports
+  to that copy, so a test that rendered a library component had two component registries, and
+  Angular reported NG0912 collisions for every component in it. The rule is the one
+  `withAngularNative` applies in Metro: a copy at a version of the library's own still resolves
+  where it is, as does a package the app does not reach. An existing app gets it by updating
+  `@ng-native/testing`; its Vitest config is unchanged.
+
+### ❤️ Thank You
+
+- Ashley Hunter
+
 ## 0.1.3 (2026-09-30)
 
 ### 🚀 Features
