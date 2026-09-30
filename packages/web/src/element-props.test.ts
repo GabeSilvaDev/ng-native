@@ -372,3 +372,57 @@ describe('props the other groups leave at their defaults', () => {
     assert.deepEqual([field.selectionStart, field.selectionEnd], [2, 2]);
   });
 });
+
+describe('the aria states ViewBase publishes for a native stylesheet', () => {
+  it('leaves aria-checked off a button, which takes aria-pressed from its state', () => {
+    const { el, set } = scene('view');
+    set('accessibilityRole', 'button');
+    set('accessibilityState', { checked: true });
+    set('aria-checked', 'true');
+    assert.equal(el.getAttribute('aria-pressed'), 'true');
+    assert.equal(el.getAttribute('aria-checked'), null);
+  });
+
+  it('keeps aria-disabled while the state still says disabled', () => {
+    const { el, set } = scene('view');
+    set('accessibilityState', { disabled: true });
+    set('aria-disabled', 'true');
+    set('aria-disabled', null);
+    assert.equal(el.getAttribute('aria-disabled'), 'true');
+  });
+
+  it('keeps aria-hidden as the hidden props say', () => {
+    const { el, set } = scene('view');
+    set('accessibilityElementsHidden', true);
+    set('aria-hidden', 'false');
+    assert.equal(el.getAttribute('aria-hidden'), 'true');
+  });
+
+  it('restores a raw aria attribute once the state stops governing it', () => {
+    const { el, set } = scene('view');
+    set('accessibilityState', { expanded: true, disabled: true });
+    set('aria-expanded', 'false');
+    set('aria-disabled', 'true');
+    assert.equal(el.getAttribute('aria-expanded'), 'true');
+    set('accessibilityState', null);
+    assert.equal(el.getAttribute('aria-expanded'), 'false');
+    assert.equal(el.getAttribute('aria-disabled'), 'true');
+  });
+
+  it('restores a raw aria-hidden once the hidden props let go', () => {
+    const { el, set } = scene('view');
+    set('accessibilityElementsHidden', false);
+    set('aria-hidden', 'true');
+    assert.equal(el.getAttribute('aria-hidden'), null);
+    set('accessibilityElementsHidden', null);
+    assert.equal(el.getAttribute('aria-hidden'), 'true');
+  });
+
+  it('writes an aria attribute nothing else governs, and removes it', () => {
+    const { el, set } = scene('view');
+    set('aria-expanded', 'true');
+    assert.equal(el.getAttribute('aria-expanded'), 'true');
+    set('aria-expanded', null);
+    assert.equal(el.getAttribute('aria-expanded'), null);
+  });
+});
