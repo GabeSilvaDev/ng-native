@@ -2,6 +2,7 @@ import { Directive, booleanAttribute, input } from '@angular/core';
 import { nativePlatform } from '@ng-native/fabric';
 import { TouchableBase } from './pressable.ts';
 import { optionalBoolean, optionalNumber } from './transforms.ts';
+import type { AccessibilityRole } from './view-base.ts';
 
 export type EllipsizeMode = 'head' | 'middle' | 'tail' | 'clip';
 export type DynamicTypeRamp =
@@ -49,8 +50,19 @@ export class Text extends TouchableBase {
    * `ngOnChanges` like the rest of the state, since `disabled` is an input of this directive: no
    * host binding, which `ControlBase` needs and a text cannot afford.
    */
-  protected override disabledForAccessibility(): boolean {
+  protected override disabledForAccessibility(): boolean | undefined {
     return this.disabled();
+  }
+
+  /**
+   * `Text.js`: a pressable text is a `link` unless a role is set or it is disabled, as the
+   * merged state says: `disabled` wins, and `aria-disabled`, `accessibilityState` or a
+   * contributing directive stand in when it is unset. Nested or not. Its inputs are this
+   * directive's, so `ngOnChanges` keeps it current without a host binding.
+   */
+  protected override roleByDefault(): AccessibilityRole | undefined {
+    if (!this.pressable()) return undefined;
+    return this.accessibilityStateProp()?.disabled === true ? undefined : 'link';
   }
 
   /** Truncate after this many lines, with `ellipsizeMode` deciding where the ellipsis goes. */
