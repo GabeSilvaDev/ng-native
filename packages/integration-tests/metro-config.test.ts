@@ -257,6 +257,152 @@ describe('the Metro preset', () => {
   });
 
   /**
+   * pnpm installs a package once per set of peers it resolves. A workspace library that lists
+   * `@ng-native/components` but not the app's `@babel/core` gets react-native's Babel peer at 8
+   * where the app has 7, so both, and every package peering on them, land in a second directory
+   * at the same version. Looked up from the library, Metro bundled that second copy: two
+   * component registries and a second React Native.
+   */
+  describe('a package a workspace library installed in a second peer context', () => {
+    type Context = {
+      resolveRequest: Resolve;
+      originModulePath: string;
+      getPackage(packageJsonPath: string): { name: string; version: string } | null;
+      getPackageForModule(file: string): {
+        packageJson: { name: string; version: string };
+        rootPath: string;
+      } | null;
+    };
+    const store = '/ws/node_modules/.pnpm';
+    const appCopy = `${store}/@ng-native+components@0.1.2_babel7/node_modules/@ng-native/components`;
+    const libCopy = `${store}/@ng-native+components@0.1.2_babel8/node_modules/@ng-native/components`;
+    const appNative = `${store}/react-native@0.86.3_babel7/node_modules/react-native`;
+    const libNative = `${store}/react-native@0.86.3_babel8/node_modules/react-native`;
+    const library = '/ws/libs/mobile-ui/button/src/index.ts';
+    const versions: Record<string, string> = {
+      [appCopy]: '0.1.2',
+      [libCopy]: '0.1.2',
+      [appNative]: '0.86.3',
+      [libNative]: '0.86.3',
+    };
+    /** Metro's resolver: the app's project reaches the app's copies, anything else the library's. */
+    const metro: Resolve = (context, name) => {
+      const from = (context as Context).originModulePath;
+      const ofApp = from.startsWith('/ws/apps/mobile/') || from.startsWith(appCopy);
+      const [components, native] = ofApp ? [appCopy, appNative] : [libCopy, libNative];
+      const root = name.startsWith('react-native') ? native : components;
+      const subpath = name.replace(/^(@ng-native\/components|react-native)\/?/, '') || 'index';
+      return { type: 'sourceFile', filePath: `${root}/src/${subpath}.ts` };
+    };
+    /** A workspace package, linked: its real path has no `node_modules` in it. */
+    const linked = '/ws/packages/components';
+    const packageAt = (root: string) => ({
+      name: root === linked ? '@ng-native/components' : root.split('/node_modules/').pop()!,
+      version: versions[root]!,
+    });
+    const getPackage = (file: string) => {
+      const root = path.dirname(file);
+      return root in versions ? packageAt(root) : null;
+    };
+    const getPackageForModule = (file: string) => {
+      const root = Object.keys(versions).find((dir) => file.startsWith(`${dir}/`));
+      return root ? { packageJson: packageAt(root), rootPath: root } : null;
+    };
+    const resolve = (name: string, originModulePath = library, resolveRequest = metro) => {
+      const config = withAngularNative({ ...base(), projectRoot: '/ws/apps/mobile' });
+      return (config as MetroConfig).resolver.resolveRequest!(
+        { resolveRequest, originModulePath, getPackage, getPackageForModule } as Context,
+        name,
+        'ios',
+      );
+    };
+
+    it("resolves to the app's copy from the library", () => {
+      assert.deepEqual(resolve('@ng-native/components'), {
+        type: 'sourceFile',
+        filePath: `${appCopy}/src/index.ts`,
+      });
+    });
+
+    it("resolves a subpath to the app's copy too", () => {
+      assert.deepEqual(resolve('@ng-native/components/gestures'), {
+        type: 'sourceFile',
+        filePath: `${appCopy}/src/gestures.ts`,
+      });
+    });
+
+    it("resolves to the app's copy from inside a package in the library's context", () => {
+      assert.deepEqual(resolve('react-native', `${libCopy}/src/index.ts`), {
+        type: 'sourceFile',
+        filePath: `${appNative}/src/index.ts`,
+      });
+    });
+
+    it('keeps the copy a library resolves at a version of its own', () => {
+      versions[libCopy] = '0.2.0';
+      try {
+        assert.deepEqual(resolve('@ng-native/components'), {
+          type: 'sourceFile',
+          filePath: `${libCopy}/src/index.ts`,
+        });
+      } finally {
+        versions[libCopy] = '0.1.2';
+      }
+    });
+
+    it("resolves to the app's copy when the app's is a linked workspace package", () => {
+      versions[linked] = '0.1.2';
+      const appLinked: Resolve = (context, name, platform) =>
+        (context as Context).originModulePath.startsWith('/ws/apps/mobile/')
+          ? { type: 'sourceFile', filePath: `${linked}/src/index.ts` }
+          : metro(context, name, platform);
+      try {
+        assert.deepEqual(resolve('@ng-native/components', library, appLinked), {
+          type: 'sourceFile',
+          filePath: `${linked}/src/index.ts`,
+        });
+      } finally {
+        delete versions[linked];
+      }
+    });
+
+    it('warns once when a library brings a second version of an @ng-native package', () => {
+      const other = `${store}/@ng-native+device@0.1.1/node_modules/@ng-native/device`;
+      const device: Resolve = (context) => ({
+        type: 'sourceFile',
+        filePath: (context as Context).originModulePath.startsWith('/ws/apps/mobile/')
+          ? `${store}/@ng-native+device@0.1.2/node_modules/@ng-native/device/src/index.ts`
+          : `${other}/src/index.ts`,
+      });
+      const warnings: string[] = [];
+      const warn = console.warn;
+      console.warn = (message: string) => void warnings.push(message);
+      try {
+        resolve('@ng-native/device', '/ws/apps/mobile/src/main.ts', device);
+        assert.deepEqual(warnings, []);
+        resolve('@ng-native/device', library, device);
+        resolve('@ng-native/device', library, device);
+      } finally {
+        console.warn = warn;
+      }
+      assert.equal(warnings.length, 1);
+      assert.match(warnings[0]!, /@ng-native\/device.*\n.*device@0\.1\.2.*\n.*device@0\.1\.1/s);
+    });
+
+    it('keeps the copy a library resolves when the app has none', () => {
+      const appHasNone: Resolve = (context, name, platform) => {
+        if ((context as Context).originModulePath.startsWith('/ws/apps/mobile/'))
+          throw new Error(`Unable to resolve ${name}`);
+        return metro(context, name, platform);
+      };
+      assert.deepEqual(resolve('@ng-native/components', library, appHasNone), {
+        type: 'sourceFile',
+        filePath: `${libCopy}/src/index.ts`,
+      });
+    });
+  });
+
+  /**
    * Two copies of Angular in one bundle fail far from their cause: a component compiled against
    * one asks the other's injector, and the device shows NG0203 at mount. A Metro cache left from
    * before an upgrade did exactly that. The preset says so where the developer is looking.
