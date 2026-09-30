@@ -42,6 +42,48 @@ function names(tree, options) {
   return { directory, name, projectName, workspaces, bundleIdentifier };
 }
 
+/**
+ * Whether the workspace's `tsconfig.base.json` is where its libraries' path aliases live, or will.
+ * With package-manager workspaces, only when it has a `paths` list, as the `angular-monorepo`
+ * preset's does: the TypeScript preset's has none, and its libraries are packages linked instead.
+ */
+function hasPathAliases(tree, workspaces) {
+  if (!tree.exists('tsconfig.base.json')) return false;
+  return !workspaces || 'paths' in baseCompilerOptions(tree);
+}
+
+/**
+ * The compiler options `file` ends up with, those it inherits through `extends` included, as
+ * TypeScript merges them: each option from the last config that sets it.
+ */
+function baseCompilerOptions(tree, file = 'tsconfig.base.json', ancestors = []) {
+  if (ancestors.includes(file) || !tree.exists(file)) return {};
+  const config = readJson(tree, file);
+  const inherited = [config.extends ?? []]
+    .flat()
+    .map((parent) => extendedFile(tree, path.dirname(file), parent))
+    .filter(Boolean)
+    .map((parent) => baseCompilerOptions(tree, parent, [...ancestors, file]));
+  return Object.assign({}, ...inherited, config.compilerOptions);
+}
+
+/**
+ * The file an `extends` entry in `directory` names: a path, or a package in a `node_modules` from
+ * `directory` up, where a workspace's own shared-config package is linked. A bare package name
+ * means its `tsconfig.json`.
+ */
+function extendedFile(tree, directory, parent) {
+  const withJson = (file) => (tree.exists(file) || file.endsWith('.json') ? file : `${file}.json`);
+  if (/^\.\.?\//.test(parent)) return withJson(path.join(directory, parent));
+  const bare = /^(@[^/]+\/)?[^/]+$/.test(parent);
+  for (let dir = directory; ; dir = path.dirname(dir)) {
+    const file = path.join(dir, 'node_modules', parent);
+    const found = bare ? path.join(file, 'tsconfig.json') : withJson(file);
+    if (tree.exists(found)) return found;
+    if (dir === '.' || dir === '/') return undefined;
+  }
+}
+
 function targets(directory) {
   const run = (command) => ({ executor: 'nx:run-commands', options: { cwd: directory, command } });
   return {
@@ -86,11 +128,9 @@ function writeFiles(tree, { directory, projectName, workspaces, bundleIdentifier
   // The template's own, for the native projects `expo prebuild` writes beside app.json.
   file('.gitignore', '# generated native folders\n/ios\n/android\n');
 
-  const base = !workspaces && tree.exists('tsconfig.base.json');
+  const base = hasPathAliases(tree, workspaces);
   const workspaceBase = base ? `${offsetFromRoot(directory)}tsconfig.base.json` : undefined;
-  const conditions = tree.exists('tsconfig.base.json')
-    ? (readJson(tree, 'tsconfig.base.json').compilerOptions?.customConditions ?? [])
-    : [];
+  const conditions = baseCompilerOptions(tree).customConditions ?? [];
   file('tsconfig.json', JSON.stringify(native.tsconfig(workspaceBase, conditions), null, 2) + '\n');
   file('vitest.config.mts', native.vitestConfig(Boolean(base)));
 
@@ -137,19 +177,20 @@ async function application(tree, options) {
     includeInWorkspaces(tree, directory);
   } else {
     for (const problem of native.conflicts(readJson(tree, 'package.json'))) logger.warn(problem);
-    // `nxViteTsPaths()`, which the app's Vitest config uses to reach the workspace's libraries.
-    // Added now rather than only when present, because a library generated later is the ordinary
-    // case and nothing would come back to add it then.
-    const aliases = tree.exists('tsconfig.base.json')
-      ? { '@nx/vite': workspaceNxVersion(tree) }
-      : {};
     addDependenciesToPackageJson(
       tree,
       native.dependencies,
-      { ...native.devDependencies, ...aliases },
+      native.devDependencies,
       'package.json',
       true,
     );
+  }
+  // `nxViteTsPaths()`, which the app's Vitest config uses to reach the workspace's libraries.
+  // Added now rather than only when present, because a library generated later is the ordinary
+  // case and nothing would come back to add it then.
+  if (hasPathAliases(tree, workspaces)) {
+    const vite = { '@nx/vite': workspaceNxVersion(tree) };
+    addDependenciesToPackageJson(tree, {}, vite, 'package.json', true);
   }
   writeFiles(tree, resolved);
   addProjectConfiguration(tree, projectName, {
