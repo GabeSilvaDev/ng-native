@@ -99,6 +99,47 @@ function generate(css, output, input) {
 const warnedSettled = new Set();
 
 /**
+ * Where a selector's `{` is on a line: -1 when the line has none, and null when a `;` or `}` ends
+ * something first, so no selector is being written. One quoted or escaped, as an arbitrary
+ * variant's `[data-x=";"]` quotes one, ends nothing.
+ */
+function openingBrace(line) {
+  let quote = null;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '\\') i++;
+    else if (quote) quote = char === quote ? null : quote;
+    else if (char === '"' || char === "'") quote = char;
+    else if (char === '{') return i;
+    else if (char === ';' || char === '}') return null;
+  }
+  return -1;
+}
+
+/**
+ * The selector of the rule that starts on line `index`, as the app writes it: through to its `{`,
+ * which a list of selectors can put lines further on, with CSS's escapes undone, so `.md\:grid`
+ * reads `.md:grid` and `.\32 xl\:grid` reads `.2xl:grid`. Undefined when no rule starts there,
+ * which leaves the line to be named.
+ */
+function selectorAt(lines, index) {
+  let text = '';
+  for (let at = index; at < lines.length; at++) {
+    const brace = openingBrace(lines[at]);
+    if (brace === null) return undefined;
+    text += ` ${brace === -1 ? lines[at] : lines[at].slice(0, brace)}`;
+    if (brace !== -1) break;
+  }
+  const selector = text
+    .replace(/\\([\da-f]{1,6})\s?|\\(.)/gi, (_, hex, char) =>
+      hex ? String.fromCodePoint(parseInt(hex, 16)) : char,
+    )
+    .replace(/\s+/g, ' ')
+    .trim();
+  return selector || undefined;
+}
+
+/**
  * Tailwind's CSS as a module exporting the compiled stylesheet.
  *
  * Exported because it is the whole of the build step worth testing: everything else here is
@@ -120,8 +161,15 @@ function compileSheetModule(css, context = 'tailwind', paths) {
         `it on device, so it does not follow where the app sets it.`,
     );
   }
+  // A refusal names the rule's selector, which is what to search the app for, rather than a line
+  // of this generated sheet, which moves as classes are added.
+  const lines = flat.split('\n');
   const sheet = compileCss(flat, context, {
     onUnsupported: (message) => dropped.push(message),
+    locate: (line) => {
+      const selector = selectorAt(lines, line - 1);
+      return selector && `${selector} (Tailwind)`;
+    },
   });
   for (const message of dropped) {
     // A leftover custom property was already substituted; anything else is a utility the app used
