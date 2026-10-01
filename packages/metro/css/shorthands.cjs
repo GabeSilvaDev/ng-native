@@ -12,7 +12,13 @@
  * is what a `var()` in a `border` *is*, since a width and a colour can come in either order; see
  * `line`.
  */
-const { CssUnsupported, fallbackChain, fallbacks, tokenValue } = require('./values.cjs');
+const {
+  CURRENT_COLOUR,
+  CssUnsupported,
+  fallbackChain,
+  fallbacks,
+  tokenValue,
+} = require('./values.cjs');
 
 const SIDES = ['Top', 'Right', 'Bottom', 'Left'];
 
@@ -203,6 +209,7 @@ function line(property, list, context) {
   const references = [];
   let style = null;
   let color = null;
+  let current = false;
   let width = null;
   for (const [part, ...rest] of list) {
     if (rest.length) throw new CssUnsupported(`${context}: could not read '${property}'`);
@@ -215,8 +222,18 @@ function line(property, list, context) {
     if (LINE_STYLES.has(word) || word === 'none' || word === 'hidden') style = word;
     else if (word in LINE_WIDTHS) width = LINE_WIDTHS[word];
     else if (value?.length !== undefined) width = value.length;
-    else if (value?.color !== undefined) color = value.color;
-    else throw new CssUnsupported(`${context}: '${describe(part)}' in '${property}'`);
+    else if (word?.toLowerCase() === 'currentcolor' || value?.color !== undefined) {
+      // A line has one colour: CSS reads a second as an invalid declaration.
+      if (current || color !== null) {
+        throw new CssUnsupported(`${context}: '${property}' has more than one colour`);
+      }
+      if (word?.toLowerCase() === 'currentcolor') current = true;
+      else color = value.color;
+    } else throw new CssUnsupported(`${context}: '${describe(part)}' in '${property}'`);
+  }
+  // Native has no spelling for an outline's currentColor, as `line()` in properties.cjs says.
+  if (current && prefix === 'outline') {
+    throw new CssUnsupported(`${context}: currentColor has no equivalent without a cascade root`);
   }
 
   const every = (props, to) => Object.fromEntries(props.map((prop) => [prop, to]));
@@ -244,13 +261,15 @@ function line(property, list, context) {
   const roles = [
     ...(width === null ? ['width'] : []),
     ...(withStyle && styleInToken ? ['style'] : []),
-    ...(color === null ? ['color'] : []),
+    ...(color === null && !current ? ['color'] : []),
   ];
   // One declaration for the whole line, every longhand it sets: the tokens are given their roles
   // on device, by what each holds, and a line they make nothing of unsets all of it, as in CSS.
+  // A written currentColor is the colour in scope, which the device fills in on its own.
   const deferred = [
+    ...(current ? [{ props: colors, within: CURRENT_COLOUR }] : []),
     {
-      props: [...widths, ...styleProp, ...colors],
+      props: [...widths, ...styleProp, ...(current ? [] : colors)],
       line: {
         references: references.map((part) => lineReference(part, context)),
         roles,
