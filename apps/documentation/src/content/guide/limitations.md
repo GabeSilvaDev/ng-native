@@ -71,12 +71,24 @@ build prose statically and mount live examples on the client.
 
 ## `HttpClient` needs `provideNativeHttpClient()`
 
-Plain `provideHttpClient()` silently returns null bodies on a device. Angular 22's default
-`fetch` backend reads only `response.body` streams, but React Native's `fetch` uses `whatwg-fetch`
-over XHR, whose `Response` has no `body`. Use `provideNativeHttpClient()` from
-`@ng-native/platform/http`: it configures `HttpClient` with `withXhr()` to use React Native's
-complete native `XMLHttpRequest`, including upload progress. See
-[HTTP requests](/packages/platform#http-requests) for the signature and an interceptor example.
+Angular 22's default `fetch` backend reads a response body only through `response.body`'s
+stream, so plain `provideHttpClient()` works only where the global `fetch` streams one. Expo's
+runtime installs a `fetch` that does, but Metro runs that runtime only when something in the
+bundle imports `expo`:
+
+- The template, the generators and [manual setup](/guide/manual-setup) write `import 'expo';` at
+  the top of `src/main.ts`, so debug and release builds both get Expo's `fetch`.
+- In an app whose `src/main.ts` does not import `expo`, a debug build still gets Expo's `fetch`,
+  because `mount()` reaches `expo` for its reload hook in development, but a release build gets
+  React Native's: `whatwg-fetch` over XHR, whose `Response` has no `body`. There every request
+  resolves with a null body and no error, so the app works in debug and fails in release.
+- With `EXPO_PUBLIC_USE_RN_FETCH` set to `1` or `true`, Expo's runtime leaves React Native's
+  `fetch` in place, so every build gets the one with no `body`.
+
+Use `provideNativeHttpClient()` from `@ng-native/platform/http`: it configures `HttpClient` with
+`withXhr()`, which uses React Native's native `XMLHttpRequest`, upload progress included, whatever
+the global `fetch` is. See [HTTP requests](/packages/platform#http-requests) for the signature and an
+interceptor example.
 
 **Workaround:** `provideNativeHttpClient(...features)` in `mount()`'s `providers`, never
 `provideHttpClient()` on its own.
