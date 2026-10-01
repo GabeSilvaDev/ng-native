@@ -8,12 +8,14 @@ import {
   booleanAttribute,
   computed,
   contentChild,
+  effect,
   inject,
   input,
   linkedSignal,
   numberAttribute,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import {
@@ -29,6 +31,7 @@ import { HeightIndex } from './height-index.ts';
 import { type KeyboardShouldPersistTaps, dismissKeyboardOnTap } from './keyboard-taps.ts';
 import { RefreshControl } from './refresh-control.ts';
 import { TemplateSlot } from './template-slot.ts';
+import { ZeroSizeWarning, checksZeroSize, written } from './zero-size-warning.ts';
 import { View } from './view.ts';
 import { ScrollViewProps } from './scroll-view-props.ts';
 
@@ -682,6 +685,14 @@ export class VirtualList<T> extends ScrollViewProps {
     else this.scrollToOffset({ offset: this.headerHeight() + pending.offset, animated: false });
   }
 
+  /** In development, a list with rows that stays at zero size; see `ZeroSizeWarning`. */
+  private readonly zeroSize = checksZeroSize()
+    ? new ZeroSizeWarning(
+        () => written(this.node),
+        () => !!this.horizontal(),
+      )
+    : null;
+
   constructor() {
     super();
     afterEveryRender(() => {
@@ -694,7 +705,23 @@ export class VirtualList<T> extends ScrollViewProps {
     inject(DestroyRef).onDestroy(() => {
       stop();
       clearTimeout(this.settleTimer);
+      this.zeroSize?.stop();
       for (const held of this.drives.values()) held.drive.stop();
+    });
+    if (this.zeroSize) this.checkZeroSize(this.zeroSize);
+  }
+
+  /** Whether the viewport has been laid out yet, so a zero in it is a measurement. */
+  private viewportMeasured = false;
+
+  /**
+   * In development, rows that arrive in a list already measured at zero, or go from one, with no
+   * new layout to say so: an update to `items` alone does not lay the viewport out again.
+   */
+  private checkZeroSize(warning: ZeroSizeWarning): void {
+    effect(() => {
+      const hasRows = this.items().length > 0;
+      if (this.viewportMeasured) warning.laidOut(untracked(this.viewport), hasRows);
     });
   }
 
@@ -1242,6 +1269,8 @@ export class VirtualList<T> extends ScrollViewProps {
   ): void {
     const layout = event.nativeEvent?.layout;
     this.viewport.set((this.horizontal() ? layout?.width : layout?.height) ?? 0);
+    this.viewportMeasured = true;
+    this.zeroSize?.laidOut(this.viewport(), this.items().length > 0);
     this.announceViewable(this.lastOffset);
   }
 
