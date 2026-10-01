@@ -293,6 +293,62 @@ describe('tokens', () => {
       );
     });
 
+    it('reads a border shorthand of tokens as Chrome does: each token by what it is, or none', () => {
+      // Each checked in Chrome. A token is the width, the style or the colour by its form, in any
+      // order; one that is none of them, or a second of one, makes the whole shorthand invalid.
+      const tokens =
+        ':root { --w: 2px; --s: dashed; --c: rgb(1, 2, 3); --c2: rgb(4, 5, 6); --thin: thin; ' +
+        '--none: none; --word: foo }';
+      const line = (value: string) => {
+        const style = resolvedStyle(`${tokens} .a { border: ${value} }`, ['a']);
+        return [style['borderTopWidth'], style['borderStyle'], style['borderTopColor']];
+      };
+      assert.deepEqual(line('var(--c) var(--w) var(--s)'), [2, 'dashed', 'rgb(1, 2, 3)']);
+      assert.deepEqual(line('var(--thin) solid var(--c)'), [1, 'solid', 'rgb(1, 2, 3)']);
+      assert.deepEqual(line('2px solid var(--c)'), [2, 'solid', 'rgb(1, 2, 3)']);
+      assert.deepEqual(line('var(--w) solid var(--missing, rgb(4, 5, 6))'), [
+        2,
+        'solid',
+        'rgb(4, 5, 6)',
+      ]);
+      // A style of none is no line, which native is told as no width and no style.
+      assert.deepEqual(line('var(--w) var(--none) var(--c)'), [0, undefined, 'rgb(1, 2, 3)']);
+      for (const invalid of [
+        'var(--c) solid var(--c2)',
+        'var(--w) solid var(--word)',
+        'var(--w) solid var(--missing)',
+        'var(--w) 3px solid',
+      ]) {
+        assert.deepEqual(line(invalid), [undefined, undefined, undefined], invalid);
+      }
+      // Invalid, it still beats a weaker rule's sides, which Chrome draws as no border.
+      const weaker = resolvedStyle(
+        `${tokens} .w { border-top-width: 7px; border-top-color: rgb(9, 9, 9) } ` +
+          '.a { border: var(--c) solid var(--c2) }',
+        ['w', 'a'],
+      );
+      assert.deepEqual(
+        [weaker['borderTopWidth'], weaker['borderTopColor']],
+        [undefined, undefined],
+      );
+    });
+
+    it('resets the parts of a border of tokens that no token fills, as a written one does', () => {
+      // Each checked in Chrome, over a weaker rule's 7px dotted rgb(9, 9, 9): a width left out is
+      // medium, 3px; a colour left out is the node's colour; a style left out is none, no line.
+      const sheet = (border: string) =>
+        ':root { --w: 2px; --c: rgb(1, 2, 3) } ' +
+        '.w { border-top-width: 7px; border-top-color: rgb(9, 9, 9); border-style: dotted } ' +
+        `.a { color: rgb(4, 4, 4); border: ${border} }`;
+      const line = (border: string) => {
+        const style = resolvedStyle(sheet(border), ['w', 'a']);
+        return [style['borderTopWidth'], style['borderStyle'], style['borderTopColor']];
+      };
+      assert.deepEqual(line('var(--c) solid'), [3, 'solid', 'rgb(1, 2, 3)']);
+      assert.deepEqual(line('var(--w) solid'), [2, 'solid', 'rgb(4, 4, 4)']);
+      assert.deepEqual(line('var(--w) var(--c)'), [0, undefined, 'rgb(1, 2, 3)']);
+    });
+
     it('reads a unitless zero token as the length it is', () => {
       // `--bs-gutter-y: 0`. CSS allows a bare 0 wherever a length goes, and without a length form
       // every `margin-top: var(--bs-gutter-y)` on device resolved to nothing.
@@ -401,9 +457,12 @@ describe('tokens', () => {
     });
 
     it('leaves calc() tokens that read each other unset', () => {
+      // Chrome: padding-top is 0px and padding-left 1px. The var() cannot be substituted, so
+      // padding-top is invalid and unset, and the `padding: 1px` before it does not show through.
       const css =
         '.a { --x: calc(var(--y) * 2); --y: calc(var(--x) * 2); padding: 1px; padding-top: var(--x) }';
-      assert.equal(resolvedStyle(css, ['a'])['paddingTop'], 1);
+      const style = resolvedStyle(css, ['a']);
+      assert.deepEqual([style['paddingTop'], style['paddingLeft']], [undefined, 1]);
     });
 
     it('adds a percentage to a token of one, as Open Props strengthens a shadow', () => {
