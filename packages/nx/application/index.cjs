@@ -32,6 +32,7 @@ const native = require('../native-app.cjs');
 const { init, workspaceNxVersion } = require('../init/index.cjs');
 const { usesWorkspaces, includeInWorkspaces } = require('./workspaces.cjs');
 const { asSaved } = require('../save-exact.cjs');
+const { registerSyncGenerator } = require('../sync/index.cjs');
 
 function names(tree, options) {
   const directory = path.normalize(options.directory).replace(/\/$/, '');
@@ -264,6 +265,7 @@ async function application(tree, options) {
   });
 
   ignoreExpo(tree);
+  registerSyncGenerator(tree, projectName);
 
   if (!options.skipFormat) await formatFiles(tree);
   logger.info(
