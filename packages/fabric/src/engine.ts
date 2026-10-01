@@ -683,6 +683,18 @@ function centreSingleLine(props: Record<string, unknown>): void {
 }
 
 /**
+ * Start a multiline Android text field's text at the top, as iOS and a `<textarea>` do.
+ *
+ * React Native maps an unset `textAlignVertical` to `Gravity.NO_GRAVITY`, which `ReactEditText`
+ * reads as the `EditText`'s own gravity, `center_vertical`. One the app set, through the input or
+ * a CSS `vertical-align`, stays.
+ */
+function alignMultiline(viewName: string, props: Record<string, unknown>): void {
+  if (viewName !== 'AndroidTextInput' || props['multiline'] !== true) return;
+  props['textAlignVertical'] ??= 'top';
+}
+
+/**
  * Resolve a paragraph's `text-align` against its direction, as CSS does.
  *
  * React Native reads `left` and `right` relative to the layout direction: in a right-to-left
@@ -2243,6 +2255,7 @@ export class Engine implements HostEngine {
     this.fontFaces.apply(style);
     if (viewName === PARAGRAPH) alignText(style, this.directionOf(node, style));
     if (this.fontsRefreshed) this.capForFonts(node, style);
+    alignMultiline(viewName, style);
     const merged = composeTransform(node, this.animated(node, this.transitioned(node, style)));
     if (viewName === 'TextInput') centreSingleLine(merged);
     return merged;
