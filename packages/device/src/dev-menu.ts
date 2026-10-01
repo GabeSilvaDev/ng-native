@@ -29,14 +29,45 @@ export interface DevMenuSource {
   readonly development: boolean;
 }
 
+/**
+ * React Native's menu, reloading the way Metro's Fast Refresh runtime does.
+ *
+ * `DevSettings.reload()` brings an app in Expo Go back without Expo's native modules (`Cannot find
+ * native module 'ExpoFontLoader'`) until Expo Go is relaunched. In development `@ng-native/platform`
+ * routes the refresh runtime's full reload through Expo's `reloadAppAsync()` in an Expo app, falling
+ * back to React Native's, so this reloads through it. Neither this package nor the bundle it is in
+ * names `expo` for that: an app on the web, or without Expo, has none to resolve. Outside
+ * development, or without the runtime, it is React Native's reload, which does nothing in a release
+ * build, where Expo's would restart the app.
+ */
+function throughRefreshRuntime(settings: NativeDevMenu): NativeDevMenu {
+  return {
+    addMenuItem: (title, handler) => settings.addMenuItem(title, handler),
+    reload: (reason) => {
+      const scope = globalThis as {
+        __METRO_GLOBAL_PREFIX__?: string;
+        __DEV__?: boolean;
+      } & Record<string, unknown>;
+      const refresh = scope[`${scope.__METRO_GLOBAL_PREFIX__ ?? ''}__ReactRefresh`] as
+        { performFullRefresh?: (reason: string) => void } | undefined;
+      if (scope.__DEV__ === true && refresh?.performFullRefresh) {
+        refresh.performFullRefresh(reason ?? 'requested by the app');
+      } else settings.reload(reason);
+    },
+  };
+}
+
 @Service()
 export class DevMenu {
   /** Overridden in a test to register items without a shake menu. */
   static readonly SOURCE = new InjectionToken<DevMenuSource>('angular-native.devMenuSource', {
-    factory: () => ({
-      menu: reactNative()?.DevSettings ?? null,
-      development: (globalThis as { __DEV__?: boolean }).__DEV__ === true,
-    }),
+    factory: () => {
+      const settings = reactNative()?.DevSettings;
+      return {
+        menu: settings ? throughRefreshRuntime(settings) : null,
+        development: (globalThis as { __DEV__?: boolean }).__DEV__ === true,
+      };
+    },
   });
 
   private readonly source = inject(DevMenu.SOURCE);

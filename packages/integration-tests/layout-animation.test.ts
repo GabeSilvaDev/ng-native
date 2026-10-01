@@ -4,7 +4,12 @@
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { DevMenu, LayoutAnimation, type NativeLayoutAnimation } from '@ng-native/device';
+import {
+  DevMenu,
+  LayoutAnimation,
+  type DevMenuSource,
+  type NativeLayoutAnimation,
+} from '@ng-native/device';
 import { androidPermissionOf } from '../device/src/android-permissions.ts';
 import { Permission } from '@ng-native/expo';
 import { serviceWith } from './injected.ts';
@@ -175,5 +180,84 @@ describe('the developer menu', () => {
     menu.add('Clear cache', () => {});
 
     assert.deepEqual(native.items, ['Clear cache', 'Clear cache']);
+  });
+});
+
+/**
+ * `DevMenu.reload()` on a device. React Native's `DevSettings.reload()` brings an app in Expo Go
+ * back without Expo's native modules (`Cannot find native module 'ExpoFontLoader'`), so in
+ * development the menu reloads through Metro's Fast Refresh runtime, which `@ng-native/platform`
+ * routes through Expo in an Expo app (see `hmr.test.ts`).
+ */
+describe("the developer menu's reload", () => {
+  const scope = globalThis as Record<string, unknown>;
+
+  /** The menu's own source on a device whose `react-native` reports to `calls`. */
+  function device(calls: string[]) {
+    scope['require'] = (id: string) => {
+      if (id === 'react-native') {
+        return {
+          DevSettings: {
+            addMenuItem: (title: string) => void calls.push(`menu: ${title}`),
+            reload: (reason?: string) => void calls.push(`DevSettings.reload: ${reason}`),
+          },
+        };
+      }
+      throw new Error(`Cannot find module '${id}'`);
+    };
+    const provider = (DevMenu.SOURCE as unknown as { ɵprov: { factory(): DevMenuSource } }).ɵprov;
+    try {
+      const source = provider.factory();
+      return { source, menu: serviceWith(DevMenu.SOURCE, source, () => new DevMenu()) };
+    } finally {
+      delete scope['require'];
+    }
+  }
+
+  it("reloads through Metro's refresh runtime in development", () => {
+    const calls: string[] = [];
+    scope['__ReactRefresh'] = {
+      performFullRefresh: (reason: string) => void calls.push(`refresh: ${reason}`),
+    };
+    scope['__DEV__'] = true;
+    try {
+      device(calls).menu.reload('reset');
+      device(calls).menu.reload();
+    } finally {
+      delete scope['__ReactRefresh'];
+      delete scope['__DEV__'];
+    }
+    assert.deepEqual(calls, ['refresh: reset', 'refresh: requested by the app']);
+  });
+
+  it("reloads through React Native's DevSettings without the runtime, as in a release build", () => {
+    const calls: string[] = [];
+    device(calls).menu.reload('reset');
+    assert.deepEqual(calls, ['DevSettings.reload: reset']);
+  });
+
+  it("never reaches the refresh runtime, and so Expo's reload, in a release build", () => {
+    // React Native's DevSettings.reload() does nothing in a release build, where Expo's
+    // reloadAppAsync() would restart the app.
+    const calls: string[] = [];
+    scope['__ReactRefresh'] = {
+      performFullRefresh: (reason: string) => void calls.push(`refresh: ${reason}`),
+    };
+    const development = scope['__DEV__'];
+    scope['__DEV__'] = false;
+    try {
+      device(calls).menu.reload('reset');
+    } finally {
+      delete scope['__ReactRefresh'];
+      if (development === undefined) delete scope['__DEV__'];
+      else scope['__DEV__'] = development;
+    }
+    assert.deepEqual(calls, ['DevSettings.reload: reset']);
+  });
+
+  it("still adds items to React Native's menu", () => {
+    const calls: string[] = [];
+    device(calls).source.menu?.addMenuItem('Clear cache', () => {});
+    assert.deepEqual(calls, ['menu: Clear cache']);
   });
 });
