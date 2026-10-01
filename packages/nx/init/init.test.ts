@@ -3,14 +3,14 @@
  */
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { describe, it } from 'node:test';
+import { describe, it, mock } from 'node:test';
 import type { Tree } from '@nx/devkit';
 
 const require = createRequire(import.meta.url);
 const { createTreeWithEmptyWorkspace } = require('@nx/devkit/testing') as {
   createTreeWithEmptyWorkspace: () => Tree;
 };
-const { readJson, readNxJson, updateJson, updateNxJson } =
+const { logger, readJson, readNxJson, updateJson, updateNxJson } =
   require('@nx/devkit') as typeof import('@nx/devkit');
 const { init, EXPO_PLUGIN } = require('./index.cjs');
 const native = require('../native-app.cjs');
@@ -124,5 +124,105 @@ describe('init', () => {
     assert.equal(typeof (await init(workspace(), { skipFormat: true })), 'function');
     const skipped = await init(workspace(), { skipFormat: true, skipInstall: true });
     assert.equal(skipped(), undefined);
+  });
+});
+
+describe('in a pnpm workspace', () => {
+  // pnpm 11 stops the install with ERR_PNPM_IGNORED_BUILDS for any dependency with an install
+  // script the workspace has not decided on. @nx/expo brings two, through @nx/jest: @parcel/watcher
+  // and unrs-resolver. Both ship prebuilt binaries, and their scripts only build from source.
+  const decided = (yaml: string) =>
+    Object.fromEntries(
+      [...yaml.matchAll(/^ {2}'?([@\w/.-]+)'?:\s*(.+)$/gm)].map(([, name, value]) => [name, value]),
+    );
+
+  it('declines the builds @nx/expo brings, beside the ones the workspace decided', async () => {
+    const tree = workspace();
+    tree.write(
+      'pnpm-workspace.yaml',
+      "packages:\n  - 'packages/*'\nallowBuilds:\n  '@swc/core': true\n  nx: true\n",
+    );
+    await init(tree, { skipFormat: true });
+    const yaml = tree.read('pnpm-workspace.yaml', 'utf-8')!;
+    assert.deepEqual(decided(yaml), {
+      '@swc/core': 'true',
+      nx: 'true',
+      '@parcel/watcher': 'false',
+      'unrs-resolver': 'false',
+    });
+    assert.match(yaml, /^packages:\n {2}- 'packages\/\*'\n/);
+  });
+
+  it('keeps a decision already made, and settles the placeholder a refused install leaves', async () => {
+    const tree = workspace();
+    tree.write(
+      'pnpm-workspace.yaml',
+      "allowBuilds:\n  '@parcel/watcher': true\n  unrs-resolver: set this to true or false\n",
+    );
+    await init(tree, { skipFormat: true });
+    assert.deepEqual(decided(tree.read('pnpm-workspace.yaml', 'utf-8')!), {
+      '@parcel/watcher': 'true',
+      'unrs-resolver': 'false',
+    });
+  });
+
+  it('adds the setting to a pnpm-workspace.yaml with none, or writes one beside a pnpm lockfile', async () => {
+    const listed = workspace();
+    listed.write('pnpm-workspace.yaml', "packages:\n  - 'packages/*'\n");
+    await init(listed, { skipFormat: true });
+    assert.equal(
+      listed.read('pnpm-workspace.yaml', 'utf-8'),
+      "packages:\n  - 'packages/*'\n\nallowBuilds:\n  '@parcel/watcher': false\n  unrs-resolver: false\n",
+    );
+
+    const integrated = workspace();
+    integrated.write('pnpm-lock.yaml', "lockfileVersion: '9.0'\n");
+    await init(integrated, { skipFormat: true });
+    assert.equal(
+      integrated.read('pnpm-workspace.yaml', 'utf-8'),
+      "allowBuilds:\n  '@parcel/watcher': false\n  unrs-resolver: false\n",
+    );
+  });
+
+  const after = async (yaml: string) => {
+    const tree = workspace();
+    tree.write('pnpm-workspace.yaml', yaml);
+    await init(tree, { skipFormat: true });
+    return tree.read('pnpm-workspace.yaml', 'utf-8')!;
+  };
+
+  it('reads past a comment after the key, and comments and blank lines among the entries', async () => {
+    // A blank line ended the block, and the generator wrote a second unrs-resolver key after it.
+    assert.equal(
+      await after('allowBuilds: # approved\n  # ours\n  nx: true\n\n  unrs-resolver: true\n'),
+      "allowBuilds: # approved\n  # ours\n  nx: true\n\n  unrs-resolver: true\n  '@parcel/watcher': false\n",
+    );
+  });
+
+  it('adds after the last entry, not after blank lines before the next key', async () => {
+    assert.equal(
+      await after("allowBuilds:\n  nx: true\n\npackages:\n  - 'apps/*'\n"),
+      "allowBuilds:\n  nx: true\n  '@parcel/watcher': false\n  unrs-resolver: false\n\npackages:\n  - 'apps/*'\n",
+    );
+  });
+
+  it('leaves an allowBuilds it cannot edit as text alone, and says what to decide', async () => {
+    // A flow mapping: appending a block below it wrote a second allowBuilds key, which YAML and
+    // pnpm refuse.
+    const warnings: string[] = [];
+    const warn = mock.method(logger, 'warn', (message: string) => void warnings.push(message));
+    try {
+      const flow = "allowBuilds: { '@parcel/watcher': true }\n";
+      assert.equal(await after(flow), flow);
+      assert.match(warnings.join('\n'), /allowBuilds.*@parcel\/watcher.*unrs-resolver/s);
+    } finally {
+      warn.mock.restore();
+    }
+  });
+
+  it('leaves a workspace on another package manager alone', async () => {
+    const tree = workspace();
+    await init(tree, { skipFormat: true });
+    assert.equal(tree.exists('pnpm-workspace.yaml'), false);
   });
 });
