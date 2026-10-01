@@ -646,27 +646,38 @@ const textDirection = (value: unknown): TextDirection | undefined =>
   value === 'ltr' || value === 'rtl' ? value : undefined;
 
 /**
- * Centre the text of a single-line iOS text field that has a line height, as Chrome centres an
+ * Centre the text of a single-line text field that has a line height, as Chrome centres an
  * input's, keeping the height the line height gives it.
  *
- * React Native's iOS field sets `lineHeight` as the paragraph's minimum and maximum line height
- * and, unlike a paragraph (`RCTApplyBaselineOffset`), never offsets the baseline, so the glyphs
- * sit at the bottom of a line box taller than the font. One line has nothing to space, so the line
- * height is left out. What it does in Chrome, and on Android, is set the field's height: line
- * height, padding and border. That is kept as a `minHeight`, the larger of it and the field's own,
- * within its `maxHeight`: the whole sum for a border-box field, Yoga's default, and the line height
- * alone for a content-box one. A `height` sizes the field on its own, as it does there, and a null
- * one is no height. A value that is not a number cannot be added up, and leaves the field as it
- * was.
+ * Where a `height` in points sizes the field, the line height has nothing left to do, and is left
+ * out on both platforms: on Android, `EditText` centres a line box taller than the font's own
+ * about 1.7pt high of centre in a 44pt field, and centres the font's own exactly. A percentage
+ * height sizes the field only where its parent's height is definite, which is known at layout
+ * alone, so such a field is left as it was. Elsewhere Android sizes the field by the line height
+ * and centres the text in it itself, and keeps it.
+ *
+ * On iOS, React Native's field sets `lineHeight` as the paragraph's minimum and maximum line
+ * height and, unlike a paragraph (`RCTApplyBaselineOffset`), never offsets the baseline, so the
+ * glyphs sit at the bottom of a line box taller than the font. One line has nothing to space, so
+ * the line height is left out. What it does in Chrome, and on Android, is set the field's height:
+ * line height, padding and border. That is kept as a `minHeight`, the larger of it and the field's
+ * own, within its `maxHeight`: the whole sum for a border-box field, Yoga's default, and the line
+ * height alone for a content-box one. A null `height` is no height. A value that is not a number
+ * cannot be added up, and leaves the field as it was.
  */
-function centreSingleLine(props: Record<string, unknown>): void {
+function centreSingleLine(viewName: string, props: Record<string, unknown>): void {
   const lineHeight = props['lineHeight'];
-  if (typeof lineHeight !== 'number' || props['multiline'] === true) return;
+  if (!TEXT_INPUTS.has(viewName) || typeof lineHeight !== 'number') return;
+  if (props['multiline'] === true) return;
   const height = props['height'];
-  if (isSet(height) && height !== 'auto') {
+  if (typeof height === 'number') {
     delete props['lineHeight'];
     return;
   }
+  // A percentage is a fixed height only where the parent's is definite, known at layout alone.
+  if (isSet(height) && height !== 'auto') return;
+  // Android sizes the field by its line height, and centres the text in it, itself.
+  if (viewName !== 'TextInput') return;
   const edge = (side: 'Top' | 'Bottom', logical: 'Start' | 'End'): unknown[] => [
     props[`padding${side}`] ??
       props[`paddingBlock${logical}`] ??
@@ -2264,7 +2275,7 @@ export class Engine implements HostEngine {
     if (this.fontsRefreshed) this.capForFonts(node, style);
     alignMultiline(viewName, style);
     const merged = composeTransform(node, this.animated(node, this.transitioned(node, style)));
-    if (viewName === 'TextInput') centreSingleLine(merged);
+    centreSingleLine(viewName, merged);
     return merged;
   }
 

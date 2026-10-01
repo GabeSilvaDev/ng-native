@@ -9,7 +9,12 @@
  */
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import { Engine, registerPlatformComponents, type StyleSheet } from '@ng-native/fabric';
+import {
+  Engine,
+  registerPlatformComponents,
+  registerViewName,
+  type StyleSheet,
+} from '@ng-native/fabric';
 import { createFakeFabric, type FakeFabricNode } from '@ng-native/testing';
 
 const sheet: StyleSheet = {
@@ -51,7 +56,10 @@ function commitInput(setUp: (engine: Engine, input: ReturnType<Engine['createEle
 }
 
 describe('a single-line text input with a line height', () => {
-  afterEach(() => registerPlatformComponents('ios'));
+  afterEach(() => {
+    registerPlatformComponents('ios');
+    registerViewName('text-input', 'TextInput');
+  });
 
   it('commits no lineHeight on iOS, and keeps its height as a minHeight', () => {
     const { props } = commitInput((engine, input) => engine.addClass(input, 'field'));
@@ -109,7 +117,7 @@ describe('a single-line text input with a line height', () => {
   });
 
   it('leaves the size to an explicit height, larger or smaller', () => {
-    for (const height of [30, 80, '50%']) {
+    for (const height of [30, 80]) {
       const { props } = commitInput((engine, input) => {
         engine.addClass(input, 'field');
         engine.setProp(input, 'style', { height });
@@ -117,6 +125,20 @@ describe('a single-line text input with a line height', () => {
       assert.equal(props()['height'], height);
       assert.equal(props()['minHeight'], undefined, `no minHeight beside height ${height}`);
       assert.equal(props()['lineHeight'], undefined);
+    }
+  });
+
+  it('leaves a field whose height is a percentage as it was, on both platforms', () => {
+    // A percentage of a parent with no definite height is auto, in Yoga as in CSS, and then the
+    // line height is what sizes the field. Whether it resolves is known only at layout.
+    for (const platform of ['ios', 'android']) {
+      registerPlatformComponents(platform);
+      const { props } = commitInput((engine, input) => {
+        engine.addClass(input, 'field');
+        engine.setProp(input, 'style', { height: '50%' });
+      });
+      assert.equal(props()['lineHeight'], 24, platform);
+      assert.equal(props()['minHeight'], undefined, platform);
     }
   });
 
@@ -180,10 +202,33 @@ describe('a single-line text input with a line height', () => {
     assert.equal(props()['minHeight'], 41);
   });
 
-  it('keeps lineHeight on Android, which centres the text itself', () => {
+  it('keeps lineHeight on Android, which sizes and centres the field by it', () => {
     registerPlatformComponents('android');
     const { props } = commitInput((engine, input) => engine.addClass(input, 'field'));
     assert.equal(props()['lineHeight'], 24);
     assert.equal(props()['minHeight'], undefined);
+  });
+
+  it('leaves lineHeight out on Android where a height sizes the field', () => {
+    // EditText centres its line box, and a line box taller than the font's own sits 1.7pt high
+    // in a 44pt field; the height already says how tall the field is.
+    registerPlatformComponents('android');
+    const { props } = commitInput((engine, input) => {
+      engine.addClass(input, 'field');
+      engine.setProp(input, 'style', { height: 44 });
+    });
+    assert.equal(props()['lineHeight'], undefined);
+    assert.equal(props()['minHeight'], undefined);
+    assert.equal(props()['height'], 44);
+  });
+
+  it('keeps lineHeight in a multiline Android field with a height', () => {
+    registerPlatformComponents('android');
+    const { props } = commitInput((engine, input) => {
+      engine.addClass(input, 'field');
+      engine.setProp(input, 'style', { height: 120 });
+      engine.setProp(input, 'multiline', true);
+    });
+    assert.equal(props()['lineHeight'], 24);
   });
 });
