@@ -82,6 +82,27 @@ describe('the generated app', () => {
     }
   });
 
+  it("typechecks as the template's script does, building the Tailwind sheet first", () => {
+    assert.equal(native.TYPECHECK, manifest.scripts.typecheck);
+    assert.equal(native.TYPECHECK, 'node metro.config.js && ngc -p tsconfig.json --noEmit');
+  });
+
+  it("ignores what the template's gitignore does in the app's own directory", () => {
+    const ignored = (text: string) =>
+      text.split('\n').filter((line: string) => line && !line.startsWith('#'));
+    for (const line of ignored(native.GITIGNORE)) {
+      assert.ok(ignored(templateFile('gitignore')).includes(line), line);
+    }
+    assert.ok(ignored(native.GITIGNORE).includes('.angular-native/'));
+  });
+
+  it("puts Expo's own ranges of what it depends on at the root", () => {
+    const expo = require(require.resolve('expo/package.json', { paths: [template] }));
+    for (const name of ['@expo/cli', '@expo/metro', '@babel/runtime']) {
+      assert.equal(native.expoCompanions[name], expo.dependencies[name], name);
+    }
+  });
+
   it('pins the framework packages to its own version, since they are released together', () => {
     const { version } = require('./package.json');
     assert.equal(native.dependencies['@ng-native/components'], version);

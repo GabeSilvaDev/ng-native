@@ -127,9 +127,11 @@ function targets(directory, port) {
   };
   return {
     typecheck: {
-      ...run('ngc -p tsconfig.json --noEmit'),
+      ...run(native.TYPECHECK),
       cache: true,
       inputs: ['default', '^production'],
+      // The Tailwind sheet the command builds, which a cache hit restores rather than rebuilds.
+      outputs: ['{projectRoot}/.angular-native'],
     },
     test: { ...run('vitest run'), cache: true, inputs: ['default', '^production'] },
     start: { ...run(`expo start${own}`), continuous: true },
@@ -182,8 +184,7 @@ async function writeFiles(tree, { directory, projectName, workspaces, bundleIden
   file('AGENTS.md', native.agentsFile(commands(projectName)));
   file('CLAUDE.md', '@AGENTS.md\n');
   file('metro.config.js', native.METRO_CONFIG);
-  // The template's own, for the native projects `expo prebuild` writes beside app.json.
-  file('.gitignore', '# generated native folders\n/ios\n/android\n');
+  file('.gitignore', native.GITIGNORE);
 
   const base = hasPathAliases(tree, workspaces);
   const workspaceBase = base ? `${offsetFromRoot(directory)}tsconfig.base.json` : undefined;
