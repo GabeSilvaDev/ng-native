@@ -434,6 +434,7 @@ function watchCompiler(dir, fingerprint) {
   };
   const watcher = watch(dir, { recursive: true, persistent: false }, check);
   watcher.unref?.();
+  return watcher;
 }
 
 /**
@@ -584,4 +585,6 @@ function withAngularNative(config, options = {}) {
   return config;
 }
 
-module.exports = { withAngularNative, compilerFingerprint };
+// An app reaches this file through `withAngularNative` alone. The other three are exported for the
+// integration tests, which pin what each does on its own.
+module.exports = { withAngularNative, compilerFingerprint, chunkOutsideServerRoot, watchCompiler };
