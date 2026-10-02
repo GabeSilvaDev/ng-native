@@ -11,7 +11,16 @@
  * event the view emits. So a test sees the style an animation settles on, not the frames between:
  * `react-native-reanimated`'s stand-in finishes every animation at once.
  */
-import { Directive, ElementRef, Renderer2, effect, inject, input, signal } from '@angular/core';
+import {
+  Directive,
+  ElementRef,
+  Renderer2,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { HostEngine, type HostNode } from '@ng-native/fabric';
 
 /** A value both runtimes can see; here there is one runtime, and it is a signal. */
@@ -19,6 +28,9 @@ export interface SharedValue<T = number> {
   value: T;
   get(): T;
   set(value: T | ((current: T) => T)): void;
+  modify(modifier?: (value: T) => T, forceUpdate?: boolean): void;
+  addListener(id: number, listener: (value: T) => void): void;
+  removeListener(id: number): void;
 }
 
 export interface WorkletStyleSpec {
@@ -32,17 +44,31 @@ export interface WorkletScrollSpec {
 }
 
 export function sharedValue<T>(initial: T): SharedValue<T> {
-  const state = signal(initial);
+  // A write of the same value is skipped, as Reanimated's is, unless it is forced. A forced one
+  // reaches every reader, which a signal's own equality check would stop.
+  let forced = false;
+  const state = signal(initial, { equal: (a, b) => !forced && Object.is(a, b) });
+  const listeners = new Map<number, (value: T) => void>();
+  const write = (next: T, force = false) => {
+    if (!force && Object.is(next, untracked(state))) return;
+    forced = force;
+    state.set(next);
+    forced = false;
+    for (const listener of listeners.values()) listener(next);
+  };
   return {
     get value() {
       return state();
     },
     set value(next: T) {
-      state.set(next);
+      write(next);
     },
     get: () => state(),
-    set: (next) =>
-      state.set(typeof next === 'function' ? (next as (current: T) => T)(state()) : next),
+    set: (next) => write(typeof next === 'function' ? (next as (current: T) => T)(state()) : next),
+    modify: (modifier, forceUpdate = true) =>
+      write(modifier ? modifier(untracked(state)) : untracked(state), forceUpdate),
+    addListener: (id, listener) => void listeners.set(id, listener),
+    removeListener: (id) => void listeners.delete(id),
   };
 }
 
