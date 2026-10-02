@@ -495,6 +495,11 @@ export interface StyleTarget {
   readonly classes: ReadonlySet<string> | null;
   readonly props: Readonly<Record<string, unknown>>;
   /**
+   * Whether `props.style` sets a property children inherit, kept by whoever sets the style so the
+   * resolver reads the style only where it can matter. Absent is false.
+   */
+  readonly inlineInherits?: boolean;
+  /**
    * The sheet this node's own rules come from, which is the sheet of the component whose renderer
    * created it. Read from the node rather than passed in, because a node's ancestors usually
    * belong to other components and must be matched against their own sheets, not this one's.
@@ -1088,6 +1093,36 @@ function drawsLine(line: unknown): boolean {
   return line !== undefined && line !== 'none';
 }
 
+/** Whether an inline style sets a property children inherit. Allocates nothing: it runs per set. */
+export function setsInherited(style: unknown): boolean {
+  if (!style || typeof style !== 'object') return false;
+  if (Array.isArray(style)) return style.some(setsInherited);
+  for (const key in style) {
+    if (INHERITED.has(key) && (style as Record<string, unknown>)[key] != null) return true;
+  }
+  return false;
+}
+
+/**
+ * The inherited properties a node's inline style sets, or null for none. Inline style is the
+ * strongest normal declaration on its element, so what it sets is inherited, and read by
+ * `color: inherit` and `currentColor`, as a rule's would be.
+ */
+export function inlineInherited(style: unknown): Record<string, unknown> | null {
+  let out: Record<string, unknown> | null = null;
+  // Flattened first, as native applies it, so a later entry's null clears an earlier value.
+  for (const [key, value] of Object.entries(flattenInline(style, {}))) {
+    if (INHERITED.has(key) && value !== undefined && value !== null) (out ??= {})[key] = value;
+  }
+  return out;
+}
+
+function flattenInline(style: unknown, into: Record<string, unknown>): Record<string, unknown> {
+  if (Array.isArray(style)) for (const entry of style) flattenInline(entry, into);
+  else if (style && typeof style === 'object') Object.assign(into, style);
+  return into;
+}
+
 /**
  * The runtime half of CSS for one engine: the global sheet, the conditions media queries are
  * evaluated against, and the memo that makes resolution cost nodes x rules rather than
@@ -1313,7 +1348,10 @@ export class StyleResolver {
     parentInherited: Record<string, unknown>,
   ): StyleCache {
     const tokens = parent ? parent.tokens : this.tokensOnRoot;
+    // What inline style sets is inherited too, with no rule to read it against.
+    const inline = node.inlineInherits ? inlineInherited(node.props['style']) : null;
     if (
+      !inline &&
       parentInherited === EMPTY &&
       parentContext === ROOT_CONTEXT &&
       tokens === NO_TOKENS &&
@@ -1332,7 +1370,7 @@ export class StyleResolver {
       context: {},
       parentContext,
       style: parentInherited,
-      inherited: parentInherited,
+      inherited: inline ? { ...parentInherited, ...inline } : parentInherited,
       tokens,
     };
     node.styleCache = passthrough;
@@ -1400,7 +1438,11 @@ export class StyleResolver {
     parentTokens: Readonly<Record<string, TokenValue>>,
     parentInherited: Record<string, unknown>,
   ): Styled {
-    if (node.customProperties) return this.style(node, matched, parentTokens, parentInherited);
+    // Shared between nodes that match alike, unless the node sets something of its own.
+    const inline = node.inlineInherits ? inlineInherited(node.props['style']) : null;
+    if (node.customProperties || inline) {
+      return this.style(node, matched, parentTokens, parentInherited, inline);
+    }
     if (this.sharedGeneration !== this.generation) {
       this.shared.clear();
       this.sharedGeneration = this.generation;
@@ -1438,8 +1480,12 @@ export class StyleResolver {
     matched: readonly StyleRule[],
     parentTokens: Readonly<Record<string, TokenValue>>,
     parentInherited: Record<string, unknown>,
+    inline: Record<string, unknown> | null = null,
   ): Styled {
-    const result = this.cascade(matched);
+    // Inline style is the last normal declaration, under every important one.
+    const result = this.cascade(
+      inline ? [...matched, { declarations: inline } as StyleRule] : matched,
+    );
 
     // Tokens are in scope for this node's own declarations as well as its descendants', so they
     // are merged before any `var()` here is resolved.
