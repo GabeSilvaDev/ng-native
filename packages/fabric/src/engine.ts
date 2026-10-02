@@ -425,6 +425,8 @@ export interface EngineNode extends HostNode {
   styleCache: StyleCache | null;
   /** Set when something that could change what this node matches has changed. */
   styleDirty: boolean;
+  /** A family left out while it loads. See `loadingFamilies`. */
+  heldFamily?: string;
   /** See `StyleTarget.inlineInherits`. */
   inlineInherits?: boolean;
   /** `:focus`, from the native focus and blur events. */
@@ -872,6 +874,17 @@ function registeredViewName(elementName: string): string | undefined {
  */
 const MEASURED_VIEWS = new Set(['Paragraph', 'TextInput', 'AndroidTextInput']);
 
+/** Leave a family that is still loading out of `style`, remembering it. See `loadingFamilies`. */
+function holdLoadingFamily(node: EngineNode, style: Record<string, unknown>): void {
+  const family = style['fontFamily'];
+  if (typeof family === 'string' && loadingFamilies.has(family)) {
+    delete style['fontFamily'];
+    node.heldFamily = family;
+  } else if (node.heldFamily !== undefined) {
+    node.heldFamily = undefined;
+  }
+}
+
 /** What each mounted app does when faces register. See `fontsRegistered`. */
 const fontListeners = new Set<(families: ReadonlySet<string>) => void>();
 
@@ -890,6 +903,47 @@ export function fontsRegistered(families: Iterable<string>): void {
   const names = new Set(families);
   if (!names.size) return;
   for (const listener of [...fontListeners]) listener(names);
+}
+
+/**
+ * Families a load has asked the platform for and not yet settled, by how many loads asked. Text
+ * naming one is laid out in the fallback without the name until it settles: native caches a
+ * text's measurement by its family name, so a fallback measurement under the face's name would
+ * outlast the face arriving.
+ */
+const loadingFamilies = new Map<string, number>();
+
+/** Faces a load is about to ask the platform for. See `loadingFamilies`. */
+export function fontsLoading(families: Iterable<string>): void {
+  for (const family of families)
+    loadingFamilies.set(family, (loadingFamilies.get(family) ?? 0) + 1);
+}
+
+/** What each mounted app does when a load settles. See `fontsSettled`. */
+const settleListeners = new Set<(families: ReadonlySet<string>) => void>();
+
+/** Hear about loads settling, until the returned function is called. */
+export function onFontsSettled(listener: (families: ReadonlySet<string>) => void): () => void {
+  settleListeners.add(listener);
+  return () => settleListeners.delete(listener);
+}
+
+/**
+ * Faces a load asked for and has finished with, registered or not, before `fontsRegistered`.
+ * Text held back for one that no load still asks for is laid out with the name again: see
+ * `Engine.fontsSettled`.
+ */
+export function fontsSettled(families: Iterable<string>): void {
+  const settled = new Set<string>();
+  for (const family of families) {
+    const left = (loadingFamilies.get(family) ?? 1) - 1;
+    if (left > 0) loadingFamilies.set(family, left);
+    else {
+      loadingFamilies.delete(family);
+      settled.add(family);
+    }
+  }
+  if (settled.size) for (const listener of [...settleListeners]) listener(settled);
 }
 
 /** Whether a paragraph, or a span in it, was committed asking for one of these families. */
@@ -1790,6 +1844,25 @@ export class Engine implements HostEngine {
    * text attributes change, which the same cap does. Android sets it only when `fontFamily` is in
    * the props it is sent, and the engine sends only what changed, so it is sent again once.
    */
+  /**
+   * Loads have settled for these families: every node held back for one, a span inside a
+   * paragraph included, is laid out with the name again, registered or not. See `loadingFamilies`.
+   */
+  fontsSettled(families: ReadonlySet<string>): void {
+    let held = false;
+    const visit = (node: EngineNode): void => {
+      for (const child of node.children) {
+        if (child.heldFamily !== undefined && families.has(child.heldFamily)) {
+          this.markProps(child, false);
+          held = true;
+        }
+        visit(child);
+      }
+    };
+    visit(this.root);
+    if (held) this.commit();
+  }
+
   fontsRegistered(families: ReadonlySet<string>): void {
     const visit = (node: EngineNode): void => {
       for (const child of node.children) {
@@ -2470,6 +2543,7 @@ export class Engine implements HostEngine {
     if (intrinsic) applyIntrinsicSize(style, intrinsic);
     flattenStyle(node.props[STYLE_OVERRIDE], style);
     this.fontFaces.apply(style);
+    holdLoadingFamily(node, style);
     if (viewName === PARAGRAPH) alignText(style, this.directionOf(node, style));
     if (this.fontsRefreshed) this.capForFonts(node, style);
     alignMultiline(viewName, style);
