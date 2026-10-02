@@ -11,6 +11,8 @@ import {
   type Type,
 } from '@angular/core';
 import {
+  createLiveActivity,
+  createWidget,
   liveActivity,
   type LiveActivityFactory,
   type NativeLiveActivity,
@@ -199,5 +201,35 @@ describe('liveActivity', () => {
     destroy();
     assert.equal(fake.listening(), 0);
     assert.equal(fake.instances.length, 1, 'a Live Activity outlives the app that started it');
+  });
+});
+
+describe('createLiveActivity and createWidget', () => {
+  it('say the transformer did not run, where a layout reaches them as a class', () => {
+    class ScoreLayout {
+      readonly props = null as never;
+    }
+    // In Node there is no expo-widgets to hand the layout to, so this stands in for the platform.
+    const expo = { createLiveActivity: () => ({}), createWidget: () => ({}) };
+    const require = (globalThis as { require?: unknown }).require;
+    (globalThis as { require?: unknown }).require = () => expo;
+    try {
+      assert.throws(
+        () => createLiveActivity('Score', ScoreLayout),
+        /createLiveActivity\('Score', \.\.\.\).*@ng-native\/metro/,
+      );
+      assert.throws(
+        () => createWidget('Score', ScoreLayout),
+        /createWidget\('Score', \.\.\.\).*@ng-native\/metro/,
+      );
+    } finally {
+      (globalThis as { require?: unknown }).require = require;
+    }
+  });
+
+  it('answer an activity that never starts in Node, where there is no expo-widgets', () => {
+    const factory = createLiveActivity('Score', 'function(){}' as never);
+    assert.equal(factory.start({}).getId(), '');
+    assert.deepEqual(factory.getInstances(), []);
   });
 });
