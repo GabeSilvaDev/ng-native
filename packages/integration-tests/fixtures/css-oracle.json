@@ -1056,6 +1056,142 @@
     }
   },
   {
+    "name": "font-family: a quoted family, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "Inter-Bold"
+    }
+  },
+  {
+    "name": "font-family: a quoted family, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "Inter-Bold"
+    }
+  },
+  {
+    "name": "font-family: a double-quoted family, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "Inter-Bold"
+    }
+  },
+  {
+    "name": "font-family: a double-quoted family, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "Inter-Bold"
+    }
+  },
+  {
+    "name": "font-family: a quoted family containing a comma, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"A,B\", monospace"
+    }
+  },
+  {
+    "name": "font-family: a quoted family containing a comma, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"A,B\", monospace"
+    }
+  },
+  {
+    "name": "font-family: a stack, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"Inter Display\", sans-serif"
+    }
+  },
+  {
+    "name": "font-family: a stack, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"Inter Display\", sans-serif"
+    }
+  },
+  {
+    "name": "font-family: a family of two words, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"Segoe UI\""
+    }
+  },
+  {
+    "name": "font-family: a family of two words, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"Segoe UI\""
+    }
+  },
+  {
+    "name": "font-family: a family with an escaped quote, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"D'Angelo\", serif"
+    }
+  },
+  {
+    "name": "font-family: a family with an escaped quote, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "\"D'Angelo\", serif"
+    }
+  },
+  {
+    "name": "font-family: a family with a hex escape, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "foo"
+    }
+  },
+  {
+    "name": "font-family: a family with a hex escape, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "foo"
+    }
+  },
+  {
+    "name": "font-family: a family with an escaped newline, which joins it, in the stylesheet",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "FooBar"
+    }
+  },
+  {
+    "name": "font-family: a family with an escaped newline, which joins it, bound on the element",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "font-family": "FooBar"
+    }
+  },
+  {
+    "name": "display: a quoted none token bound on the element is no display",
+    "expected": {
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "display": "inline"
+    }
+  },
+  {
     "name": "whitespace: channels separated by tabs and newlines, in the stylesheet",
     "expected": {
       "color": "rgb(1, 0, 0)",

@@ -115,6 +115,13 @@ function assertExtra(property: ExtraProperty, style: Record<string, unknown>, br
     assert.equal(style['display'] ?? 'flex', native, property);
     return;
   }
+  // One family by name here, and the whole stack, quoted where it needs to be, in the browser.
+  if (property === 'font-family') {
+    // Chrome quotes a family that needs it, and escapes a quote or a backslash inside.
+    const quoted = /^"((?:\\.|[^"\\])*)"/.exec(browser)?.[1]?.replace(/\\(.)/g, '$1');
+    assert.equal(style['fontFamily'], quoted ?? browser.split(',')[0], property);
+    return;
+  }
   // A length is a number of points here, and `2px` in the browser. An unset one is native's
   // initial value, as the browser reports its own.
   const ours = style[EXTRA_KEYS[property]] ?? NATIVE_INITIAL[property];
