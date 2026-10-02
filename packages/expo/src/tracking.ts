@@ -19,7 +19,7 @@
  */
 import { InjectionToken, Service, inject } from '@angular/core';
 import { expoModule } from './native.ts';
-import { Permission, type PermissionResponse } from './permissions.ts';
+import { Permission, UNAVAILABLE } from './permissions.ts';
 
 type Expo = typeof import('expo-tracking-transparency');
 
@@ -31,9 +31,6 @@ export type NativeTracking = Pick<
   | 'isAvailable'
   | 'getAdvertisingId'
 >;
-
-/** The permission answer without the module: nothing granted, and nothing to ask. */
-const UNAVAILABLE: PermissionResponse = { status: 'denied', granted: false, canAskAgain: false };
 
 @Service()
 export class Tracking {
@@ -56,8 +53,8 @@ export class Tracking {
    * the text in it is `NSUserTrackingUsageDescription`, set through the module's config plugin.
    */
   readonly permission: Permission = Permission.of(
-    () => this.native?.getTrackingPermissionsAsync() ?? Promise.resolve(UNAVAILABLE),
-    () => this.native?.requestTrackingPermissionsAsync() ?? Promise.resolve(UNAVAILABLE),
+    () => this.native?.getTrackingPermissionsAsync?.() ?? Promise.resolve(UNAVAILABLE),
+    () => this.native?.requestTrackingPermissionsAsync?.() ?? Promise.resolve(UNAVAILABLE),
   );
 
   /** Whether the device has the tracking API. Where it does not, the permission answers granted. */

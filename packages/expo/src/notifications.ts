@@ -42,7 +42,7 @@ import type {
   SchedulableTriggerInputTypes,
 } from 'expo-notifications';
 import { expoModule } from './native.ts';
-import { Permission, type PermissionResponse } from './permissions.ts';
+import { Permission, UNAVAILABLE } from './permissions.ts';
 
 type Expo = typeof import('expo-notifications');
 
@@ -109,9 +109,6 @@ export const TriggerType = {
   TIME_INTERVAL: 'timeInterval',
 } as unknown as typeof SchedulableTriggerInputTypes;
 
-/** The permission answer without the module: nothing granted, and nothing to ask. */
-const UNAVAILABLE: PermissionResponse = { status: 'denied', granted: false, canAskAgain: false };
-
 @Service()
 export class Notifications {
   /** Overridden in a test to deliver a notification nobody sent. */
@@ -138,8 +135,8 @@ export class Notifications {
   constructor() {
     const native = this.native;
     this.permission = Permission.of(
-      () => native?.getPermissionsAsync() ?? Promise.resolve(UNAVAILABLE),
-      () => native?.requestPermissionsAsync() ?? Promise.resolve(UNAVAILABLE),
+      () => native?.getPermissionsAsync?.() ?? Promise.resolve(UNAVAILABLE),
+      () => native?.requestPermissionsAsync?.() ?? Promise.resolve(UNAVAILABLE),
     );
     if (!native) return;
     const subscriptions = [

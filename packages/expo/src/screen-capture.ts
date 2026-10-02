@@ -19,7 +19,7 @@
  */
 import { DestroyRef, InjectionToken, Service, inject, signal, type Signal } from '@angular/core';
 import { expoModule } from './native.ts';
-import { Permission, type PermissionResponse } from './permissions.ts';
+import { Permission, UNAVAILABLE } from './permissions.ts';
 
 type Expo = typeof import('expo-screen-capture');
 
@@ -35,9 +35,6 @@ export type NativeScreenCapture = Pick<
   | 'getPermissionsAsync'
   | 'requestPermissionsAsync'
 >;
-
-/** The permission answer without the module: nothing granted, and nothing to ask. */
-const UNAVAILABLE: PermissionResponse = { status: 'denied', granted: false, canAskAgain: false };
 
 @Service()
 export class ScreenCapture {
@@ -58,8 +55,8 @@ export class ScreenCapture {
    * photo library. Later Android needs none, and iOS always answers granted.
    */
   readonly permission: Permission = Permission.of(
-    () => this.native?.getPermissionsAsync() ?? Promise.resolve(UNAVAILABLE),
-    () => this.native?.requestPermissionsAsync() ?? Promise.resolve(UNAVAILABLE),
+    () => this.native?.getPermissionsAsync?.() ?? Promise.resolve(UNAVAILABLE),
+    () => this.native?.requestPermissionsAsync?.() ?? Promise.resolve(UNAVAILABLE),
   );
 
   /** How many screenshots the user has taken while the app was in front. */

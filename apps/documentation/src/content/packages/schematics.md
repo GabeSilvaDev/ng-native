@@ -1,6 +1,7 @@
 ---
 title: Angular CLI
-summary: ng add for an Angular CLI workspace, with a native app beside the web one that ng serve, ng build and ng test run.
+summary: ng add for an Angular CLI workspace, with a native app beside the web one that ng serve,
+  ng build and ng test run.
 ---
 
 # Angular CLI
@@ -21,12 +22,11 @@ a workspace around it, [the template](/guide/getting-started) is still the short
 ## What it adds
 
 The files are the template's, copied as they are: `src/app/app.ts`, `src/main.ts`,
-`src/app/app.test.ts`, `metro.config.js`, `tsconfig.json` and `vitest.config.mts`, plus an `app.json` named for the
-project, a small `package.json` for Expo, and a `.gitignore` that ignores the `ios/` and
-`android/` projects `expo prebuild` writes and the `.angular-native/` Tailwind generates, as the
-template's does. The dependencies go in the workspace's root
-`package.json`, beside Angular's, and `ng add` installs them. A version the workspace already has
-is left alone.
+`src/app/app.test.ts`, `metro.config.js`, `tsconfig.json` and `vitest.config.mts`, plus an
+`app.json` named for the project, a small `package.json` for Expo, and a `.gitignore` that ignores
+the `ios/` and `android/` projects `expo prebuild` writes and the `.angular-native/` Tailwind
+generates, as the template's does. The dependencies go in the workspace's root `package.json`,
+beside Angular's, and `ng add` installs them. A version the workspace already has is left alone.
 
 The project's own `package.json` is never installed from. Expo reads `main` from it to find the
 entry file, and it also lists every dependency the app has at the root's ranges. Expo links the
@@ -94,9 +94,9 @@ anything but letters and digits removed, where `expo prebuild` would otherwise u
 `com.anonymous.<name>`. An app name Android refuses as a segment, such as the Java keyword `native`
 or the Kotlin keyword `object`, gets an `app` prefix: `ng add` in a workspace with no scope names
 the app `com.appnative`. A scope that cannot be a segment is left out, so `@native` with an app
-named `mobile` gives `com.mobile`. A given identifier needs two or more dot-separated segments, each a letter and then
-letters or digits, none a Java or Kotlin keyword, and the schematic stops with an error on one that
-is not.
+named `mobile` gives `com.mobile`. A given identifier needs two or more dot-separated segments, each
+a letter and then letters or digits, none a Java or Kotlin keyword, and the schematic stops with an
+error on one that is not.
 
 ## When the install fails
 
