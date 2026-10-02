@@ -4,7 +4,7 @@
 
 - Node 24 (see `.nvmrc`); the packages require at least the `engines.node` floor in `package.json`,
   `>=22.18`.
-- pnpm, pinned by `packageManager` in `package.json` (currently `pnpm@10.28.1`). Enable it with
+- pnpm, pinned by `packageManager` in `package.json` (currently `pnpm@11.28.2`). Enable it with
   `corepack enable` if you do not already have it. npm is not supported in this workspace - the
   packages resolve through pnpm workspace links.
 
@@ -50,6 +50,13 @@ change to the lockfile would move React Native onto the Babel 8 that `@angular/c
 and Nx and Expo onto TypeScript 7. An optional peer that pulls one of these in, such as
 `@ng-native/metro`'s `@expo/metro-config`, is a devDependency too, since a peer pnpm installs for
 it ignores the package's own devDependencies. `workspace-peers.test.ts` checks it.
+
+An optional peer that no package above it depends on, with more than one version in the workspace,
+is declared by the project too: `jiti` for Vite in `@ng-native/web`, beside Tailwind 3's `jiti` 1.
+pnpm otherwise resolves it to whichever copy it reaches first, and adding a dependency to any
+project swaps it, rewriting every lockfile entry above it. `workspace-peers.test.ts` checks this
+too. `debug`'s `supports-color` gets a dependency of its own in `pnpm-workspace.yaml` instead,
+since nearly every project would otherwise need to declare it.
 
 ## Running the app and the docs site
 
