@@ -19,6 +19,7 @@ import {
   animationEvent,
   bezier,
   interpolate,
+  readsInheritedColour,
   sample,
   step,
   tracksOf,
@@ -130,6 +131,8 @@ interface ScrollAnimation {
   readonly tracks: ReadonlyMap<string, readonly { offset: number; value: unknown }[]>;
   readonly resting: Record<string, unknown>;
   readonly first: Record<string, unknown>;
+  /** The colour the node inherits, which the tracks were built with, for frames that read it. */
+  readonly inherited: unknown;
   readonly source: EngineNode | null;
   readonly drive: { update(channels: DrivenChannels): void; stop(): void } | null;
 }
@@ -2586,10 +2589,12 @@ export class Engine implements HostEngine {
     props: Record<string, unknown>,
   ): void {
     const current = node.playing;
+    const inherited = this.inheritedColour(node, frames);
     if (!current || !sameAnimation(current.spec, spec)) {
       const started: RunningAnimation = {
         spec,
-        tracks: tracksOf(frames, props),
+        tracks: tracksOf(frames, props, inherited),
+        inherited,
         start: this.now(),
         values: {},
         done: false,
@@ -2609,21 +2614,36 @@ export class Engine implements HostEngine {
       this.emitTransition(node, 'topAnimationstart', spec.name);
       return;
     }
-    if (this.playedFrames.get(current) !== frames) this.reframe(node, current, frames, props);
+    if (this.playedFrames.get(current) !== frames || inherited !== current.inherited) {
+      this.reframe(node, current, frames, props, inherited);
+    }
     this.playOrPause(node, node.playing!, spec);
   }
 
   /**
+   * The colour `node` inherits, for frames that set `color: currentColor`, which is that colour
+   * wherever the animation has got to, as in CSS. Undefined for frames that do not.
+   */
+  private inheritedColour(node: EngineNode, frames: readonly Keyframe[]): unknown {
+    if (!readsInheritedColour(frames)) return undefined;
+    const parent = node.parent && this.styles.resolve(node.parent, this.styleEpoch);
+    return parent?.inherited['color'] ?? 'black';
+  }
+
+  /**
    * The name an animation plays now has other frames: a hot swap edited them, or took away the
-   * sheet whose copy won. It carries on along the new ones, on its own clock, as a browser does.
+   * sheet whose copy won. Or the colour its `color: currentColor` stands for has changed. It
+   * carries on along the new tracks, on its own clock, as a browser does, paused or not.
    */
   private reframe(
     node: EngineNode,
     current: RunningAnimation,
     frames: readonly Keyframe[],
     props: Record<string, unknown>,
+    inherited: unknown,
   ): void {
-    const reframed: RunningAnimation = { ...current, tracks: tracksOf(frames, props) };
+    const tracks = tracksOf(frames, props, inherited);
+    const reframed: RunningAnimation = { ...current, tracks, inherited };
     const { values, finished } = sample(reframed, current.pausedAt ?? this.now());
     const holds = current.spec.fill === 'forwards' || current.spec.fill === 'both';
     reframed.values = finished && !holds ? {} : values;
@@ -2669,8 +2689,9 @@ export class Engine implements HostEngine {
     props: Record<string, unknown>,
   ): Record<string, unknown> {
     const current = node.scrolled;
+    const inherited = this.inheritedColour(node, frames);
     if (current?.frames === frames && sameAnimation(current.spec, spec)) {
-      return Object.assign(props, current.first);
+      return Object.assign(props, this.rescrolled(node, current, frames, props, inherited));
     }
     this.stopScrolled(node);
     if (node.playing) {
@@ -2678,7 +2699,7 @@ export class Engine implements HostEngine {
       this.playing.delete(node);
     }
 
-    const tracks = tracksOf(frames, props);
+    const tracks = tracksOf(frames, props, inherited);
     const source = this.scrollSourceOf(node);
     const extent = source ? (this.scrollExtents.get(source)?.[spec.timeline!] ?? null) : null;
     const range = rangeOf(spec, extent);
@@ -2689,8 +2710,35 @@ export class Engine implements HostEngine {
     // As Animated does: Fabric flattens a view that only lays out, and then there is no native
     // view for the animation to move. Committed with the first frame, so it stays put.
     if (drive) first['collapsable'] = false;
-    node.scrolled = { spec, frames, tracks, resting, first, source, drive };
+    node.scrolled = { spec, frames, tracks, resting, first, source, drive, inherited };
     return Object.assign(props, first);
+  }
+
+  /**
+   * The first frame of a scroll-driven animation already playing. When the colour its
+   * `color: currentColor` stands for has changed, that frame's colour is taken from tracks built
+   * again. Native drives opacity and transforms only, so a colour holds its first frame, and
+   * nothing native animates is touched.
+   */
+  private rescrolled(
+    node: EngineNode,
+    current: ScrollAnimation,
+    frames: readonly Keyframe[],
+    props: Record<string, unknown>,
+    inherited: unknown,
+  ): Record<string, unknown> {
+    if (inherited === current.inherited) return current.first;
+    // The element's own colour, which a track with no first frame starts at, may be the one it
+    // inherits, so it is read again too.
+    const resting = { ...current.resting, color: props['color'] };
+    const tracks = tracksOf(frames, resting, inherited);
+    const extent = current.source ? this.scrollExtents.get(current.source) : undefined;
+    const range = rangeOf(current.spec, extent?.[current.spec.timeline!] ?? null);
+    const first = { ...current.first };
+    const colour = firstFrame(tracks, current.spec, range)['color'];
+    if ('color' in first) first['color'] = colour;
+    node.scrolled = { ...current, tracks, resting, first, inherited };
+    return first;
   }
 
   /** Hand a scroll-driven animation's channels to native, fed by `source`'s scroll events. */
