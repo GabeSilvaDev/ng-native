@@ -17,6 +17,14 @@ export interface ColorSchemeSource {
   set?(scheme: Scheme | null): void;
 }
 
+/**
+ * Every source's listeners, told of a scheme the app sets. React Native takes it at once but
+ * reports it only when its root view next changes appearance, and on iOS a full-screen modal takes
+ * that view out of the window, so the change arrived when the modal closed. The platform's own
+ * report, when it comes, repeats the same scheme.
+ */
+const setListeners = new Set<() => void>();
+
 export function colorSchemeSource(): ColorSchemeSource {
   const native = reactNative();
   if (!native) return { current: () => 'light', subscribe: () => () => {} };
@@ -26,10 +34,28 @@ export function colorSchemeSource(): ColorSchemeSource {
   return {
     current: read,
     subscribe: (listener) => {
-      const subscription = native.Appearance.addChangeListener(() => listener(read()));
-      return () => subscription.remove();
+      // Each scheme once: the platform's report repeats one the app set, and it also reports
+      // appearance changes that are not the scheme.
+      let last = read();
+      const onChange = () => {
+        const scheme = read();
+        if (scheme === last) return;
+        last = scheme;
+        listener(scheme);
+      };
+      const subscription = native.Appearance.addChangeListener(onChange);
+      setListeners.add(onChange);
+      return () => {
+        subscription.remove();
+        setListeners.delete(onChange);
+      };
     },
-    set: (scheme) => native.Appearance.setColorScheme?.(scheme ?? 'unspecified'),
+    set: (scheme) => {
+      native.Appearance.setColorScheme?.(scheme ?? 'unspecified');
+      // Back to the system's waits for the platform's report: React Native resolves it from a
+      // native cache that a full-screen modal on iOS can leave stale.
+      if (scheme !== null) for (const listener of [...setListeners]) listener();
+    },
   };
 }
 

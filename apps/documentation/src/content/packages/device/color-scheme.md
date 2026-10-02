@@ -71,9 +71,10 @@ A few things to know:
   style. In Expo Go on iOS `set()` then changes nothing, and `set(null)` returns to the fixed style
   rather than the system's.
 
-- `set()` does not write `current()` itself. `current()` changes when `Appearance` reports the new
-  scheme, the same path a system change takes, so read it afterwards rather than assuming it
-  updated synchronously.
+- `set('light')` and `set('dark')` update `current()` and `.dark` styles at once. When
+  `Appearance` reports the same scheme afterwards, subscribers ignore it. On iOS that report comes
+  only from the root view, which a full-screen `<modal>` takes out of the window. `set(null)` and a
+  system change wait for the report, so inside a full-screen modal they take effect when it closes.
 - `current()` reports what the app is showing, not what the user chose. Once the app is forced
   into a scheme it no longer tells you what the system is set to, and it cannot tell "forced dark"
   from "following a dark system." Keep the choice in a signal of your own, as `choice` does above.

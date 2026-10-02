@@ -409,6 +409,93 @@ describe('the colour scheme and app state sources', () => {
     });
   });
 
+  it('tells every source of a scheme the app sets, though the platform sends no change', () => {
+    // On iOS a full-screen modal takes the root view out of the window, and React Native hears of
+    // an appearance change only from that view, so `setColorScheme` emits nothing until the modal
+    // closes. React Native's own state takes the scheme at once, which is what this reads.
+    let scheme: string | null = 'light';
+    const native = {
+      Appearance: {
+        getColorScheme: () => scheme,
+        addChangeListener: () => ({ remove: () => {} }),
+        setColorScheme: (next: string) => void (scheme = next === 'unspecified' ? 'light' : next),
+      },
+    };
+    withNative(native, () => {
+      // Two, as `ColorScheme` and `watchConditions` each make their own.
+      const [service, conditions] = [colorSchemeSource(), colorSchemeSource()];
+      const heard: string[] = [];
+      const stop = service.subscribe((value) => heard.push(`service ${value}`));
+      const stopToo = conditions.subscribe((value) => heard.push(`conditions ${value}`));
+      service.set?.('dark');
+      service.set?.('light');
+      stop();
+      stopToo();
+      service.set?.('dark');
+      assert.deepEqual(heard, [
+        'service dark',
+        'conditions dark',
+        'service light',
+        'conditions light',
+      ]);
+    });
+  });
+
+  it('says each scheme once, when the platform then reports the one the app set', () => {
+    // Each repeat would cost a subscriber such as `watchConditions` a commit of its own.
+    let scheme: string | null = 'light';
+    let emit: () => void = () => {};
+    const native = {
+      Appearance: {
+        getColorScheme: () => scheme,
+        addChangeListener: (handler: () => void) => {
+          emit = handler;
+          return { remove: () => {} };
+        },
+        setColorScheme: (next: string) => void (scheme = next === 'unspecified' ? 'light' : next),
+      },
+    };
+    withNative(native, () => {
+      const source = colorSchemeSource();
+      const heard: string[] = [];
+      source.subscribe((value) => heard.push(value));
+      source.set?.('dark');
+      emit();
+      emit();
+      assert.deepEqual(heard, ['dark']);
+    });
+  });
+
+  it('waits for the platform to say which scheme set(null) hands back', () => {
+    // React Native resolves 'unspecified' from its native cache, which on iOS can still hold the
+    // scheme from before a full-screen modal opened, so only its own report is to be trusted.
+    let native = 'light';
+    let scheme: string | null = native;
+    let emit: () => void = () => {};
+    const fake = {
+      Appearance: {
+        getColorScheme: () => scheme,
+        addChangeListener: (handler: () => void) => {
+          emit = handler;
+          return { remove: () => {} };
+        },
+        setColorScheme: (next: string) => void (scheme = next === 'unspecified' ? native : next),
+      },
+    };
+    withNative(fake, () => {
+      const source = colorSchemeSource();
+      const heard: string[] = [];
+      source.subscribe((value) => heard.push(value));
+      source.set?.('dark');
+      source.set?.(null);
+      assert.deepEqual(heard, ['dark'], 'nothing yet: the cache may be stale');
+      native = 'light';
+      scheme = native;
+      emit();
+      assert.deepEqual(heard, ['dark', 'light']);
+    });
+  });
+
   it('keeps inactive apart from active, as a call or the app switcher leaves it', () => {
     const native = {
       AppState: { currentState: 'inactive', addEventListener: () => ({ remove: () => {} }) },
