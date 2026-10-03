@@ -1,5 +1,5 @@
 import { DestroyRef, InjectionToken, Injector, Service, inject } from '@angular/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, injectService, render, screen } from './index.ts';
 
 interface Source {
@@ -46,12 +46,41 @@ describe('injectService', () => {
     expect(injectService(Scheme, { providers: [sourceOf('dark')] }).current).toBe('dark');
   });
 
-  it('gives each call an app of its own', () => {
-    const first = injectService(Scheme, { providers: [sourceOf('dark')] });
-    const second = injectService(Scheme);
+  it('gives a second call the app the first one made, so two services share a root', () => {
+    const scheme = injectService(Scheme);
+    const clock = injectService(Clock);
 
-    expect(second).not.toBe(first);
-    expect(second.current).toBe('light');
+    expect(scheme.clock).toBe(clock);
+    expect(injectService(Scheme)).toBe(scheme);
+  });
+
+  it('keeps to the app a call with providers made, for the calls after it', () => {
+    const scheme = injectService(Scheme, { providers: [sourceOf('dark')] });
+
+    expect(injectService(Scheme)).toBe(scheme);
+    expect(injectService(Clock)).toBe(scheme.clock);
+  });
+
+  it('starts a new app for a call with providers, which the calls after it then use', () => {
+    const light = injectService(Scheme);
+    const dark = injectService(Scheme, { providers: [sourceOf('dark')] });
+
+    expect(dark).not.toBe(light);
+    expect(dark.current).toBe('dark');
+    expect(injectService(Scheme)).toBe(dark);
+  });
+
+  it('starts a new app for an empty list of providers too', () => {
+    const first = injectService(Scheme);
+
+    expect(injectService(Scheme, { providers: [] })).not.toBe(first);
+  });
+
+  it('starts again after cleanup', () => {
+    const before = injectService(Scheme);
+    cleanup();
+
+    expect(injectService(Scheme)).not.toBe(before);
   });
 
   it("ends the service's DestroyRef on cleanup", () => {
@@ -97,5 +126,68 @@ describe('injectService', () => {
   it('finds a service Injector.create cannot', () => {
     expect(() => Injector.create({ providers: [sourceOf('dark')] }).get(Scheme)).toThrow(/NG0201/);
     expect(injectService(Scheme, { providers: [sourceOf('dark')] }).current).toBe('dark');
+  });
+});
+
+describe('injectService, in a file that never calls cleanup', () => {
+  let earlier: Scheme | undefined;
+
+  it('makes an app in one test', () => {
+    earlier = injectService(Scheme);
+    expect(injectService(Scheme)).toBe(earlier);
+  });
+
+  it("and another in the next, which cannot see the first one's services", () => {
+    expect(earlier).toBeDefined();
+    expect(injectService(Scheme)).not.toBe(earlier);
+  });
+});
+
+describe('injectService, in tests that run at once', () => {
+  const made: Scheme[] = [];
+  let started = () => {};
+  const both = new Promise<void>((resolve) => (started = resolve));
+
+  // Each waits for the other to have started, so both are under way when either asks again.
+  const run = async () => {
+    made.push(injectService(Scheme));
+    if (made.length === 2) started();
+    await both;
+    made.push(injectService(Scheme));
+  };
+
+  it.concurrent('gives one test no app of another that is still running', run);
+  it.concurrent('and the other none of the first', run);
+
+  it('so no two of their services are the same', () => {
+    expect(made).toHaveLength(4);
+    expect(new Set(made).size).toBe(4);
+  });
+});
+
+describe('injectService, before any test', () => {
+  let before: Scheme;
+  beforeAll(() => {
+    before = injectService(Scheme);
+  });
+
+  it("makes an app that is no test's, so the first test does not share it", () => {
+    expect(injectService(Scheme)).not.toBe(before);
+  });
+});
+
+describe('injectService, when the setup file runs again in one worker', () => {
+  // As it does for each test file under Vitest's `isolate: false`, where the files share a global.
+  it('keeps counting tests, so a test in the next file is not taken for one in the last', async () => {
+    const key = Symbol.for('ng-native.testing.tests');
+    const counted = (globalThis as Record<symbol, { finished: number } | undefined>)[key]!;
+    const finished = counted.finished;
+    expect(finished).toBeGreaterThan(0);
+    // Last in the file: whatever Vitest makes of hooks registered inside a test ends with it.
+    const again: string = '../runner/setup.mjs?again';
+    await import(again).catch(() => undefined);
+    const after = (globalThis as Record<symbol, { finished: number } | undefined>)[key]!;
+    expect(after).toBe(counted);
+    expect(after.finished).toBe(finished);
   });
 });
