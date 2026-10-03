@@ -469,6 +469,12 @@ export interface EngineNode extends HostNode {
   /** The resolved style this node was last committed with, for the skip check in `reconcile`. */
   styleCommitted: StyleCache | null;
   /**
+   * How this node laid its children out when one of them last had a `fit-content` size, as
+   * `containerOf` says it. Set by such a child, and compared on each reconcile so the children
+   * are worked out again when the direction or alignment changes. Unset on every other node.
+   */
+  fitContainer?: string;
+  /**
    * Per-property transition state, for every property this node has ever seen a `transition` for.
    * A finished entry stays, because its target is what the next change is measured against.
    */
@@ -806,6 +812,71 @@ function centreSingleLine(
       ? line
       : (box as number[]).reduce((sum, part) => sum + part, 0);
   props['minHeight'] = Math.max(own as number, Math.min(content, max as number));
+}
+
+/**
+ * What a container's own style says for `key`, in the order `mergeProps` applies them: a
+ * component's override, inline, a prop, its stylesheet, its default.
+ */
+function ownLayout(node: EngineNode, key: string): unknown {
+  return (
+    flattenStyle(node.props[STYLE_OVERRIDE], {})[key] ??
+    flattenStyle(node.props['style'], {})[key] ??
+    node.props[key] ??
+    node.styleCache?.style[key] ??
+    node.defaultStyle?.[key]
+  );
+}
+
+/**
+ * A container's main axis and how it aligns across it, as `row` or `column` and a keyword. A
+ * `display: contents` node is no container: its children are laid out in the one above it.
+ */
+function containerOf(node: EngineNode): string {
+  if (ownLayout(node, 'display') === 'contents') return 'contents';
+  const direction = String(ownLayout(node, 'flexDirection') ?? 'column');
+  return `${direction.startsWith('row') ? 'row' : 'column'} ${ownLayout(node, 'alignItems') ?? 'stretch'}`;
+}
+
+/**
+ * The node a box is laid out in: its parent, or the one above every `display: contents` ancestor.
+ * Each of those is told a `fit-content` child passed through, so that when it stops being
+ * `contents`, and is the container, the child is worked out again.
+ */
+function layoutParent(node: EngineNode): EngineNode | null {
+  let parent = node.parent;
+  while (parent && containerOf(parent) === 'contents') {
+    parent.fitContainer = 'contents';
+    parent = parent.parent;
+  }
+  return parent;
+}
+
+const STRETCHES = new Set([undefined, null, 'auto', 'stretch']);
+
+/**
+ * `width: fit-content` and `height: fit-content`, which Yoga has no size for.
+ *
+ * Along its container's main axis a box is as big as its content already, so the size is
+ * dropped. Across it a box stretches, where a browser keeps it at its content's size and at the
+ * start: `align-self: flex-start` does both. An alignment the container or the box asked for is
+ * kept, since it stops the stretch already.
+ */
+function fitContent(node: EngineNode, props: Record<string, unknown>): void {
+  const width = props['width'] === 'fit-content';
+  const height = props['height'] === 'fit-content';
+  if (!width && !height) return;
+  if (width) delete props['width'];
+  if (height) delete props['height'];
+  const parent = layoutParent(node);
+  if (!parent) return;
+  const container = containerOf(parent);
+  parent.fitContainer = container;
+  const [direction, align] = container.split(' ');
+  const across = direction === 'row' ? height : width;
+  if (across && align === 'stretch' && STRETCHES.has(props['alignSelf'] as string)) {
+    props['alignSelf'] = 'flex-start';
+  }
 }
 
 /**
@@ -1465,6 +1536,7 @@ class RetainedNode {
   styleCache: StyleCache | null = null;
   styleDirty = true;
   styleCommitted: StyleCache | null = null;
+  fitContainer: string | undefined = undefined;
   ownStyle: object | undefined = undefined;
   claimed: true | undefined = undefined;
   dormantHoists: EngineNode[] | null = null;
@@ -2876,6 +2948,8 @@ export class Engine implements HostEngine {
     const cascaded = props['transform'];
     const style = boundTransform(node, flattenStyle(node.props['style'], props), cascaded);
     nativePointerEvents(node, style, resolved);
+    // Before an image's own size: `fit-content` is no size, so the image's is what it gets.
+    fitContent(node, style);
     const intrinsic = node.props[INTRINSIC_SIZE] as IntrinsicSize | undefined;
     if (intrinsic) applyIntrinsicSize(style, intrinsic);
     flattenStyle(node.props[STYLE_OVERRIDE], style);
@@ -2887,6 +2961,28 @@ export class Engine implements HostEngine {
     const merged = composeTransform(node, this.animated(node, this.transitioned(node, style)));
     centreSingleLine(viewName, merged, this.fontScale);
     return merged;
+  }
+
+  /**
+   * A container whose direction or alignment changed since a child with a `fit-content` size
+   * read it: those children are merged again. A change to a container marks nothing beneath it,
+   * since neither property is inherited.
+   */
+  private refitChildren(node: EngineNode): void {
+    if (node.fitContainer === undefined) return;
+    const container = containerOf(node);
+    if (container === node.fitContainer) return;
+    node.fitContainer = container;
+    this.refit(node);
+  }
+
+  /** Have a container's children merged again, through any `display: contents` among them. */
+  private refit(container: EngineNode): void {
+    for (const child of container.children) {
+      if (child.kind !== 'element') continue;
+      child.propsDirty = true;
+      if (containerOf(child) === 'contents') this.refit(child);
+    }
   }
 
   /**
@@ -3541,6 +3637,7 @@ export class Engine implements HostEngine {
     const styleChanged = node.styleCommitted !== style;
     if (this.isClean(node) && !styleChanged) return node.committed!.handle;
     node.styleCommitted = style;
+    this.refitChildren(node);
 
     const viewName = viewNameOf(node);
     this.forgetRenamed(node, viewName);
