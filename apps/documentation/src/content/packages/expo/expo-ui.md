@@ -85,6 +85,9 @@ error. `expo-ui-components.ts` has thin typed components for the views an app re
 - **`UiContextMenu`** - a SwiftUI `contextMenu`, the menu a long press opens, iOS only. Its
   content is three `ui-slot`s: `trigger`, what is always shown; `items`, the menu's buttons; and
   `preview`, shown above the open menu when there is one. See [A context menu](#a-context-menu).
+- **`UiViewHost`** - views of the app's own inside SwiftUI or Compose content, the way back from a
+  `ui-host`: `@expo/ui`'s `RNHostView`. It holds one element; `matchContents` sizes it to that
+  element.
 - **`UiButton`** - a SwiftUI `Button`, as a menu item or on its own. `role` is `'default'`,
   `'cancel'` or `'destructive'`.
 - **`UiDivider`** - a separator between groups of menu items.
@@ -192,9 +195,67 @@ A long press on the trigger lifts it over the dimmed screen and opens the menu b
 ```
 
 The trigger is SwiftUI content, as everything inside a `ui-host` is: `ui-text`, `ui-image`, the
-stacks. A row drawn with the app's own components is not one, so a `<virtual-list>` row of the
-app's cannot be the trigger; a long press on such a row opens `Dialogs.choose()` instead. The view
-is SwiftUI's alone, and on Android the element commits as nothing.
+stacks. A row drawn with the app's own components becomes one inside a `<ui-view-host>`, which
+hosts views of the app's own in SwiftUI content. The row is laid out and pressed as anywhere
+else, and a long press lifts it and opens the menu:
+
+```html
+@for (row of list.window(); track row.slot) {
+<view [virtualListRow]="row">
+  <ui-host
+    ignoreSafeArea="all"
+    [matchContents]="{ vertical: true }"
+    (layout)="rowWidth.set($event.nativeEvent.layout.width)"
+  >
+    <ui-context-menu>
+      <ui-slot name="trigger">
+        <ui-view-host [matchContents]="true">
+          <pressable class="row" [style.width.px]="rowWidth()" (press)="open(row.item)">
+            <text>{{ row.item.label }}</text>
+          </pressable>
+        </ui-view-host>
+      </ui-slot>
+      <ui-slot name="items">
+        <ui-button
+          label="Duplicate"
+          systemImage="plus.square.on.square"
+          (buttonPress)="copy(row.item)"
+        />
+        <ui-button
+          label="Delete"
+          role="destructive"
+          systemImage="trash"
+          (buttonPress)="remove(row.item)"
+        />
+      </ui-slot>
+    </ui-context-menu>
+  </ui-host>
+</view>
+}
+```
+
+`<ui-view-host>` holds one element, and `matchContents` sizes it to that element: its height, and
+its width too. Nothing stretches the row to the list's width as a `<view>` around it would, so the
+row is given one, here the width its `ui-host` is laid out at, kept in a signal
+(`rowWidth = signal<number | undefined>(undefined)`). Without it the row is as wide as its text;
+without `matchContents` it has the width and no height.
+
+Each row has a host of its own, sized to the row's height. `ignoreSafeArea="all"` matters in a
+list: a host keeps clear of the safe area otherwise, and a row that scrolls under the home
+indicator is pushed over the one above it.
+
+This is iOS's menu: `ui-context-menu` is SwiftUI's alone, and has no view on Android. Render the
+row on its own there, with a long press that opens [`Dialogs.choose()`](/packages/device/dialogs):
+
+```html
+@if (ios) {
+<!-- the ui-host and ui-context-menu above -->
+} @else {
+<pressable class="row" (press)="open(row.item)" (longPress)="choose(row.item)">
+  <text>{{ row.item.label }}</text>
+</pressable>
+}
+```
 
 ## Text field state: `nativeState`
 
@@ -297,6 +358,7 @@ An element registered for `@expo/ui` when it is not installed commits as nothing
 <!-- api: UiHost -->
 <!-- api: UiMenu -->
 <!-- api: UiContextMenu -->
+<!-- api: UiViewHost -->
 <!-- api: UiButton -->
 <!-- api: UiDivider -->
 <!-- api: UiSlot -->

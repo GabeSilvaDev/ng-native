@@ -134,6 +134,11 @@ export const EXPO_UI_VIEWS: Readonly<Record<string, readonly [string | null, str
   'tri-state-checkbox': [null, 'TriStateCheckboxView'],
   'uneven-rounded-rectangle': ['UnevenRoundedRectangleView', null],
   'vertical-slider': [null, 'VerticalSliderView'],
+  /**
+   * The other way round from `host`: views of the app's own inside SwiftUI or Compose content,
+   * as a context menu's trigger or a sheet's body. `@expo/ui` calls it `RNHostView`.
+   */
+  'view-host': ['RNHostView', 'RNHostView'],
   vstack: ['VStackView', 'ColumnView'],
   zstack: ['ZStackView', 'BoxView'],
 };
