@@ -114,11 +114,29 @@ function trim(code, { start, end }) {
 }
 
 /**
- * The `styles` property of the `@Component({...})` decorating the class that starts at
+ * Where the last `@Component` before `classStart` is, or -1. One written in a comment or a string
+ * between the decorator and the class is not it.
+ */
+function lastDecorator(src, classStart) {
+  let found = -1;
+  for (let i = 0; i < classStart;) {
+    const next = skip(src, i);
+    if (next !== i) {
+      i = next;
+      continue;
+    }
+    if (src.startsWith('@Component', i)) found = i;
+    i += 1;
+  }
+  return found;
+}
+
+/**
+ * The `name` property of the `@Component({...})` decorating the class that starts at
  * `classStart`: where its value is in the source, or null when the decorator has none.
  */
-function stylesValue(src, classStart) {
-  const decorator = src.lastIndexOf('@Component', classStart);
+function decoratorProperty(src, classStart, name) {
+  const decorator = lastDecorator(src, classStart);
   if (decorator === -1) return null;
   const open = src.indexOf('{', decorator);
   if (open === -1 || open > classStart) return null;
@@ -126,9 +144,9 @@ function stylesValue(src, classStart) {
 
   for (const property of split(src, open + 1, end, ',')) {
     const { start, text } = trim(src, property);
-    const key = /^(?:styles|'styles'|"styles")\s*(:|$)/.exec(text);
+    const key = new RegExp(`^(?:${name}|'${name}'|"${name}")\\s*(:|$)`).exec(text);
     if (!key) continue;
-    // `styles,` shorthand is a variable called `styles`: the whole property is the expression.
+    // `styles,` shorthand is a variable of that name: the whole property is the expression.
     if (!key[1]) return { start, end: start + text.length };
     return trim(src, { start: start + key[0].length, end: property.end });
   }
@@ -157,7 +175,7 @@ function readable(src, filename, className, value, entry) {
 
 /** Every `styles` entry of `component` the compiler dropped, as its source text. */
 function unreadStyles(src, filename, component) {
-  const value = stylesValue(src, component.spanStart);
+  const value = decoratorProperty(src, component.spanStart, 'styles');
   if (!value) return [];
   return entries(src, value)
     .filter((entry) => !LITERAL.test(entry.text))
@@ -182,4 +200,4 @@ function assertStylesRead(src, filename, components) {
   }
 }
 
-module.exports = { assertStylesRead };
+module.exports = { assertStylesRead, close, decoratorProperty, split, trim };
