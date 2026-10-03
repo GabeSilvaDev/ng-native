@@ -11,6 +11,12 @@ export interface FakeFabricNode {
   props: Record<string, unknown>;
   children: FakeFabricNode[];
   instanceHandle: unknown;
+  /**
+   * The node this one is under, as of the last query: null at the top. Set by the queries as they
+   * walk the committed tree. A commit shares the nodes it did not change with the one before, so
+   * on a node held across commits a later query may set it again, to the parent in that commit.
+   */
+  readonly parent?: FakeFabricNode | null;
 }
 
 export interface FakeFabric extends FabricUIManager {
