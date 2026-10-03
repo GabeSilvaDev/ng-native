@@ -17,6 +17,16 @@ export class HeaderDefault {}
 })
 export class HeaderBound {}
 
+/** A header that asks for the Liquid Glass bar itself, or refuses it, whatever the app's defaults. */
+@Component({
+  imports: [NativeHeader],
+  selector: 'x-header-glass',
+  template: `<native-header title="Inbox" nativeID="bar" [liquidGlass]="glass()" />`,
+})
+export class HeaderGlass {
+  readonly glass = input(true);
+}
+
 /** A large title that says nothing else, which should look as iOS draws one. */
 @Component({
   imports: [NativeHeader],
