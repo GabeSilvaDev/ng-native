@@ -1,3 +1,204 @@
+## 0.4.0 (2026-10-03)
+
+### 🚀 Features
+
+- `injectService()` calls in one test share an app, so a service and a service it injects are the same instances a later call returns, where each call made an app of its own and the two never saw each other. ([#419](https://github.com/ng-native/ng-native/pull/419), [#397](https://github.com/ng-native/ng-native/issues/397))
+
+  A call with `providers` starts a new app, which the calls after it use. The app ends with its test, whether or not `cleanup()` ran. A test that relied on two bare calls returning separate instances now gets one: pass `providers: []` to the second call for an app of its own. Calls outside a test, or in tests that run at once, still make an app each.
+
+- `@ng-native/expo/widget` keeps a home screen widget in step with a signal, and hands the app the taps on its buttons: `widget(widget, props, { onTaps })`. A widget layout's `<ui-button target="...">` now compiles: a tap runs in the widget extension while the app may be suspended, so it records its target in the widget's props as `taps`, and `widget` collects them when the app next runs, before anything is written over them. Its `error` holds why the last sync failed. `(buttonPress)` is an object of the props to change at once, so the widget shows the tap before the app has seen it. `UiButton` gains a `target` input. The padel example has a score widget with a button for each side. ([#340](https://github.com/ng-native/ng-native/pull/340))
+- `@ng-native/web/vite` exports `ngNativeWebLink()`: `ngNativeWeb()` without the compiler, for an app whose own Angular plugin compiles its components, such as Analog. It keeps the browser resolution and `@oxc-angular/vite`'s linker, which links the `@ng-native/*` packages from `dist/`. ([#375](https://github.com/ng-native/ng-native/pull/375))
+
+### 🩹 Fixes
+
+- An `(animationcancel)` listener now fires when a running animation stops before it ends, because the element no longer asks for it, asks for another by name, or its `@keyframes` went in a hot swap, as a browser fires it. ([#361](https://github.com/ng-native/ng-native/pull/361), [#329](https://github.com/ng-native/ng-native/issues/329))
+- `animate.enter` on a `transition` fades an element in once from its enter style, where it drew the element at rest, eased to the enter style and eased back, in twice the duration. ([#454](https://github.com/ng-native/ng-native/pull/454), [#410](https://github.com/ng-native/ng-native/issues/410))
+
+  A class added to an element in the turn that created it is now its starting style, as in a browser, and is committed in that turn rather than a frame later. An `animate.enter` on `@keyframes` starts a frame sooner for the same reason.
+
+- A component of an app's own with a `ui-` selector, such as `ui-button`, is now a plain view drawing its own template after `registerExpoUiViews()`, where its host was committed as the `@expo/ui` view of that name and its template drew nothing. ([#484](https://github.com/ng-native/ng-native/pull/484), [#428](https://github.com/ng-native/ng-native/issues/428))
+
+  An element with no component on it is still the native view, and so are the typed components `@ng-native/expo/ui` exports. A view registered with `registerViewName` or `registerExpoView` can ask for the same with the `yieldsToComponents` option, and a component that wraps such a view keeps it by calling `keepNativeView` on its host from its constructor.
+
+- In a Node test, `Crypto`, `FileSystem`, `database()` and the audio and video players say that Node has no native module to load and what a test does instead, where they said the package was not installed when it was. ([#467](https://github.com/ng-native/ng-native/pull/467), [#395](https://github.com/ng-native/ng-native/issues/395))
+- A sibling rule after `:empty`, such as `.box:empty + .spacer`, is matched again when the element gains its first child or loses its last, where the sibling kept the style it had at first. ([#453](https://github.com/ng-native/ng-native/pull/453), [#411](https://github.com/ng-native/ng-native/issues/411))
+- `<dom-component>` acts only on messages from the page it loaded, or from its dev server in development, and the Metro preset's dev server looks for a lazy chunk from outside the project only in the server root and the watch folders, rather than in every directory up to the root of the disk. ([#374](https://github.com/ng-native/ng-native/pull/374))
+
+  A page the web view is taken to by a link cannot fire the app's outputs or be sent its changed inputs. The inputs given before the page loads are still handed to whatever page the web view shows, so they should hold nothing secret. A message that is not JSON is dropped instead of throwing, and an output named after an object member such as `constructor` does nothing.
+
+  The dev server also refuses a chunk name that decodes to a `..` segment, a root or a backslash.
+
+- A `display: var()` whose fallback native has no layout for, such as `var(--d, grid)`, now warns at build time and keeps reading the token, and a fallback of two keywords such as `var(--d, inline flex)` is kept where it was dropped. ([#352](https://github.com/ng-native/ng-native/pull/352), [#334](https://github.com/ng-native/ng-native/issues/334))
+- `DateTimePicker` from `@ng-native/expo` is a typed component over the `<date-time-picker>` element, so a strict template can bind the picker's `date`, `mode`, `displayIOS`, `minimumDate` and `maximumDate` and read `$event.nativeEvent.timestamp` from `(change)`. ([#491](https://github.com/ng-native/ng-native/pull/491), [#430](https://github.com/ng-native/ng-native/issues/430))
+
+  `date`, `minimumDate` and `maximumDate` take a `Date` or milliseconds. The Native views page now says what the element takes and sends, and that it is iOS only: on Android the library has no view, and the element commits as nothing.
+
+- `database()` takes an `onOpen` option, run on every open, before the migrations and outside any transaction, which is where `PRAGMA foreign_keys = ON` has to be said for a schema's foreign keys to be enforced. ([#463](https://github.com/ng-native/ng-native/pull/463), [#396](https://github.com/ng-native/ng-native/issues/396))
+
+  A migration is the wrong place for it: SQLite ignores the statement inside a transaction, and forgets it when the connection closes. Foreign keys stay off unless `onOpen` turns them on, as with `expo-sqlite` itself.
+
+- A service built on `database()` can be tested in Node: `openDatabasesWith()` from `@ng-native/expo/database` points every `database()` at a stand-in, and `memoryDatabase()` from `@ng-native/testing` is one that runs the migrations and the SQL for real, in memory. ([#472](https://github.com/ng-native/ng-native/pull/472), [#394](https://github.com/ng-native/ng-native/issues/394))
+- A token worked out on the device, such as a `calc()` of tokens bound on an element, and a transform bound as a string now treat only CSS whitespace as whitespace, so a no-break space leaves the value invalid as it does in Chrome, and an inline transform CSS cannot read leaves the transform a rule sets rather than replacing it. ([#351](https://github.com/ng-native/ng-native/pull/351), [#336](https://github.com/ng-native/ng-native/issues/336))
+
+  A bound transform with anything but functions and their numeric arguments in it, such as `rotate(90deg) junk`, is now dropped in favour of the rule's transform, or none, where it was applied in part.
+
+  A bound transform's function names are now read in any case, as CSS reads them, so `ROTATE(90deg)` turns the view, and a function native has no transform for, such as `spin(90deg)`, leaves the rule's transform.
+
+- A push from a page under a route with no component of its own, a `loadChildren` wrapper or a group of routes, keeps that page on the stack beneath the new screen, where it destroyed it and the push acted as a replace. Back from there returns to the page as it was, where a group at path `''` came back as a page at `''` beside it. ([#489](https://github.com/ng-native/ng-native/pull/489))
+- `ColorScheme.set('light')` and `set('dark')` now take effect at once for `ColorScheme.current()` and `.dark` styles, including inside a full-screen `<modal>` on iOS, where they waited for the modal to close. ([#368](https://github.com/ng-native/ng-native/pull/368), [#347](https://github.com/ng-native/ng-native/issues/347))
+
+  On iOS React Native reports an appearance change only from its root view, which a full-screen modal takes out of the window. `set(null)` and a system switch while one is open still arrive when it closes. A subscriber hears each scheme once, though the platform repeats it.
+
+- `@layer` in a component's or a library's stylesheet orders its rules as a browser does, where the block was refused and every rule in it lost. ([#385](https://github.com/ng-native/ng-native/pull/385), [#380](https://github.com/ng-native/ng-native/issues/380))
+
+  A rule in a layer loses to every rule outside one whatever their specificity, a layer loses to each one named after it, and `!important` turns that order round. `@layer a, b;`, nested layers and layers with no name are read. Layers have one order across every stylesheet, so a library's layer and the app's layer of the same name are one layer. A library compiled with `libraryStyles` keeps what it ships in a layer, such as the Angular CDK's overlay stacking and backdrop.
+
+- A `transition` on `transform` eases a transform bound as a style, `[style.transform]="'translateX(100px)'"`, as it eases one a rule sets, where the bound one started again from where it was at every frame and did not arrive on time. ([#459](https://github.com/ng-native/ng-native/pull/459), [#401](https://github.com/ng-native/ng-native/issues/401))
+- A bound style declaration whose value is a `var()`, `[style.background-color]="'var(--surface)'"`, reads the token in scope and follows it, where the text `var(--surface)` was sent to native. ([#460](https://github.com/ng-native/ng-native/pull/460), [#402](https://github.com/ng-native/ng-native/issues/402))
+
+  The whole value has to be the `var()`, with its fallback if it has one. It is settled as the same declaration in a stylesheet is: inherited where the property is, and reported in development when the token is unset with nothing to fall back to.
+
+- A `border`, a per-side border or an `outline` shorthand now takes a `color-mix()` of a token as its color, as in `border: 1px solid color-mix(in srgb, var(--tint) 35%, transparent)`, where it was dropped whole with a message about arithmetic. ([#427](https://github.com/ng-native/ng-native/pull/427), [#423](https://github.com/ng-native/ng-native/issues/423))
+
+  The color is worked out on device, as `border-color` has it, and follows the token. With the token unset the whole shorthand is invalid and no border is drawn, as in a browser.
+
+  A `color-mix()` of a token with `currentColor` as its other side now mixes the text color, in a shorthand and in `border-color`, `background-color` and the other color properties, where the declaration was dropped with no message.
+
+- A boolean view prop written as an attribute, such as `focusable="false"` on a component's own element, is committed as a boolean, where Android stopped with `java.lang.String cannot be cast to java.lang.Boolean`. ([#382](https://github.com/ng-native/ng-native/pull/382), [#378](https://github.com/ng-native/ng-native/issues/378))
+
+  It applies to the props every native view reads as a boolean (`focusable`, `accessible`, `collapsable` and the rest of React Native's view and accessibility booleans) on an element no component takes the prop as an input for. `"false"` is false and anything else, the bare attribute included, is true. A stylesheet still reads the attribute as its text, so `[focusable="false"]` matches as it does in a browser.
+
+- `NativeNavigation.back()` called while the navigation that shows the page is still in flight, as from an `effect()` in the page's constructor, goes back once that navigation ends, where the call was ignored and the page stayed on screen. ([#480](https://github.com/ng-native/ng-native/pull/480), [#439](https://github.com/ng-native/ng-native/issues/439))
+- `role` takes the ARIA roles (`row`, `cell`, `listitem`, `heading`, `dialog` and the rest) and commits one `accessibilityRole` has no word for as native's own `role` prop, and `role` and the `aria-*` attributes are read on any element that draws a view, the host of an app's own component included. ([#450](https://github.com/ng-native/ng-native/pull/450), [#413](https://github.com/ng-native/ng-native/issues/413), [#412](https://github.com/ng-native/ng-native/issues/412))
+
+  `<view role="row">` type-checks, where it failed with `TS2322`, and no longer sends `accessibilityRole: "row"`, a value native does not know. `Role` is exported from `@ng-native/components`. `getByRole` and its siblings match `role` as well as `accessibilityRole`. On a component's host, `aria-label` was dropped and is now the label; the state and value attributes become `accessibilityState` and `accessibilityValue`, and `aria-hidden`, `aria-live`, `aria-modal` and `aria-labelledby` the props React Native maps them to.
+
+- A `<native-stack-outlet>` or `<native-tabs-outlet>` created after the first navigation has finished, one held behind an `@if` until a session or a database is ready, shows the route the router is on, where it rendered nothing with no error. ([#479](https://github.com/ng-native/ng-native/pull/479), [#438](https://github.com/ng-native/ng-native/issues/438))
+- The types of `@ng-native/components/reanimated` and `/gestures` no longer import `react-native-reanimated` or `react-native-gesture-handler`, so a browser app that installs neither now type-checks with `skipLibCheck: false`, and `sharedValue()` keeps its type there where it was `any`. ([#348](https://github.com/ng-native/ng-native/pull/348), [#338](https://github.com/ng-native/ng-native/issues/338))
+
+  `sharedValue()` now returns a `MutableValue<T>`, which has the shape of Reanimated's public `SharedValue` and is still accepted wherever Reanimated takes one. In `@ng-native/testing`, a shared value now also has `modify()`, `addListener()` and `removeListener()`, as Reanimated's does.
+
+- `render()` and `rerender()` reject when `inputs` names an input the component does not have, with a message that names it, the component and the inputs it has, where Angular only logged `NG0303` and the component rendered with its defaults. ([#466](https://github.com/ng-native/ng-native/pull/466), [#389](https://github.com/ng-native/ng-native/issues/389))
+- `render()` with a template string no longer logs `NG0303` for each native prop a component in it binds on its own host, the ones `PressBehavior` binds included. ([#443](https://github.com/ng-native/ng-native/pull/443), [#415](https://github.com/ng-native/ng-native/issues/415))
+
+  The template is compiled with `NO_ERRORS_SCHEMA`, as an app's templates have no such check at run time. A property a test's template misspells on a component is therefore not reported there either.
+
+- `render()` with a template string no longer logs `NG0912`, Angular's component ID collision warning, when a test file renders more than one. ([#365](https://github.com/ng-native/ng-native/pull/365), [#356](https://github.com/ng-native/ng-native/issues/356))
+- `inject(Screen).window()` in a test is the size the render's `conditions` give, and follows `engine.updateConditions()`, where it was zero by zero whatever `conditions` said. ([#455](https://github.com/ng-native/ng-native/pull/455), [#407](https://github.com/ng-native/ng-native/issues/407))
+- `render()`'s `on` hears an output a host directive forwards, and refuses a name the component has no output by with a message that names it, where both threw `TypeError: Cannot read properties of undefined (reading 'subscribe')`. ([#461](https://github.com/ng-native/ng-native/pull/461), [#392](https://github.com/ng-native/ng-native/issues/392))
+
+  An output is named as a template binds it, so one with an alias is listened to by its alias, not by the name of the field. `mount()` takes `bindings`, which is how `on` is passed.
+
+- A custom property set to a string in a stylesheet, such as `--d: "none"`, is now read as text rather than as the word in it, so `display: var(--d)` no longer hides the element and `color: var(--c)` with `--c: "red"` is no colour, as in Chrome; a quoted font family still names its family. ([#350](https://github.com/ng-native/ng-native/pull/350), [#335](https://github.com/ng-native/ng-native/issues/335))
+- A push to a url that is already on the stack pushes a new screen over it, and Back returns to where the push came from, where the push popped to the earlier screen and destroyed everything above it. ([#481](https://github.com/ng-native/ng-native/pull/481), [#440](https://github.com/ng-native/ng-native/issues/440))
+
+  `NativeNavigation.popTo(url)` is the way to go back to a screen further down. A back, by gesture, button or `back()`, still returns to the screen that was kept.
+
+- `NativeNavigation.push()` to a page of a tab that has not been opened now puts the tab's own first screen under the page, where the page was the only screen of the tab's stack, a back from it went to the tab it came from, and tapping the tab afterwards pushed its list over the page. ([#490](https://github.com/ng-native/ng-native/pull/490), [#444](https://github.com/ng-native/ng-native/issues/444))
+
+  The push navigates to the tab's url first and then to the page, so the same push leaves the same stack whether or not the tab was ever tapped. `nativeRouterLink` does the same. `present()` and the router's own `navigate` are unchanged.
+
+- `PressBehavior` has `disableWhile(signal)`, for a component that composes it to refuse presses from its own state, a button that is loading: either that or the `disabled` input disables the control, for the press, for `[data-disabled]` in a stylesheet and for what is announced. ([#471](https://github.com/ng-native/ng-native/pull/471), [#391](https://github.com/ng-native/ng-native/issues/391))
+
+  `[data-disabled]` now follows whether presses are refused, so on a `<touchable-opacity>` it is also set by `aria-disabled` and `accessibilityState.disabled`, which already refused its presses.
+
+- `preventNativeDismiss` on a page inside a presented screen that is a stack of its own now guards the sheet: the stack gives the refusal of its top screen to the presented screen, and `(nativeDismissCancelled)` reaches the page, for a swipe down on iOS and for Android's Back. ([#436](https://github.com/ng-native/ng-native/pull/436), [#421](https://github.com/ng-native/ng-native/issues/421))
+
+  Before, the binding landed on the first screen of the inner stack, and the sheet swiped away with no warning.
+
+- `NativeNavigation.present()` now shows a page of a tab that is not in front over the tab that is, where it selected the page's own tab and added the page to that tab's stack, as its only screen when the tab had not been opened. ([#498](https://github.com/ng-native/ng-native/pull/498), [#445](https://github.com/ng-native/ng-native/issues/445))
+
+  The page is shown on the app's root stack, over the tab bar, through a root outlet named `presented`: while it is up `router.url` reads `/home(presented:invoices/7)`, and a back or the dismissing swipe returns to `/home`. Its route keeps its params, resolvers, data and the guards and providers of the routes it sits inside. A `push()` from the page leaves it for the pushed url's own place. A page of the tab in front, or of no tab, is presented where its url puts it, as before, and so is every page in an app whose root is not a `<native-stack-outlet>`.
+
+- `pointer-events` is inherited, and a descendant that sets `pointer-events: auto` inside a `pointer-events: none` element takes touches again, as on the web, where it took none. ([#383](https://github.com/ng-native/ng-native/pull/383), [#379](https://github.com/ng-native/ng-native/issues/379))
+
+  An element that computes to `none` is committed as React Native's `box-none` while something inside it takes touches again, and as `none` otherwise. The `pointerEvents` prop keeps React Native's meaning, where `none` is the whole subtree.
+
+- `getByPlaceholderText` and its siblings match text fields only, so a wrapper component with a `placeholder` input of its own no longer makes the query for its one field throw for finding two. ([#458](https://github.com/ng-native/ng-native/pull/458), [#403](https://github.com/ng-native/ng-native/issues/403))
+- A per-side border in a style other than solid, such as `border-top: 1px dashed red`, is drawn solid with its width and color and the build says that, where it said the declaration was dropped, and dropped it whole when its color or width was a token. ([#442](https://github.com/ng-native/ng-native/pull/442), [#416](https://github.com/ng-native/ng-native/issues/416))
+- `nx typecheck` on an app generated in a workspace of package-manager links now checks its templates when pnpm has given a workspace library its own copy of `@ng-native/components`, where `ngc` stopped at `NG3004: Unable to import symbol` and reported none of the app's template errors. ([#486](https://github.com/ng-native/ng-native/pull/486), [#432](https://github.com/ng-native/ng-native/issues/432))
+
+  The app generator writes `tsconfig.typecheck.json`, which maps every `@ng-native` package to the app's own copy, and points the `typecheck` target at it. An existing app takes the same file by hand: the Nx page has it.
+
+- A library from `nx g @ng-native/nx:library` in the TypeScript preset lets its source import with `.ts`, as its test and the documentation do, where `nx typecheck` failed with `TS5097`. ([#422](https://github.com/ng-native/ng-native/pull/422), [#398](https://github.com/ng-native/ng-native/issues/398))
+
+  `tsconfig.lib.json` gets `allowImportingTsExtensions`, and `src/index.ts` exports `./lib/<name>.ts`. A workspace whose base config no longer sets `emitDeclarationOnly` keeps the `.js` form, since TypeScript takes the option only where no JavaScript is emitted. A library already generated is not changed: add the option to its `tsconfig.lib.json` by hand.
+
+- `nx typecheck` on a library from `nx g @ng-native/nx:library` in the TypeScript preset checks its templates: the generator writes a `tsconfig.typecheck.json`, a `typecheck` target that runs `ngc` on it, and `@angular/compiler-cli` in the library's dev dependencies, where the inferred `tsc` target read no template and a misspelled input passed. ([#477](https://github.com/ng-native/ng-native/pull/477), [#406](https://github.com/ng-native/ng-native/issues/406))
+
+  A library already generated can add the three by hand: the config extends `./tsconfig.lib.json` with `noEmit: true`, `composite: false` and `emitDeclarationOnly: false`, and the Angular options a generated app's `tsconfig.json` has.
+
+- `Location` has `geocode(address)`, the places an address could be as `{ latitude, longitude }`, and `reverseGeocode(coordinates)`, the addresses at a point, through `Location.SOURCE` so a test fakes them, and empty without the permission or off a device. ([#476](https://github.com/ng-native/ng-native/pull/476), [#424](https://github.com/ng-native/ng-native/issues/424))
+- An element that names `@keyframes` from a component sheet first met later in the same commit, such as a sibling's, now plays them from the first render, and the development warning that they are missing no longer fires for keyframes that arrive within the commit. ([#360](https://github.com/ng-native/ng-native/pull/360), [#330](https://github.com/ng-native/ng-native/issues/330))
+- Text laid out while `loadFonts()` is still loading its face, as when the app mounts without awaiting it, now takes the face's size once it registers, where on Android it kept the fallback font's width and wrapped and clipped. ([#371](https://github.com/ng-native/ng-native/pull/371), [#345](https://github.com/ng-native/ng-native/issues/345))
+
+  React Native caches a text's measurement by its family name, so the engine now lays such text out without the name until the face registers, and then with it, measured fresh.
+
+- The build warning for `currentColor` on a property other than `color` in a `@keyframes` frame now says `currentColor` is the cause, where it blamed `var()`, `em` and viewport units. ([#353](https://github.com/ng-native/ng-native/pull/353), [#333](https://github.com/ng-native/ng-native/issues/333))
+- `withHeaderDefaults({ liquidGlass: true })`, or `[liquidGlass]="true"` on one `<native-header>`, gives a header with no background of its own iOS 26's Liquid Glass navigation bar: clear and unlined, with the content scrolling under it and blurring out. ([#495](https://github.com/ng-native/ng-native/pull/495), [#451](https://github.com/ng-native/ng-native/issues/451))
+
+  The default is unchanged: a header nobody configured is still the opaque neutral bar. The glass bar is over the page, so the page's scroll view takes `contentInsetAdjustmentBehavior="automatic"`. `OS_VERSION` from `@ng-native/device` is the major version of the operating system, which a test can provide.
+
+- A `font-family` in a style set on an element, such as `style="font-family: 'Inter-Bold'"`, `[style.font-family]` or a custom property bound on the element and read with `var()`, now commits the first family of the stack without its quotes, as a stylesheet rule does, so the text draws in that face rather than the system font. ([#343](https://github.com/ng-native/ng-native/pull/343), [#342](https://github.com/ng-native/ng-native/issues/342))
+
+  A family that needs quotes, such as `'Inter Display'`, can now be named in an inline style, and a stack such as `'Inter Display', sans-serif` commits `Inter Display` where it committed the whole text.
+
+- A property CSS inherits, such as a colour or font size set with `[style.color]` or `[style.fontSize]`, now reaches the text inside the element, and `color: inherit` and `currentColor` read it there and on the element itself, as they would one set by a rule. ([#359](https://github.com/ng-native/ng-native/pull/359), [#331](https://github.com/ng-native/ng-native/issues/331))
+
+  An `!important` rule still beats it, as in a browser. A `[style]` change restyles nothing below it, as before, when neither the old nor the new style sets an inherited property.
+
+- `!important` on a custom property is honoured: an important `--x` beats a more specific or later plain one, and in a cascade layer it takes part in the reversal layers give important declarations, where the cascade ranked it as a plain declaration. ([#469](https://github.com/ng-native/ng-native/pull/469), [#384](https://github.com/ng-native/ng-native/issues/384))
+- `<ng-icon>` treats an icon name, SVG tag or attribute that only exists on `Object.prototype` (such as `constructor` or `toString`) as unknown. Before, it threw during render and took the host component down with it. ([#369](https://github.com/ng-native/ng-native/pull/369))
+- An icon's own markup takes a colour from a custom property: a `fill` or a `stroke` whose value is a `var()`, as an attribute or in `style`, is painted from the token in scope and follows it, where a `style` one left the path unpainted and an attribute sent the text `var(--brand)` to native as the colour. ([#470](https://github.com/ng-native/ng-native/pull/470), [#414](https://github.com/ng-native/ng-native/issues/414))
+
+  An unset token with no fallback is reported in development.
+
+- HTML's text and layout elements can be written in a template with no import: `span`, `p`, `h1` to `h6`, `label`, `strong`, `em` and the rest draw as text, and `div`, `section`, `ul`, `li` and the rest as views, where each was an unknown element drawn as an empty view. ([#393](https://github.com/ng-native/ng-native/pull/393), [#381](https://github.com/ng-native/ng-native/issues/381))
+
+  A text element is text when it holds only text and other text elements, which then flow inline, and a view when it holds anything else. Text written straight into a view is now drawn, as a paragraph of its own, where it drew nothing: a template that left stray text inside a `<view>` shows it. `strong`, `em`, `u`, `s`, `small`, `code` and `mark` have the styles Tailwind's preflight leaves them, a heading and a paragraph have none, and `h1` to `h6` are announced as headings. `@ng-native/web`'s reset gives the same elements the same look.
+
+- In development, a hot swap that drops, renames or removes an `@font-face` rule now stops text being matched to that face, where it stayed matched until the app reloaded. ([#362](https://github.com/ng-native/ng-native/pull/362), [#328](https://github.com/ng-native/ng-native/issues/328))
+
+  The face stays registered with the platform, which has no way to unregister one. A face that declares a weight or style is registered under a name of its own, which nothing names any more; one that declares neither is registered under the family's own name, so text naming that family draws it until the app reloads.
+
+- A component's `host` with a spread in it, or a `host` that is a constant or a call, fails the build with a message naming the component and the entry, where the compiler dropped those bindings without a word and the listeners and attributes were missing at run time. ([#465](https://github.com/ng-native/ng-native/pull/465), [#388](https://github.com/ng-native/ng-native/issues/388))
+- `inject(Fonts)` now reports the faces `loadFonts()` registered, so `families()` and `has()` update once they load, where they kept the result of their first read for the life of the app. ([#346](https://github.com/ng-native/ng-native/pull/346), [#341](https://github.com/ng-native/ng-native/issues/341))
+- `FileSystem` has `file(uri)`, the file at a uri, so a document the picker answers with can be read: `files.file(picked.uri).text()`. A `FileSystem.SOURCE` stand-in opens one with `fileAt(uri)`. ([#475](https://github.com/ng-native/ng-native/pull/475), [#425](https://github.com/ng-native/ng-native/issues/425))
+- `fabric.render({ props: true })` prints the props of a node that has text, a text field's placeholder and keyboard among them, after the text, where it printed the text alone. ([#457](https://github.com/ng-native/ng-native/pull/457), [#404](https://github.com/ng-native/ng-native/issues/404))
+- Under test, a `[workletStyle]` whose worklet returns a style such as `opacity` or `height` no longer logs "has no prop" for each key: the stand-in writes what the worklet returns as styles, where it wrote them as props. ([#483](https://github.com/ng-native/ng-native/pull/483), [#429](https://github.com/ng-native/ng-native/issues/429))
+- A browser build through `ngNativeWeb()` now resolves `react-native-reanimated`, `react-native-worklets` and `react-native-gesture-handler` to inert stand-ins, so a component that imports `Gesture`, `withTiming` or `scheduleOnRN` builds for the web as well as for a device. ([#363](https://github.com/ng-native/ng-native/pull/363), [#327](https://github.com/ng-native/ng-native/issues/327))
+
+  The stand-ins are `@ng-native/components/stand-ins/reanimated`, `/worklets` and `/gesture-handler`, and `@ng-native/testing` now uses the same ones, so it lists `@ng-native/components` as a peer dependency. On the web an animation lands where it ends and calls its callback with `true` at once, a gesture recognises nothing, and work scheduled for either runtime runs at once.
+
+- An island now renders in an Angular app that hydrates server-rendered markup with `provideClientHydration()`, as an Analog app does by default, rather than staying empty with `TypeError: hasAttribute is not a function`. The element an island is mounted into is marked `ngSkipHydration`, so the island renders from scratch while the page around it hydrates as before. ([#375](https://github.com/ng-native/ng-native/pull/375))
+- A component whose stylesheet declares `@font-face` now loads in a test, under Vitest and `node --test`: the `require` the compiler writes for the font file gets the `{ testUri }` stand-in an image's does, where the test file failed with `require is not a function` before any test ran. ([#437](https://github.com/ng-native/ng-native/pull/437), [#420](https://github.com/ng-native/ng-native/issues/420))
+- A variable font declared with a weight range, `font-weight: 100 900`, keeps the range and the text keeps its `font-weight`, where the range was read as its lowest weight, the face registered as `Inter-100`, and the weight taken off the text so everything drew at the lightest. ([#468](https://github.com/ng-native/ng-native/pull/468), [#387](https://github.com/ng-native/ng-native/issues/387))
+
+  The face is registered under the family and both ends of the range, `Inter-100to900`. Two files that split a family by range are matched by the range each covers.
+
+- `UiViewHost` from `@ng-native/expo/expo-ui-components`, and the `<ui-view-host>` element `registerExpoUiViews()` now registers, hosts views of the app's own inside SwiftUI or Compose content, so a row drawn with the app's own components can be the trigger of a `UiContextMenu`: a long press lifts the row and opens the system menu, and the row still takes its own presses. ([#499](https://github.com/ng-native/ng-native/pull/499), [#426](https://github.com/ng-native/ng-native/issues/426))
+- `UiContextMenu` from `@ng-native/expo/expo-ui-components` is a typed component for the `<ui-context-menu>` element `registerExpoUiViews()` already registers, so a strict template can use SwiftUI's long-press context menu: a `trigger`, `items` and optional `preview` slot. iOS only. ([#496](https://github.com/ng-native/ng-native/pull/496))
+- A typed `UiChart` in `@ng-native/expo/expo-ui-components` draws a Swift Charts chart with its data and styles type-checked, in an app and in a widget or Live Activity layout, where `<ui-chart>` was an untyped element that strict templates rejected. ([#373](https://github.com/ng-native/ng-native/pull/373), [#339](https://github.com/ng-native/ng-native/issues/339))
+
+  It is iOS only, as Compose has no chart. Each chart type takes a style of its own, and `referenceLines` draws lines across the chart.
+
+- The development warning for an element used without importing its component says what is lost, the component's inputs and behavior, where it said the element renders as a plain view, which a `<text>` does not. ([#473](https://github.com/ng-native/ng-native/pull/473), [#418](https://github.com/ng-native/ng-native/issues/418), [#409](https://github.com/ng-native/ng-native/issues/409))
+- A no-break space at the start or end of a text is drawn, as in a browser, where it was dropped with the ordinary spaces a paragraph drops at its ends; so `&nbsp;` keeps a space at the end of a bound value, and one alone holds a line open. ([#482](https://github.com/ng-native/ng-native/pull/482), [#447](https://github.com/ng-native/ng-native/issues/447))
+- `text-shadow: none` switches a text shadow off, over a weaker rule's or an inherited one, where the declaration was dropped with a build warning and the shadow stayed. ([#464](https://github.com/ng-native/ng-native/pull/464), [#390](https://github.com/ng-native/ng-native/issues/390))
+- A text decoration on an element is now drawn under the text inside it in that element's decoration colour, or its text colour when it sets none, as Chrome draws it, and `text-decoration: underline currentColor` sets the colour of the text rather than none. ([#354](https://github.com/ng-native/ng-native/pull/354), [#332](https://github.com/ng-native/ng-native/issues/332))
+
+  Text that declares a line of its own still draws it in its own colour, and a text's `text-decoration-color` without a line of its own no longer recolours a line it is given. Android draws every line in the text's colour, as React Native's Android text has no decoration colour.
+
+- A test of a component with a `[gesture]`, a worklet or Reanimated loads in an app that installed `@ng-native/testing` from npm, where it failed with `Cannot find module '.../@ng-native/testing/src/gestures.ts'`: the Vitest plugin's stand-ins pointed at source files the package does not ship. ([#462](https://github.com/ng-native/ng-native/pull/462), [#400](https://github.com/ng-native/ng-native/issues/400))
+- A node a query returns has `parent`, the node it is under, so a test can go from a text to the row around it, and `fireEvent.layout(node, { width, height })` sends a `(layout)` event with a frame; `fireEvent(node, 'layout', ...)` takes the frame bare, as `{ layout }`, or as `{ nativeEvent: { layout } }`. ([#478](https://github.com/ng-native/ng-native/pull/478), [#448](https://github.com/ng-native/ng-native/issues/448))
+- `@ng-native/testing` exports `compileCss`, which compiles a stylesheet for `render()`'s `globalStyles`, so a test no longer reaches into `@ng-native/metro`, a path a test in a pnpm workspace library could not resolve. ([#456](https://github.com/ng-native/ng-native/pull/456), [#405](https://github.com/ng-native/ng-native/issues/405))
+- An icon whose `<rect>`, `<circle>`, `<ellipse>` or `<line>` leaves out a position or size, such as a `<rect>` with no `y`, now draws it at 0 as SVG does, where it crashed the app on Android. ([#367](https://github.com/ng-native/ng-native/pull/367), [#349](https://github.com/ng-native/ng-native/issues/349))
+
+### ❤️ Thank You
+
+- Ashley Hunter
+- erKam @erkamyaman
+
 ## 0.3.0 (2026-10-02)
 
 ### 🚀 Features
