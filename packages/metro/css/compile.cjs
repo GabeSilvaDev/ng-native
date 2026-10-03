@@ -2118,7 +2118,7 @@ function compileCss(source, context = 'styles', options = {}) {
 
   function placeholderColour(built, context) {
     reportPlaceholderDrops(built, context);
-    const { declarations, important, tokens, deferred } = built;
+    const { declarations, important, tokens, importantTokens, deferred } = built;
     const kept = (deferred ?? [])
       .filter((entry) => entry.props?.length === 1 && entry.props[0] === 'color')
       .map((entry) => ({ ...entry, props: ['placeholderTextColor'] }));
@@ -2126,6 +2126,7 @@ function compileCss(source, context = 'styles', options = {}) {
       declarations: placeholderOf(declarations),
       ...(important && 'color' in important ? { important: placeholderOf(important) } : {}),
       ...(tokens ? { tokens } : {}),
+      ...(importantTokens ? { importantTokens } : {}),
       ...(kept.length ? { deferred: kept } : {}),
     };
     const empty = !Object.keys(out.declarations).length && !out.important && !out.tokens;
@@ -2187,7 +2188,13 @@ function compileCss(source, context = 'styles', options = {}) {
 
     const shared = build(declarations);
     const normalCount = deferred.length;
+    const plainTokens = { ...tokens };
     const important = build(importantDeclarations);
+    // The custom properties the important pass set, which the cascade applies after every plain
+    // one, as it does an important declaration.
+    const importantTokens = Object.keys(tokens).filter(
+      (name) => tokens[name] !== plainTokens[name],
+    );
     // A value settled on device keeps its importance, or the cascade cannot rank it. Without it
     // an important var() lost to any later plain declaration and beat every earlier important one.
     for (let i = normalCount; i < deferred.length; i++) {
@@ -2204,6 +2211,7 @@ function compileCss(source, context = 'styles', options = {}) {
       declarations: shared,
       ...(Object.keys(important).length ? { important } : {}),
       ...(Object.keys(tokens).length ? { tokens } : {}),
+      ...(importantTokens.length ? { importantTokens } : {}),
       ...(deferred.length ? { deferred } : {}),
     };
   }
