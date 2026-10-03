@@ -125,6 +125,35 @@ names the module and the commands that fix it; see
 is no value to fall back to for a query that has not been asked yet, so a database an app relies
 on fails loudly rather than pretending to hold data it does not have.
 
+## In a test
+
+A test runs in Node, where `expo-sqlite` cannot load. `openDatabasesWith` points every
+`database()` at a stand-in until the function it answers is called, and `memoryDatabase()` from
+`@ng-native/testing` is one: an in-memory SQLite database, Node's own, so the migrations and the
+SQL a service runs are run for real.
+
+```ts
+import { openDatabasesWith } from '@ng-native/expo/database';
+import { injectService, memoryDatabase } from '@ng-native/testing';
+import { afterEach, beforeEach, expect, test } from 'vitest';
+
+let restore: () => void;
+beforeEach(() => (restore = openDatabasesWith(() => memoryDatabase())));
+afterEach(async () => {
+  // The database is a value of the module, so its connection outlives the test unless closed.
+  await notes.close();
+  restore();
+});
+
+test('adds a note', async () => {
+  expect(await injectService(Notes).add('hello')).toBe(1);
+});
+```
+
+Each open is a database of its own, so once the last one is closed a test starts with no rows. It
+needs Node 22.13 or later, where `node:sqlite` loads without a flag. The stand-in has
+`execAsync`, `runAsync`, `getFirstAsync`, `getAllAsync`, `withTransactionAsync` and `closeAsync`.
+
 ## Working offline
 
 `Database` is the cache to reach for a list - a feed, search results, anything queried, filtered or
