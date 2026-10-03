@@ -9,10 +9,12 @@
  */
 
 import {
+  boundDeclaration,
   inlineInherited,
   setsInherited,
   StyleResolver,
   type Conditions,
+  type DeferredDeclaration,
   type StyleCache,
   type StyleSheet,
   type TokenValue,
@@ -433,6 +435,9 @@ export interface EngineNode extends HostNode {
   heldFamily?: string;
   /** See `StyleTarget.inlineInherits`. */
   inlineInherits?: boolean;
+  /** See `StyleTarget.boundStyle`: the declarations, and the same by the property each sets. */
+  boundStyle?: readonly DeferredDeclaration[] | null;
+  boundByProp?: Map<string, DeferredDeclaration>;
   /**
    * Whether this node, or one inside it, takes touches under a `pointer-events: none` it would
    * otherwise inherit. Kept as each node is reconciled, children first. See `noteTouches`.
@@ -1905,7 +1910,8 @@ export class Engine implements HostEngine {
     this.structuralSheets = options.globalStyles?.structural === true;
     this.dev = options.dev ?? (globalThis as { __DEV__?: boolean }).__DEV__ === true;
     if (this.dev) {
-      this.styles.onUndefinedToken = (name, props) => this.reportUndefinedToken(name, props);
+      this.styles.onUndefinedToken = (name, props, on) =>
+        this.reportUndefinedToken(name, props, on);
       this.styles.onUnreadDisplay = (name, value) => this.reportUnreadDisplay(name, value);
     }
     this.now = options.now ?? (() => globalThis.performance?.now?.() ?? Date.now());
@@ -2460,6 +2466,24 @@ export class Engine implements HostEngine {
    */
   styleChanged(node: EngineNode): void {
     this.markProps(node, this.inlineReachesStyle(node));
+  }
+
+  /**
+   * A bound declaration, `[style.color]`, whose value may be a `var()`. One that is, is kept as a
+   * declaration the cascade settles with the node's tokens, as a rule's is, and true is answered:
+   * the text is no value to put in the node's style. Any other value forgets what was kept.
+   */
+  setBoundStyle(node: EngineNode, prop: string, value: unknown): boolean {
+    const text = typeof value === 'string' && /^\s*var\(/i.test(value) ? value : undefined;
+    const bound =
+      text === undefined ? null : boundDeclaration(prop, tokenFromValue(text), node.name);
+    if (!bound && !node.boundByProp?.has(prop)) return false;
+    const byProp = (node.boundByProp ??= new Map());
+    if (bound) byProp.set(prop, bound);
+    else byProp.delete(prop);
+    node.boundStyle = byProp.size ? [...byProp.values()] : null;
+    this.markProps(node);
+    return bound !== null;
   }
 
   /**
@@ -3836,11 +3860,13 @@ export class Engine implements HostEngine {
   private readonly undefinedTokens = new Set<string>();
 
   /** Said once per name: a phone has no inspector to show the declaration struck out. */
-  private reportUndefinedToken(name: string, props: readonly string[]): void {
+  private reportUndefinedToken(name: string, props: readonly string[], on?: string): void {
     if (this.undefinedTokens.has(name)) return;
     this.undefinedTokens.add(name);
+    // A bound declaration has no rule to be found by, so it says which element it is on.
+    const where = on === undefined ? props.join(', ') : `${props.join(', ')}, bound on <${on}>,`;
     console.warn(
-      `[angular-native] var(${name}) in ${props.join(', ')} names a custom property nothing in` +
+      `[angular-native] var(${name}) in ${where} names a custom property nothing in` +
         ` scope defines, so the declaration is dropped, as a browser drops it. Define ${name} on` +
         ` :root or an ancestor, or give the var() a fallback.`,
     );
