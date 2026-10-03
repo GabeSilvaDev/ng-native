@@ -165,6 +165,60 @@ function writeSpecConfig(tree, root, angular) {
 }
 
 /**
+ * Lets the library's source import as its test, the template and the documentation do, with
+ * `.ts`: `allowImportingTsExtensions` in `tsconfig.lib.json`, and `src/index.ts` written that way
+ * in place of the `.js` `@nx/js` gives it.
+ *
+ * TypeScript takes the option only where no JavaScript is emitted, which is the TypeScript
+ * preset's own setting (`emitDeclarationOnly`, which `@nx/js` writes into `tsconfig.lib.json`). A
+ * workspace that has turned that off keeps `.js`.
+ */
+function importWithTsExtensions(tree, root) {
+  const config = joinPathFragments(root, 'tsconfig.lib.json');
+  if (!emitsDeclarationsOnly(tree, config)) return;
+  updateJson(tree, config, (lib) => ({
+    ...lib,
+    compilerOptions: { ...lib.compilerOptions, allowImportingTsExtensions: true },
+  }));
+  const index = joinPathFragments(root, 'src', 'index.ts');
+  if (!tree.exists(index)) return;
+  const source = tree.read(index, 'utf-8');
+  tree.write(index, source.replace(/(from\s+['"]\.{1,2}\/[^'"]*)\.js(['"])/g, '$1.ts$2'));
+}
+
+/** Whether a tsconfig emits declarations and no JavaScript, once what it extends is merged in. */
+function emitsDeclarationsOnly(tree, file) {
+  const { noEmit, emitDeclarationOnly } = emitOptions(tree, file, new Set());
+  return noEmit === true || emitDeclarationOnly === true;
+}
+
+/**
+ * `noEmit` and `emitDeclarationOnly` as the compiler reads them: each from the nearest config that
+ * sets it, and a later entry of an `extends` list over an earlier one.
+ */
+function emitOptions(tree, file, seen) {
+  if (seen.has(file) || !tree.exists(file)) return {};
+  // The configs on the way here, to stop at a cycle. Not every config read: two entries of a list
+  // may share an ancestor, and each is read whole.
+  const above = new Set(seen).add(file);
+  const { compilerOptions = {}, extends: base = [] } = readJson(tree, file);
+  // ponytail: a config that comes from a package is not followed, so a library under one keeps
+  // `.js`. Resolve the specifier from the config's directory if a workspace needs it.
+  const inherited = [base]
+    .flat()
+    .filter((from) => typeof from === 'string' && from.startsWith('.'))
+    .map((from) => joinPathFragments(path.dirname(file), from))
+    .map((from) => emitOptions(tree, from.endsWith('.json') ? from : `${from}.json`, above));
+  const { noEmit, emitDeclarationOnly } = compilerOptions;
+  return Object.assign(
+    {},
+    ...inherited,
+    noEmit === undefined ? {} : { noEmit },
+    emitDeclarationOnly === undefined ? {} : { emitDeclarationOnly },
+  );
+}
+
+/**
  * The packages the component and its test import: in the library's own `package.json` when it is
  * a workspace package, which pnpm links from, and at the root otherwise. A version already there
  * is left alone.
@@ -211,6 +265,7 @@ async function library(tree, options) {
   const aliases = hasPathAliases(tree, usesWorkspaces(tree));
   tree.write(joinPathFragments(directory, 'vitest.config.mts'), native.vitestConfig(aliases));
   writeSpecConfig(tree, directory, angular);
+  if (!angular) importWithTsExtensions(tree, directory);
   updateProjectConfiguration(tree, name, {
     ...project,
     targets: {
