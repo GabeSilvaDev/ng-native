@@ -2188,6 +2188,14 @@ export class Engine implements HostEngine {
   /** The system text size, from the conditions. See `Conditions.fontScale`. */
   private fontScale: number | undefined;
 
+  private readonly viewportWatchers = new Set<() => void>();
+
+  /** Calls `listener` after each change of conditions, which is when `viewport` can change. */
+  watchViewport(listener: () => void): () => void {
+    this.viewportWatchers.add(listener);
+    return () => this.viewportWatchers.delete(listener);
+  }
+
   updateConditions(next: Conditions): void {
     this.viewportSize = { width: next.width, height: next.height };
     this.fontScale = next.fontScale;
@@ -2196,6 +2204,7 @@ export class Engine implements HostEngine {
     // Committed here rather than left to the next change-detection pass, because there may not
     // be one: no view is dirty, so a tick does no work and never reaches the renderer at all.
     this.commit();
+    for (const watcher of this.viewportWatchers) watcher();
   }
 
   // --- mutation API -----------------------------------------------------
