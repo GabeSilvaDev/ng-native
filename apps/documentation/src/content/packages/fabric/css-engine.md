@@ -124,3 +124,21 @@ drops its whole `@media` block with a build warning rather than silently never m
 re-evaluates a media query on its own - a rotation or a system theme change dirties no component
 and no binding - which is why `@ng-native/device`'s `watchConditions(engine)` exists; see
 [Bootstrapping](/packages/platform/bootstrapping).
+
+## Cascade layers
+
+`@layer` orders rules as it does in a browser. A rule in a layer loses to every rule outside one,
+whatever their specificity, and a layer loses to each layer named after it. `@layer a, b;` sets the
+order ahead of the blocks, a layer opened again keeps its first place, `@layer a.x` is `x` nested in
+`a`, and a layer's own rules beat the layers nested in it. `!important` turns the order round: an
+important declaration in a layer beats one in a later layer, and both beat one outside any layer.
+
+So a library can ship its defaults in a layer and the app's plain rules win without matching the
+library's specificity.
+
+Layers have one order across every stylesheet, as they do in a document: a name keeps the place
+it had when it was first seen, in the app's global sheet and then in each component's sheet as the
+component first renders. So a library's layer and the app's layer of the same name are one layer.
+`@keyframes` of one name resolve by layer within a stylesheet. `revert-layer` is dropped with a
+warning, `@import ... layer()` is not read, and `!important` on a custom property is not tracked,
+in a layer or out of one.

@@ -71,6 +71,11 @@ export interface StyleRule {
   /** Between compounds; length is `compounds.length - 1`. */
   readonly combinators: readonly Combinator[];
   readonly specificity: number;
+  /**
+   * The cascade layer the rule is in, as its place in its sheet's `layers`, or nothing for a rule
+   * in no layer, which beats every layered one whatever their specificity.
+   */
+  readonly layer?: number;
   readonly order: number;
   readonly declarations: Readonly<Record<string, unknown>>;
   readonly important?: Readonly<Record<string, unknown>>;
@@ -415,6 +420,12 @@ export interface GradientTemplate {
 
 export interface StyleSheet {
   readonly rules: readonly StyleRule[];
+  /**
+   * The sheet's cascade layers, each by its name from the outermost layer in, in the order they
+   * were first named. A name that starts with a null is a block with no name, which is a layer
+   * no other block can name.
+   */
+  readonly layers?: readonly (readonly string[])[];
   /**
    * `@keyframes` by name. Global within a sheet, as they are within a document; the engine keeps
    * one registry across every sheet it sees, so a name defined in a global stylesheet is usable
@@ -890,6 +901,43 @@ function carryDeferred(
   return kept;
 }
 
+const NO_DECLARATIONS: Readonly<Record<string, unknown>> = Object.freeze({});
+
+const isImportant = (rule: StyleRule): boolean =>
+  rule.important !== undefined || rule.deferred?.some((one) => one.important) === true;
+
+/**
+ * The matched rules in the order their declarations apply, weakest first.
+ *
+ * That is the order they matched in, unless a layered rule is important. Layers turn round for
+ * `!important`: an important declaration in a layer beats one in a later layer, and both beat one
+ * in no layer. So each such rule is split, its plain declarations where it matched, and its
+ * important ones after every plain one, in the layers' order reversed.
+ */
+function byImportance(
+  matched: readonly StyleRule[],
+  places: WeakMap<StyleRule, LayerPlace>,
+): readonly StyleRule[] {
+  if (!matched.some((rule) => rule.layer !== undefined && isImportant(rule))) return matched;
+  const plain = matched.map((rule) =>
+    isImportant(rule)
+      ? { ...rule, important: undefined, deferred: rule.deferred?.filter((one) => !one.important) }
+      : rule,
+  );
+  const important = matched
+    .filter(isImportant)
+    // Stable, so rules of one layer keep the order their specificity gave them. Sorted before
+    // they are copied, since a rule's place is kept by the rule itself.
+    .sort((a, b) => layerOrder(places.get(b), places.get(a)))
+    .map((rule) => ({
+      ...rule,
+      declarations: NO_DECLARATIONS,
+      tokens: undefined,
+      deferred: rule.deferred?.filter((one) => one.important),
+    }));
+  return [...plain, ...important];
+}
+
 function countPosition(
   node: StyleTarget,
   siblings: readonly StyleTarget[],
@@ -927,6 +975,33 @@ function lastElement(siblings: readonly StyleTarget[]): StyleTarget | null {
  */
 const COMPONENT_SPECIFICITY_BUMP = 1_000;
 
+/**
+ * Where a layer is among every layer the app's sheets have named: at each depth, its place among
+ * the layers nested in its parent, in the order they were first named.
+ */
+type LayerPlace = readonly number[];
+
+/** The layers named so far at one depth, each with its place and the layers nested in it. */
+interface LayerNames {
+  readonly place: number;
+  readonly nested: Map<string, LayerNames>;
+}
+
+/**
+ * Two rules' layers, weakest first: a layer before each one named after it, a layer's nested
+ * layers before its own rules, and every layered rule before a rule in no layer.
+ */
+function layerOrder(a: LayerPlace | undefined, b: LayerPlace | undefined): number {
+  if (a === b) return 0;
+  if (a === undefined) return 1;
+  if (b === undefined) return -1;
+  const shared = Math.min(a.length, b.length);
+  for (let depth = 0; depth < shared; depth++) {
+    if (a[depth] !== b[depth]) return a[depth]! - b[depth]!;
+  }
+  // One is nested in the other, whose own rules are the stronger.
+  return b.length - a.length;
+}
 /** One rule in a cascade: the sheet it came from, which `:host` needs, and its weight here. */
 interface RuleEntry {
   readonly rule: StyleRule;
@@ -1176,6 +1251,21 @@ export class StyleResolver {
    * single index.
    */
   private merged = new WeakMap<StyleSheet, Map<StyleSheet | null, RuleIndex>>();
+  /**
+   * Whether any sheet merged so far has a rule in a cascade layer. Until one does, rules are
+   * ordered by weight alone and the cascade does not look for layers, which is nearly every app.
+   * It stays set once a layered sheet has gone, which costs a look at each cascade and no more.
+   */
+  private layered = false;
+  /**
+   * Every layer the sheets seen so far have named, in the order each name was first seen, which
+   * is the one order a document has for them. A name keeps its place when its sheet is replaced.
+   */
+  private readonly layerNames: LayerNames = { place: 0, nested: new Map() };
+  /** Each layered rule's place among them, set when its sheet is first merged. */
+  private readonly layerPlaces = new WeakMap<StyleRule, LayerPlace>();
+  private readonly layeredSheets = new WeakSet<StyleSheet>();
+  private unnamedLayers = 0;
 
   /**
    * The application-level sheet, if any: the one set of rules allowed to match a node whatever
@@ -1428,6 +1518,7 @@ export class StyleResolver {
     const entries: RuleEntry[] = [];
     const add = (from: StyleSheet | null, bump: number): void => {
       if (!from) return;
+      this.placeLayers(from);
       for (const rule of from.rules) {
         entries.push({ rule, sheet: from, weight: rule.specificity + bump });
       }
@@ -1436,7 +1527,42 @@ export class StyleResolver {
     add(hostSheet, COMPONENT_SPECIFICITY_BUMP);
     add(sheet, COMPONENT_SPECIFICITY_BUMP);
     for (const added of this.addedSheets) add(added, 0);
-    return entries.sort((a, b) => a.weight - b.weight);
+    if (!entries.some((entry) => entry.rule.layer !== undefined)) {
+      return entries.sort((a, b) => a.weight - b.weight);
+    }
+    this.layered = true;
+    const places = this.layerPlaces;
+    return entries.sort(
+      (a, b) => layerOrder(places.get(a.rule), places.get(b.rule)) || a.weight - b.weight,
+    );
+  }
+
+  /**
+   * Gives each of a sheet's layers its place among every sheet's, the first time the sheet is
+   * merged, and each of its layered rules that place. Sheets are merged in the order a document
+   * holds them: the app's global sheet, then each component's as it first renders.
+   */
+  private placeLayers(sheet: StyleSheet): void {
+    if (!sheet.layers || this.layeredSheets.has(sheet)) return;
+    this.layeredSheets.add(sheet);
+    // A block with no name is a layer of this sheet's alone.
+    const unnamed = `\0${this.unnamedLayers++}`;
+    const places = sheet.layers.map((path) => {
+      const place: number[] = [];
+      let names = this.layerNames;
+      for (const part of path) {
+        const name = part.startsWith('\0') ? unnamed + part : part;
+        let nested = names.nested.get(name);
+        if (!nested)
+          names.nested.set(name, (nested = { place: names.nested.size, nested: new Map() }));
+        place.push(nested.place);
+        names = nested;
+      }
+      return place;
+    });
+    for (const rule of sheet.rules) {
+      if (rule.layer !== undefined) this.layerPlaces.set(rule, places[rule.layer]!);
+    }
   }
 
   /**
@@ -1535,7 +1661,7 @@ export class StyleResolver {
     let tokens: Record<string, TokenValue> | null = null;
     let deferred: DeferredDeclaration[] | null = null;
 
-    for (const rule of matched) {
+    for (const rule of this.layered ? byImportance(matched, this.layerPlaces) : matched) {
       Object.assign(normal, rule.declarations);
       if (rule.important) {
         Object.assign(important, rule.important);
