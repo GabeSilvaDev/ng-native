@@ -62,6 +62,7 @@ export const EXTRA_KEYS = {
   'text-decoration-color': 'textDecorationColor',
   display: 'display',
   'font-family': 'fontFamily',
+  'pointer-events': 'pointerEvents',
 } as const;
 
 export type ExtraProperty = keyof typeof EXTRA_KEYS;
@@ -318,6 +319,52 @@ export const CASES: OracleCase[] = [
     name: 'inheritance: a value of its own beats anything inherited',
     css: '.outer { color: rgb(1, 0, 0) } #probe { color: rgb(2, 0, 0) }',
     tree: { name: 'view', classes: ['outer'], children: [probe()] },
+  },
+  {
+    name: 'pointer-events is inherited',
+    css: '.outer { pointer-events: none }',
+    tree: { name: 'view', classes: ['outer'], children: [probe()] },
+    extra: ['pointer-events'],
+  },
+  {
+    name: 'pointer-events: auto inside none is its own',
+    css: '.outer { pointer-events: none } #probe { pointer-events: auto }',
+    tree: { name: 'view', classes: ['outer'], children: [probe()] },
+    extra: ['pointer-events'],
+  },
+  {
+    name: "pointer-events: inherit takes the parent's over a weaker rule's auto",
+    css: '.outer { pointer-events: none } #probe { pointer-events: auto } #probe.c { pointer-events: inherit }',
+    tree: { name: 'view', classes: ['outer'], children: [probe({ classes: ['c'] })] },
+    extra: ['pointer-events'],
+  },
+  {
+    name: 'pointer-events: unset is inherit, as the property inherits',
+    css: '.outer { pointer-events: none } #probe { pointer-events: auto } #probe.c { pointer-events: unset }',
+    tree: { name: 'view', classes: ['outer'], children: [probe({ classes: ['c'] })] },
+    extra: ['pointer-events'],
+  },
+  {
+    name: 'pointer-events: initial is auto inside none',
+    css: '.outer { pointer-events: none } #probe { pointer-events: initial }',
+    tree: { name: 'view', classes: ['outer'], children: [probe({ classes: ['c'] })] },
+    extra: ['pointer-events'],
+  },
+  {
+    name: 'pointer-events: an important auto beats a more specific none',
+    css: '.outer { pointer-events: none } .c { pointer-events: auto !important } #probe.c { pointer-events: none }',
+    tree: { name: 'view', classes: ['outer'], children: [probe({ classes: ['c'] })] },
+    extra: ['pointer-events'],
+  },
+  {
+    name: 'pointer-events: none through an ancestor that sets nothing',
+    css: '.outer { pointer-events: none }',
+    tree: {
+      name: 'view',
+      classes: ['outer'],
+      children: [{ name: 'view', classes: ['inner'], children: [probe()] }],
+    },
+    extra: ['pointer-events'],
   },
   {
     name: 'background-color does not inherit',

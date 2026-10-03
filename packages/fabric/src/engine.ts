@@ -9,6 +9,7 @@
  */
 
 import {
+  inlineInherited,
   setsInherited,
   StyleResolver,
   type Conditions,
@@ -429,6 +430,11 @@ export interface EngineNode extends HostNode {
   heldFamily?: string;
   /** See `StyleTarget.inlineInherits`. */
   inlineInherits?: boolean;
+  /**
+   * Whether this node, or one inside it, takes touches under a `pointer-events: none` it would
+   * otherwise inherit. Kept as each node is reconciled, children first. See `noteTouches`.
+   */
+  touchWithin?: boolean;
   /** `:focus`, from the native focus and blur events. */
   focused?: boolean;
   /** `:active`, set on the responder and every ancestor of it. */
@@ -1132,6 +1138,84 @@ function committedProp(key: string, value: unknown): unknown {
   return typeof value === 'string' && BOOLEAN_VIEW_PROPS.has(key) ? value !== 'false' : value;
 }
 
+/**
+ * The `pointer-events` an element ends up with, in the order its props are merged: its inline
+ * style's, then its `pointerEvents` prop, then what the sheets resolve. The inline one is read for
+ * itself because an element no rule matches resolves to what it inherits, with its own inline
+ * value only in what it hands down.
+ */
+function pointerEventsOf(node: EngineNode, resolved: Record<string, unknown>): unknown {
+  const inline = node.inlineInherits ? inlineInherited(node.props['style']) : null;
+  const own = inline?.['pointerEvents'];
+  // Merged over the prop, so its `inherit` is what the sheets and the parent settled, not the prop.
+  if (own === 'inherit') return resolved['pointerEvents'];
+  return own ?? node.props['pointerEvents'] ?? resolved['pointerEvents'];
+}
+/**
+ * A node's `pointer-events` as native takes it, once its props and styles are merged.
+ *
+ * In CSS `none` is the element alone, and a descendant's `auto` takes touches again, which native
+ * calls `box-none`: what a `none` with something inside to open it is committed as. Native's own
+ * `none` is the whole subtree. It is what a `none` with nothing inside to open it stays, because
+ * Android's text and images take no `pointerEvents` of their own and only an ancestor's `none`
+ * keeps touches off them. It is also what the `pointerEvents` prop means, so a `none` that is the
+ * prop's is left as it is.
+ *
+ * An inline `inherit` is what the element has without it, which is `resolved`: what the sheets
+ * and its parent settled.
+ */
+function nativePointerEvents(
+  node: EngineNode,
+  style: Record<string, unknown>,
+  resolved: unknown,
+): void {
+  let value = style['pointerEvents'];
+  if (value === undefined) return;
+  if (value === 'inherit') {
+    value = resolved;
+    if (value === undefined) delete style['pointerEvents'];
+    else style['pointerEvents'] = value;
+  }
+  if (value === 'none' && node.touchWithin && node.props['pointerEvents'] !== 'none') {
+    style['pointerEvents'] = 'box-none';
+  }
+}
+/** Whether `node`, whose `pointer-events` is `value`, takes touches or holds something that does. */
+function takesTouches(node: EngineNode, value: unknown, prop: unknown): boolean {
+  if (value === undefined) return false;
+  // The prop's `none` is native's: the whole subtree, whatever is inside it.
+  if (value === 'none' && prop === 'none') return false;
+  // CSS's `none` and native's `box-none` take no touches themselves: their children answer.
+  if (value === 'none' || value === 'box-none') {
+    return node.children.some((child) => child.touchWithin);
+  }
+  return true;
+}
+
+/**
+ * Records on `node` whether it, or something inside it, takes touches where it would inherit
+ * `none`. When that changes a `none` element's own answer, its props are marked to be committed
+ * again.
+ *
+ * Called as a node is reconciled, after its children, so theirs are already current: a child that
+ * was skipped as clean has nothing beneath it that changed, and a change beneath marks every
+ * ancestor to come back through here.
+ */
+function noteTouches(node: EngineNode, style: StyleCache | null): void {
+  if (!style) return;
+  // Nearly every node: no `pointer-events` in any sheet, style or prop, and nothing recorded.
+  const resolved = style.style['pointerEvents'];
+  const prop = node.props['pointerEvents'];
+  if (resolved === undefined && prop === undefined && !node.inlineInherits && !node.touchWithin) {
+    return;
+  }
+  const value = pointerEventsOf(node, style.style);
+  const within = takesTouches(node, value, prop);
+  if (within === !!node.touchWithin) return;
+  node.touchWithin = within;
+  if (value === 'none') node.propsDirty = true;
+}
+
 /** Whether `node` is `ancestor` or somewhere under it. */
 function isWithin(node: EngineNode | null, ancestor: EngineNode): boolean {
   for (let at = node; at; at = at.parent) if (at === ancestor) return true;
@@ -1244,6 +1328,7 @@ class RetainedNode {
   propsDirty = false;
   structureDirty = false;
   subtreeDirty = false;
+  touchWithin: boolean | undefined = undefined;
   transitions?: Map<string, Transition>;
   playing?: RunningAnimation;
   scrolled?: ScrollAnimation;
@@ -2566,6 +2651,7 @@ export class Engine implements HostEngine {
     this.registerSheet(node.hostSheet);
     const props: Record<string, unknown> = { ...DEFAULT_PROPS[viewName], ...node.defaultStyle };
     Object.assign(props, this.styles.resolve(node, this.styleEpoch).style);
+    const resolved = props['pointerEvents'];
     for (const key of Object.keys(node.props)) {
       // No native prop has a hyphen. `data-*` and `aria-*` attributes stay on the node for
       // selectors to match, and the components package maps `aria-*` to what native reads.
@@ -2581,6 +2667,7 @@ export class Engine implements HostEngine {
     withTextContent(node, viewName, props);
     const cascaded = props['transform'];
     const style = boundTransform(flattenStyle(node.props['style'], props), cascaded);
+    nativePointerEvents(node, style, resolved);
     const intrinsic = node.props[INTRINSIC_SIZE] as IntrinsicSize | undefined;
     if (intrinsic) applyIntrinsicSize(style, intrinsic);
     flattenStyle(node.props[STYLE_OVERRIDE], style);
@@ -3247,6 +3334,7 @@ export class Engine implements HostEngine {
 
     const viewName = viewNameOf(node);
     const childHandles = this.reconcileChildren(node, viewName, style);
+    noteTouches(node, style);
     const previous = node.committed;
     this.notePresented(node, viewName);
     if (!previous)

@@ -559,7 +559,16 @@ const INHERITED = new Set([
   'textShadowRadius',
   'textShadowColor',
   'selectable',
+  // CSS inherits it, and its `none` is the element alone: a descendant's `auto` takes touches
+  // again. The engine commits a computed `none` as native's `box-none`, which means that.
+  'pointerEvents',
 ]);
+
+/**
+ * The `pointer-events` values CSS has. Native's own `box-none` and `box-only` say what their
+ * children do already, so neither is handed down.
+ */
+const INHERITED_POINTER_EVENTS = new Set(['none', 'auto']);
 
 /**
  * `border-style: none`, which the compiler writes as a style native does not have. On the web it
@@ -1058,8 +1067,15 @@ function inheritFrom(
   let inherited = parentInherited;
   for (const key of Object.keys(own)) {
     if (!INHERITED.has(key)) continue;
+    // `pointer-events: inherit`, which only an inline style on an element no rule matches still
+    // holds here: what the parent hands down stands.
+    if (key === 'pointerEvents' && own[key] === 'inherit') continue;
     if (inherited === parentInherited) inherited = { ...parentInherited };
-    inherited[key] = own[key];
+    if (key === 'pointerEvents' && !INHERITED_POINTER_EVENTS.has(own[key] as string)) {
+      delete inherited[key];
+    } else {
+      inherited[key] = own[key];
+    }
   }
   return inherited;
 }
@@ -1370,7 +1386,7 @@ export class StyleResolver {
       context: {},
       parentContext,
       style: parentInherited,
-      inherited: inline ? { ...parentInherited, ...inline } : parentInherited,
+      inherited: inline ? inheritFrom(parentInherited, inline) : parentInherited,
       tokens,
     };
     node.styleCache = passthrough;
@@ -1496,6 +1512,8 @@ export class StyleResolver {
       this.applyDeferred(result.deferred, own, tokens, parentInherited, result.important);
     }
     if (own['borderStyle'] === 'none') drawNoBorder(own);
+    // `pointer-events: inherit` won the cascade: what the parent hands down stands.
+    if (own['pointerEvents'] === 'inherit') delete own['pointerEvents'];
     const style = { ...parentInherited, ...own };
     return { style, inherited: decorate(style, inheritFrom(parentInherited, own), own), tokens };
   }
