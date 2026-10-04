@@ -2171,7 +2171,10 @@ function compileCss(source, context = 'styles', options = {}) {
     styleVariant(schemeSide(rule, 'light'), (parts) => first + selectors.indexOf(parts), context);
     const before = rules.length;
     styleVariant(darkSide(rule), () => order - 0.5, context);
-    for (let i = before; i < rules.length; i++) rules[i].condition = DARK;
+    for (let i = before; i < rules.length; i++) {
+      const own = rules[i].condition;
+      rules[i].condition = own ? { all: [DARK, own] } : DARK;
+    }
   }
 
   /** A style rule's selectors and declarations as rules, each at the place `orderOf` gives it. */
@@ -2185,9 +2188,11 @@ function compileCss(source, context = 'styles', options = {}) {
 
   function groupedSelectors(rule, context) {
     const groups = new Map();
-    for (const written of rule.value.selectors) {
+    const weigh = (part, others) => listWeight(part, others, context);
+    for (const variant of rule.value.selectors.flatMap((one) => byDirection(one, weigh))) {
+      const { written, source, direction, bump } = variant;
       const placeholder = isPlaceholder(written.at(-1));
-      const parts = placeholder ? written.slice(0, -1) : written;
+      const parts = forgiving(placeholder ? written.slice(0, -1) : written, context);
       // One selector the engine cannot match is dropped on its own, not with the list it is in:
       // lightningcss merges neighbouring rules with the same declarations, so a list is often
       // several unrelated utilities that happen to share a colour.
@@ -2199,13 +2204,13 @@ function compileCss(source, context = 'styles', options = {}) {
       const platforms = rulePlatforms([written], targets);
       const key = `${platforms.join()}${placeholder ? ' placeholder' : ''}`;
       if (!groups.has(key)) groups.set(key, { platforms, placeholder, selectors: [] });
-      groups.get(key).selectors.push({ written, parts, compiled });
+      groups.get(key).selectors.push({ source, parts, compiled, direction, bump });
     }
     return groups.values();
   }
 
   function pushRules(selectors, built, placeholder, orderOf, context) {
-    for (const { written, parts, compiled } of selectors) {
+    for (const { source, parts, compiled, direction, bump } of selectors) {
       // One rule per alternative an ancestor test is among; each as specific as the selector
       // written, which is what `:is()` makes all of them.
       for (const one of alternatives(parts)) {
@@ -2213,9 +2218,10 @@ function compileCss(source, context = 'styles', options = {}) {
         if (!alternative) continue;
         rules.push({
           ...alternative,
-          specificity: compiled.specificity + (placeholder ? 1 : 0),
-          order: orderOf(written),
+          specificity: compiled.specificity + (placeholder ? 1 : 0) + bump,
+          order: orderOf(source),
           ...built,
+          ...(direction ? { condition: { feature: 'direction', value: direction } } : {}),
           ...(layer === layers ? {} : { layer }),
         });
       }
@@ -2251,6 +2257,61 @@ function compileCss(source, context = 'styles', options = {}) {
       if (!onUnsupported) throw new CssUnsupported(message);
       onUnsupported(reported(context, `dropped '${name}'`, message));
     }
+  }
+
+  /**
+   * A selector with the alternatives the engine cannot match taken out of its `:is()` and
+   * `:where()` lists, each reported. CSS reads those lists forgivingly: an alternative a browser
+   * does not know is left out and the rest still match, which is how Tailwind writes one selector
+   * in the spellings different browsers know. A list with nothing left is kept as written, for
+   * the selector to be dropped with what it says. With nothing to report to, nothing is forgiven:
+   * the build that asked to hear of every drop fails as before.
+   */
+  function forgiving(parts, context) {
+    if (!onUnsupported) return parts;
+    return parts.map((part) => {
+      const list = part.type === 'pseudo-class' && (part.kind === 'is' || part.kind === 'where');
+      if (!list || !part.selectors || part.selectors.length < 2) return part;
+      const kept = part.selectors.filter((argument) => matchable(part, argument, context));
+      return kept.length && kept.length < part.selectors.length
+        ? { ...part, selectors: kept }
+        : part;
+    });
+  }
+
+  /** Whether one alternative of a list compiles, saying so where it does not. */
+  function matchable(part, argument, context) {
+    try {
+      for (const one of alternatives(argument)) {
+        functionalPseudo({ ...part, selectors: [one] }, context);
+      }
+      return true;
+    } catch (error) {
+      if (!(error instanceof CssUnsupported)) throw error;
+      onUnsupported(
+        reported(context, `dropped an alternative of ':${part.kind}()'`, error.message),
+      );
+      return false;
+    }
+  }
+
+  /**
+   * What the alternatives of a list weigh: the most specific of them, as `:is()` does. One the
+   * engine cannot match weighs nothing here, and is reported where the list itself is compiled.
+   */
+  function listWeight(part, others, context) {
+    let most = 0;
+    for (const argument of others) {
+      try {
+        most = Math.max(
+          most,
+          weight(functionalPseudo({ ...part, selectors: [argument] }, context)),
+        );
+      } catch (error) {
+        if (!(error instanceof CssUnsupported)) throw error;
+      }
+    }
+    return most;
   }
 
   /** One selector compiled, or null and reported when the engine cannot match it. */
@@ -2644,6 +2705,70 @@ function sideOrder() {
       order.some((prop) => PHYSICAL_SIDES.has(prop)),
   };
 }
+
+const isDir = (part) => part?.type === 'pseudo-class' && part.kind === 'dir';
+const isList = (part) =>
+  part?.type === 'pseudo-class' && (part.kind === 'is' || part.kind === 'where') && part.selectors;
+
+/**
+ * A selector as the selectors it is with `:dir()` taken out of it, each with the direction it
+ * then holds in. The direction is the app's, the same for every element, so it is a condition on
+ * the rule as a media query is, and no part of what the matcher tests.
+ *
+ * Two shapes are read: `:dir(rtl)` on a compound, and `:dir(rtl)` as one whole alternative of an
+ * `:is()` or `:where()`, which is how Tailwind writes `rtl:` beside `[dir="rtl"]` for an element
+ * that says its own. Anywhere else it is refused with the rest of what the engine cannot match.
+ *
+ * `bump` is the pseudo-class's own weight, which a `:dir()` on the compound has and one inside
+ * `:where()` does not.
+ */
+/**
+ * Each variant with the selector it came from, whose place among the rules it keeps. `weigh`
+ * answers what a list's alternatives weigh, which a `:dir()` taken out of an `:is()` keeps.
+ */
+const byDirection = (written, weigh) =>
+  directionVariants(written, weigh).map((variant) => ({ ...variant, source: written }));
+
+/** One step of `directionVariants`: the first `:dir()` taken out, or null where there is none. */
+function directionStep(written, weigh) {
+  const at = written.findIndex(isDir);
+  if (at !== -1) {
+    const rest = [...written.slice(0, at), ...written.slice(at + 1)];
+    return [{ written: rest, direction: written[at].direction, bump: pack(0, 1, 0) }];
+  }
+  const list = written.findIndex((part) => isList(part) && part.selectors.some(aloneDir));
+  if (list === -1) return null;
+  const part = written[list];
+  const before = written.slice(0, list);
+  const after = written.slice(list + 1);
+  const others = part.selectors.filter((argument) => !aloneDir(argument));
+  // `:is()` weighs what its most specific alternative does, for whichever one matched.
+  const bump = part.kind === 'is' ? Math.max(pack(0, 1, 0), weigh(part, others)) : 0;
+  return [
+    ...part.selectors
+      .filter(aloneDir)
+      .map(([dir]) => ({ written: [...before, ...after], direction: dir.direction, bump })),
+    ...(others.length ? [{ written: [...before, { ...part, selectors: others }, ...after] }] : []),
+  ];
+}
+
+function directionVariants(written, weigh) {
+  const step = directionStep(written, weigh);
+  if (!step) return [{ written, bump: 0 }];
+  // What is left may ask again. Two that ask for different directions never both hold.
+  return step.flatMap((first) =>
+    directionVariants(first.written, weigh)
+      .filter((rest) => !first.direction || !rest.direction || rest.direction === first.direction)
+      .map((rest) => ({
+        written: rest.written,
+        direction: first.direction ?? rest.direction,
+        bump: (first.bump ?? 0) + rest.bump,
+      })),
+  );
+}
+
+/** Whether an alternative of a list is `:dir()` and nothing else. */
+const aloneDir = (argument) => argument.length === 1 && isDir(argument[0]);
 
 /** The combinators a node's own position can answer, which is all four of the real ones. */
 const COMBINATORS = new Set(['descendant', 'child', 'next-sibling', 'later-sibling']);
