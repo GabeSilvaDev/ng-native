@@ -41,6 +41,21 @@ test('a checkbox is a small bordered box that says what it is and whether it is 
   });
 });
 
+test('a checked checkbox draws its tick, and an unchecked one none', async () => {
+  await mount();
+  const shapes = (id: string): string[] => {
+    const walk = (node: FakeFabricNode): string[] => [
+      node.viewName,
+      ...node.children.flatMap(walk),
+    ];
+    return walk(box(id)).filter((name) => name.startsWith('RNSVG'));
+  };
+  // The library's icon, from `@ng-icons/core`, drawn by the native icon the build gives it.
+  expect(shapes('checked')).toContain('RNSVGSvgView');
+  expect(shapes('checked')).toContain('RNSVGPath');
+  expect(shapes('terms')).toEqual([]);
+});
+
 test('a press checks a checkbox, and another unchecks it', async () => {
   await mount();
   await userEvent.press(box('terms'));

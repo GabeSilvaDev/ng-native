@@ -34,6 +34,10 @@ const muted = 'rgb(106, 114, 130)';
 
 test('a select shows its placeholder, muted, until something is chosen', async () => {
   await mount();
+  // The chevron, drawn natively at the size its font size gives it.
+  const chevron = all(trigger()).find((node) => node.viewName === 'RNSVGSvgView')!;
+  expect(all(chevron).some((node) => node.viewName === 'RNSVGPath')).toBe(true);
+  expect(chevron.props['color']).toBe(muted);
   expect(screen.getByText('Select a fruit').props['color']).toBe(muted);
   expect(trigger().props).toMatchObject({ flexDirection: 'row', borderTopWidth: 1, height: 36 });
   expect(screen.queryByText('Banana')).toBeNull();
@@ -71,16 +75,16 @@ test('the chosen option is ticked when the list opens again', async () => {
   await userEvent.press(trigger());
   await settle();
   const ticks = () =>
-    all(screen.getByTestId('select-content')).filter((n) => n.props['name'] === 'lucideCheck');
+    all(screen.getByTestId('select-content')).filter((n) => n.viewName === 'RNSVGSvgView');
   expect(ticks()).toHaveLength(0);
   await userEvent.press(screen.getByTestId('select-banana'));
   await settle();
   await userEvent.press(trigger());
   await settle();
   expect(ticks()).toHaveLength(1);
-  expect(
-    all(screen.getByTestId('select-banana')).some((n) => n.props['name'] === 'lucideCheck'),
-  ).toBe(true);
+  expect(all(screen.getByTestId('select-banana')).some((n) => n.viewName === 'RNSVGSvgView')).toBe(
+    true,
+  );
 });
 
 test('an option that is disabled is dimmed and cannot be chosen', async () => {

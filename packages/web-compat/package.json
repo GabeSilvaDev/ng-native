@@ -21,7 +21,9 @@
   },
   "peerDependencies": {
     "@angular/core": "^22.0.0",
-    "@angular/common": "^22.0.0"
+    "@angular/common": "^22.0.0",
+    "@ng-icons/core": ">=30",
+    "@ng-native/icons": "workspace:*"
   },
   "nx": {
     "tags": [
@@ -45,16 +47,29 @@
     "directory": "packages/web-compat"
   },
   "files": [
-    "dist"
+    "dist",
+    "build.cjs",
+    "build.d.cts"
   ],
   "devDependencies": {
     "@angular/core": "22.2.0",
     "@ng-native/components": "workspace:*",
     "@ng-native/testing": "workspace:*",
-    "@angular/common": "22.2.0"
+    "@angular/common": "22.2.0",
+    "@ng-icons/core": "^36.0.0",
+    "@ng-native/icons": "workspace:*"
   },
   "exports": {
     ".": "./src/index.ts",
+    "./ng-icons": "./src/ng-icons.ts",
+    "./metro": {
+      "types": "./build.d.cts",
+      "default": "./build.cjs"
+    },
+    "./vitest": {
+      "types": "./build.d.cts",
+      "default": "./build.cjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -66,7 +81,27 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./ng-icons": {
+        "types": "./dist/ng-icons.d.ts",
+        "default": "./dist/ng-icons.js"
+      },
+      "./metro": {
+        "types": "./build.d.cts",
+        "default": "./build.cjs"
+      },
+      "./vitest": {
+        "types": "./build.d.cts",
+        "default": "./build.cjs"
+      },
       "./package.json": "./package.json"
+    }
+  },
+  "peerDependenciesMeta": {
+    "@ng-icons/core": {
+      "optional": true
+    },
+    "@ng-native/icons": {
+      "optional": true
     }
   }
 }
