@@ -598,6 +598,13 @@ export interface StyleTarget {
    * target.
    */
   hasDirty?: boolean;
+  /**
+   * Set by the engine when the node's own interaction state changed and nothing else about it
+   * did: a press began or ended on it or under it. It is matched again, and keeps the style it
+   * has, and everything under it, when it matches the rules it did. Not for an element a rule
+   * asks about from another one, which is restyled: see `usesActive`.
+   */
+  stateDirty?: boolean;
   /** `:focus`. Set by the engine from the native focus and blur events. */
   focused?: boolean;
   /**
@@ -668,6 +675,77 @@ function drawNoBorder(own: Record<string, unknown>): void {
  * The cost is one integer increment per comparison, against a Set lookup and several property
  * reads, so it does not distort what it measures.
  */
+/**
+ * What a sheet asks about a pressed element. `own` is whether a rule styles one, `.button:active`,
+ * which matching the pressed elements again answers. `elsewhere` is each compound that asks about
+ * a pressed element from another one: `.card:active .title`, `.a:active + .b`, or `:active`
+ * inside `:not()`, `:is()` or `:has()`. An element such a compound could be is restyled with
+ * everything under it when it is pressed, as what it changes is not itself alone.
+ */
+export function usesActive(sheet: StyleSheet): ActiveUse {
+  const known = ACTIVE_USE.get(sheet);
+  if (known) return known;
+  let own = false;
+  const elsewhere: Compound[] = [];
+  for (const rule of sheet.rules) {
+    rule.compounds.forEach((compound, at) => {
+      const subject = at === rule.compounds.length - 1;
+      // Asked of the element itself, on the compound or in its `:is()` and `:not()`: the
+      // subject's is its own, and any other compound's is of the element that compound is.
+      if (activeItself(compound, elsewhere)) {
+        if (subject) own = true;
+        else elsewhere.push(compound);
+      }
+      activeAround(compound, elsewhere);
+    });
+  }
+  const use = { own, elsewhere };
+  ACTIVE_USE.set(sheet, use);
+  return use;
+}
+
+const isActive = (compound: Compound): boolean => compound.pseudo?.includes('active') === true;
+
+/**
+ * Whether a compound asks about the pressed state of the element it matches: on itself, in a
+ * `:not()`, or as the last compound of an `:is()` argument. The compounds before the last in
+ * such an argument are other elements, and are collected as they are.
+ */
+function activeItself(compound: Compound, elsewhere: Compound[]): boolean {
+  let itself = isActive(compound);
+  for (const inner of compound.not ?? []) {
+    if (activeItself(inner, elsewhere)) itself = true;
+    activeAround(inner, elsewhere);
+  }
+  for (const chain of compound.is ?? []) {
+    chain.forEach((inner, at) => {
+      const asked = activeItself(inner, elsewhere);
+      if (asked && at === chain.length - 1) itself = true;
+      else if (asked) elsewhere.push(inner);
+      activeAround(inner, elsewhere);
+    });
+  }
+  return itself;
+}
+
+/** Each compound that asks about a pressed element around the one a compound matches. */
+function activeAround(compound: Compound, elsewhere: Compound[]): void {
+  const collect = (value: unknown): void => {
+    if (!value || typeof value !== 'object') return;
+    if (Array.isArray(value)) return value.forEach(collect);
+    if (isActive(value as Compound)) elsewhere.push(value as Compound);
+    for (const inside of Object.values(value)) collect(inside);
+  };
+  for (const [key, inside] of Object.entries(compound)) {
+    if (key !== 'is' && key !== 'not' && key !== 'pseudo') collect(inside);
+  }
+}
+export interface ActiveUse {
+  readonly own: boolean;
+  readonly elsewhere: readonly Compound[];
+}
+const ACTIVE_USE = new WeakMap<StyleSheet, ActiveUse>();
+
 export const styleStats = {
   /** Calls to `matchesCompound`, the innermost unit of matching work. */
   compoundTests: 0,
@@ -1638,7 +1716,7 @@ export class StyleResolver {
       cached.epoch = epoch;
       return cached;
     }
-    const kept = this.keptBeneath(node, parentContext, epoch);
+    const kept = this.kept(node, parentContext, epoch);
     if (kept) return kept;
 
     const parentInherited = parent ? parent.inherited : EMPTY;
@@ -1669,6 +1747,7 @@ export class StyleResolver {
     node.styleCache = cache;
     node.styleDirty = false;
     node.hasDirty = false;
+    node.stateDirty = false;
     return cache;
   }
 
@@ -1691,7 +1770,7 @@ export class StyleResolver {
   private keptBeneath(node: StyleTarget, parentContext: object, epoch: number): StyleCache | null {
     const cached = node.styleCache;
     const stands =
-      node.hasDirty === true &&
+      (node.hasDirty === true || node.stateDirty === true) &&
       cached?.matched !== undefined &&
       !node.styleDirty &&
       cached.parentContext === parentContext &&
@@ -1702,6 +1781,38 @@ export class StyleResolver {
     const before = cached.matched!;
     if (now.length !== before.length || now.some((rule, i) => rule !== before[i])) return null;
     node.hasDirty = false;
+    node.stateDirty = false;
+    cached.epoch = epoch;
+    return cached;
+  }
+
+  /** A cache that still stands for a node marked for its subtree or its state alone. */
+  private kept(node: StyleTarget, parentContext: object, epoch: number): StyleCache | null {
+    return (
+      this.keptBeneath(node, parentContext, epoch) ?? this.keptUnmatched(node, parentContext, epoch)
+    );
+  }
+
+  /**
+   * The cache of a node whose pressed state changed and nothing else, where no rule can match
+   * it at all: it has no style of its own to change, so it and all under it stay as they are.
+   */
+  private keptUnmatched(
+    node: StyleTarget,
+    parentContext: object,
+    epoch: number,
+  ): StyleCache | null {
+    const cached = node.styleCache;
+    const stands =
+      node.stateDirty === true &&
+      cached !== null &&
+      !node.styleDirty &&
+      !node.hasDirty &&
+      cached.parentContext === parentContext &&
+      cached.generation === this.generation &&
+      (node.anonymous === true || this.hasNoRules(node));
+    if (!stands) return null;
+    node.stateDirty = false;
     cached.epoch = epoch;
     return cached;
   }
@@ -1727,6 +1838,7 @@ export class StyleResolver {
       cached !== null &&
       !node.styleDirty &&
       !node.hasDirty &&
+      !node.stateDirty &&
       cached.parentContext === parentContext &&
       cached.generation === this.generation
     );
