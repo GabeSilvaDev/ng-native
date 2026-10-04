@@ -1105,7 +1105,12 @@ export interface PlatformViewName {
 }
 
 /** An element's registered view name, for the platform the host reported. */
-function registeredViewName(elementName: string): string | undefined {
+/**
+ * The native view an element name is registered as on this platform, or nothing for a name no
+ * one registered: a component's own host, or a custom element. For a package that treats the
+ * two differently, as a browser's defaults apply to an element and not to a native view.
+ */
+export function registeredViewName(elementName: string): string | undefined {
   const name = VIEW_NAMES[elementName];
   if (name === undefined || typeof name === 'string') return name;
   return platformOS === 'android' ? name.android : name.ios;

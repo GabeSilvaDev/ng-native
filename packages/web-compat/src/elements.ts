@@ -1,4 +1,9 @@
-import { registerViewName, type Engine, type EngineNode } from '@ng-native/fabric';
+import {
+  registerViewName,
+  registeredViewName,
+  type Engine,
+  type EngineNode,
+} from '@ng-native/fabric';
 import { documentOf } from './document.ts';
 
 /**
@@ -40,13 +45,50 @@ export function registerElements(): () => void {
   return () => undo.forEach((each) => each());
 }
 
+/** HTML's elements that the engine has a view for already, and so a registered name. */
+const HTML_ELEMENTS = new Set([
+  ...['div', 'section', 'article', 'header', 'footer', 'main', 'nav', 'ul', 'ol', 'li'],
+  ...['span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'label', 'strong', 'b', 'em', 'i'],
+  ...['u', 's', 'small', 'code', 'mark', 'abbr', 'cite', 'time', 'input', 'textarea'],
+  ...Object.keys(ROLES),
+  ...PLAIN,
+]);
+
+/**
+ * A browser's element starts `static`: an absolutely placed element inside it is placed against
+ * the nearest ancestor that says `relative`, which is how a library writes its overlays. A native
+ * view starts `relative`, and is that ancestor for everything in it.
+ */
+const STATIC = { position: 'static' };
+const CELL = { ...STATIC, flexGrow: 1, flexShrink: 1, flexBasis: '0%', justifyContent: 'center' };
+
+/**
+ * What an element is laid out as for its name alone, under any stylesheet. A table has no
+ * layout of its own here: a row is a row of cells of one width, which is `table-layout: fixed`
+ * with no widths given.
+ */
+const DEFAULTS: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
+  tr: { ...STATIC, flexDirection: 'row' },
+  td: CELL,
+  // ponytail: a browser also draws a heading bold and centred, which is text style, and a
+  // default style is not inherited by the text inside. A library that styles its headings
+  // says both itself; give the engine a way to inherit a default if one does not.
+  th: CELL,
+};
+
+/** Whether a name is an element a browser has: one of HTML's, or a custom element. */
+const isHtml = (name: string): boolean =>
+  HTML_ELEMENTS.has(name) || registeredViewName(name) === undefined;
+
 /**
  * Give an element what it has for its name alone, in an app that asked for this package.
  * Answers whether it is one a press is aimed at.
  */
 export function created(node: EngineNode, engine: Engine): boolean {
+  if (!documentOf(engine)) return false;
+  if (isHtml(node.name)) engine.setDefaultStyle(node, DEFAULTS[node.name] ?? STATIC);
   const role = ROLES[node.name];
-  if (!role || !documentOf(engine)) return false;
+  if (!role) return false;
   // Props a binding can replace, as it can any other: `role="tab"` on a button is a tab.
   engine.setProp(node, 'accessibilityRole', role);
   engine.setProp(node, 'accessible', true);

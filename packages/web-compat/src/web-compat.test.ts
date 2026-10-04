@@ -400,6 +400,71 @@ class Links {
 })
 class Table {}
 
+/** A component of an app's or a library's own, whose host is a custom element. */
+@Component({ selector: 'x-custom', template: '' })
+class Custom {}
+
+@Component({
+  selector: 'x-positions',
+  imports: [Custom, View],
+  template: `
+    <div testID="div"><span testID="span">text</span></div>
+    <x-custom testID="custom"></x-custom>
+    <div testID="placed" style="position: relative"></div>
+    <view testID="view"></view>
+    <table>
+      <tbody>
+        <tr testID="row">
+          <th testID="heading">Total</th>
+          <td testID="data">1</td>
+        </tr>
+      </tbody>
+    </table>
+  `,
+})
+class Positions {}
+
+describe('@ng-native/web-compat element defaults', () => {
+  const style = (id: string) => screen.getByTestId(id).props;
+
+  it('starts an HTML element and a custom element static, as a browser does', async () => {
+    // An absolute element is then placed against the nearest element that says `relative`,
+    // where a native view is that for everything inside it.
+    await render(Positions, { providers: [provideWebCompat()] });
+    for (const id of ['div', 'span', 'custom', 'row', 'data']) {
+      assert.equal(style(id)['position'], 'static', id);
+    }
+  });
+
+  it("leaves a position the element is given, and the engine's own views", async () => {
+    await render(Positions, { providers: [provideWebCompat()] });
+    assert.equal(style('placed')['position'], 'relative');
+    assert.equal(style('view')['position'], undefined);
+  });
+
+  it('lays a table row out as a row of cells of one width', async () => {
+    await render(Positions, { providers: [provideWebCompat()] });
+    assert.equal(style('row')['flexDirection'], 'row');
+    for (const id of ['heading', 'data']) {
+      assert.equal(style(id)['flexGrow'], 1, id);
+      assert.equal(style(id)['flexBasis'], '0%', id);
+      assert.equal(style(id)['justifyContent'], 'center', id);
+    }
+  });
+
+  it('gives none of it to an app that did not ask for the package', async () => {
+    const error = console.error;
+    console.error = () => {};
+    try {
+      await render(Positions);
+    } finally {
+      console.error = error;
+    }
+    assert.equal(style('div')['position'], undefined);
+    assert.equal(style('custom')['position'], undefined);
+  });
+});
+
 describe('@ng-native/web-compat elements', () => {
   /** What the engine reports while `run` renders, an unknown element among it. */
   const reported = async (run: () => Promise<unknown>) => {

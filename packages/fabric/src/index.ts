@@ -53,6 +53,7 @@ export {
   registerHoist,
   registerPlatformComponents,
   registerViewName,
+  registeredViewName,
   type PlatformViewName,
   type ViewNameOptions,
   viewNameOf,

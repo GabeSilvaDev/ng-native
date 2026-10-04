@@ -58,20 +58,6 @@
   flex-direction: row;
 }
 
-/*
- * A table has no layout of its own here, so its rows would be stacked and their cells too. The
- * nearest a flex layout comes: each row is a row of cells of one width, which is what
- * `table-layout: fixed` gives a table that names no widths, with a cell's content in its middle.
- * A column is not as wide as its widest cell, and a caption stays above the rows.
- */
-:where(.spartan) :where(tr) {
-  flex-direction: row;
-}
-:where(.spartan) :where(td, th) {
-  flex: 1;
-  justify-content: center;
-}
-
 /* Spartan's base layer: a border with no colour of its own is the border token's. */
 :where(.spartan, .cdk-overlay-container) * {
   border-color: var(--border);
@@ -79,12 +65,9 @@
 
 /*
  * Spartan's sheet is `position: fixed`, against the screen, which nothing here says. The nearest
- * thing is `absolute` with every element between it and the CDK's full-screen wrapper `static`,
- * as they all are in a browser: an absolute element is then placed against the wrapper.
+ * thing is `absolute`: every element between it and the CDK's full-screen wrapper is `static`, as
+ * in a browser, so it is placed against the wrapper.
  */
-.cdk-dialog-container:has(> .spartan-sheet-content) {
-  position: static;
-}
 .spartan .spartan-sheet-content,
 .cdk-overlay-container .spartan-sheet-content {
   position: absolute;
