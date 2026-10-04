@@ -78,14 +78,6 @@
 }
 
 /*
- * The CDK's dialog container is `height: 100%` of a pane with no height of its own, which a
- * browser reads as no height at all and Yoga as the height of the screen.
- */
-.cdk-dialog-container {
-  height: auto !important;
-}
-
-/*
  * Spartan's sheet is `position: fixed`, against the screen, which nothing here says. The nearest
  * thing is `absolute` with every element between it and the CDK's full-screen wrapper `static`,
  * as they all are in a browser: an absolute element is then placed against the wrapper.

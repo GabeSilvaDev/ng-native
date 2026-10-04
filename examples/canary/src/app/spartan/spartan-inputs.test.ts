@@ -42,8 +42,16 @@ test('its placeholder is the muted colour', async () => {
 
 test('a label is small, medium-weight text on one line', async () => {
   await mount();
-  expect(screen.getByTestId('label').viewName).toBe('Paragraph');
-  expect(props('label')).toMatchObject({ fontSize: 14, lineHeight: 14, fontWeight: '500' });
+  // A flex container that centres what it holds: a view around a paragraph of the text.
+  const label = screen.getByTestId('label');
+  expect(label.viewName).toBe('View');
+  expect(label.props).toMatchObject({ alignItems: 'center' });
+  expect(label.children[0]!.viewName).toBe('Paragraph');
+  expect(label.children[0]!.props).toMatchObject({
+    fontSize: 14,
+    lineHeight: 14,
+    fontWeight: '500',
+  });
 });
 
 test('what is typed reaches the page', async () => {

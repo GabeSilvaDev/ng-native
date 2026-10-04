@@ -8,8 +8,7 @@ import { HlmCommandImports } from './helm/command';
   host: { class: 'spartan flex flex-col gap-3' },
   template: `
     <p class="text-muted-foreground text-sm" testID="command-state">Ran: {{ ran() }}</p>
-    <!-- h-auto: the command is as tall as its parent, which here has no height of its own. -->
-    <hlm-command class="h-auto rounded-lg border shadow-md" testID="command">
+    <hlm-command class="rounded-lg border shadow-md" testID="command">
       <hlm-command-input placeholder="Type a command or search..." />
       <hlm-command-list testID="command-list">
         <div *hlmCommandEmptyState hlmCommandEmpty>No results found.</div>

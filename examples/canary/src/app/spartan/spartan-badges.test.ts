@@ -23,10 +23,19 @@ const mount = () =>
 
 const badge = (id: string) => screen.getByTestId(id);
 
-test('a badge on a span is one pill of text', async () => {
+test('a badge on a span is a pill with its text in the middle', async () => {
   await mount();
   const view = badge('default');
-  expect(view.viewName).toBe('Paragraph');
+  // A flex container that centres its text: a view around a paragraph, as a browser lays it out.
+  expect(view.viewName).toBe('View');
+  expect(view.props).toMatchObject({ alignItems: 'center', justifyContent: 'center' });
+  expect(view.children.map((child) => child.viewName)).toEqual(['Paragraph']);
+  expect(view.children[0]!.props).toMatchObject({
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    color: 'rgb(249, 250, 251)',
+  });
   expect(view.props).toMatchObject({
     height: 20,
     paddingLeft: 8,
