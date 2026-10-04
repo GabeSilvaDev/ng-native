@@ -49,13 +49,20 @@ test('a button group is a row of buttons with no border between them', async () 
   expect(screen.getByTestId('group-last').props).toMatchObject({ borderStartWidth: 0 });
 });
 
-// Fails: the inner corners are squared with a logical radius, `rounded-e-none`, which React
-// Native reads after the physical one `rounded-md` set. Issue #525.
-test.fails('a button group squares the corners its buttons meet at', async () => {
+// The inner corners are squared with a logical radius, `rounded-e-none`, set after the physical
+// one `rounded-md` sets: the cascade hands on the later of the two alone.
+test('a button group squares the corners its buttons meet at', async () => {
   await mount();
-  const first = screen.getByTestId('group-first').props;
-  expect(first['borderStartEndRadius']).toBe(0);
-  expect(first['borderTopRightRadius'] ?? 0).toBe(0);
+  const [first, middle, last] = ['first', 'middle', 'last'].map(
+    (name) => screen.getByTestId(`group-${name}`).props,
+  );
+  expect(first!['borderStartEndRadius']).toBe(0);
+  expect(first!['borderTopRightRadius'] ?? 0).toBe(0);
+  expect(first!['borderTopLeftRadius']).toBeGreaterThan(0);
+  expect(middle!['borderTopLeftRadius'] ?? 0).toBe(0);
+  expect(middle!['borderTopRightRadius'] ?? 0).toBe(0);
+  expect(last!['borderTopLeftRadius'] ?? 0).toBe(0);
+  expect(last!['borderTopRightRadius']).toBeGreaterThan(0);
 });
 
 test('an input group is a field and what is added to it, in one bordered row', async () => {
