@@ -1378,7 +1378,19 @@ function refuseHasAbove(compounds, context) {
 
 const isPlaceholder = (part) => part?.type === 'pseudo-element' && part.kind === 'placeholder';
 
-const placeholderOf = (from) => ('color' in from ? { placeholderTextColor: from.color } : {});
+/** What a placeholder rule's two properties are on the field, a token in either included. */
+const PLACEHOLDER_PROPS = { color: 'placeholderTextColor', opacity: 'placeholderOpacity' };
+
+const takesPlaceholder = (from) => 'color' in from || 'opacity' in from;
+
+/**
+ * What a placeholder rule sets on the field: its colour, and an opacity the engine fades that
+ * colour by, which is how a stylesheet hides a placeholder and shows it again.
+ */
+const placeholderOf = (from) => ({
+  ...('color' in from ? { placeholderTextColor: from.color } : {}),
+  ...('opacity' in from ? { placeholderOpacity: from.opacity } : {}),
+});
 
 const subject = (compiled, placeholder) => (placeholder ? onTextInput(compiled) : compiled);
 
@@ -2328,11 +2340,11 @@ function compileCss(source, context = 'styles', options = {}) {
     reportPlaceholderDrops(built, context);
     const { declarations, important, tokens, importantTokens, deferred } = built;
     const kept = (deferred ?? [])
-      .filter((entry) => entry.props?.length === 1 && entry.props[0] === 'color')
-      .map((entry) => ({ ...entry, props: ['placeholderTextColor'] }));
+      .filter((entry) => entry.props?.length === 1 && entry.props[0] in PLACEHOLDER_PROPS)
+      .map((entry) => ({ ...entry, props: [PLACEHOLDER_PROPS[entry.props[0]]] }));
     const out = {
       declarations: placeholderOf(declarations),
-      ...(important && 'color' in important ? { important: placeholderOf(important) } : {}),
+      ...(important && takesPlaceholder(important) ? { important: placeholderOf(important) } : {}),
       ...(tokens ? { tokens } : {}),
       ...(importantTokens ? { importantTokens } : {}),
       ...(kept.length ? { deferred: kept } : {}),
@@ -2346,10 +2358,10 @@ function compileCss(source, context = 'styles', options = {}) {
       ...Object.keys(declarations),
       ...Object.keys(important ?? {}),
       ...(deferred ?? []).flatMap((entry) => entry.props ?? []),
-    ].filter((prop) => prop !== 'color');
+    ].filter((prop) => prop !== 'color' && prop !== 'opacity');
     for (const prop of new Set(unsupported)) {
       const name = prop.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-      const message = `${context}: a placeholder takes only a colour on native, not '${name}'`;
+      const message = `${context}: a placeholder takes only a colour and an opacity on native, not '${name}'`;
       if (!onUnsupported) throw new CssUnsupported(message);
       onUnsupported(reported(context, `dropped '${name}'`, message));
     }

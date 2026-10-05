@@ -1,7 +1,7 @@
 {
   "bootstrap": {
     "rules": 2523,
-    "dropped": 687,
+    "dropped": 686,
     "emitted": [
       "$animation",
       "$animationDelay",
@@ -78,6 +78,7 @@
       "paddingLeft",
       "paddingRight",
       "paddingTop",
+      "placeholderOpacity",
       "placeholderTextColor",
       "pointerEvents",
       "position",
@@ -254,9 +255,6 @@
       "min-height": {
         "arithmetic with tokens in it cannot take 'em' here. What the device works out is numbers, points, degrees and var(), with + - * / and brackets; a percentage, an em or a viewport unit beside a token needs layout the device does not do here.": 5,
         "arithmetic with tokens in it cannot take 'percentage' here. What the device works out is numbers, points, degrees and var(), with + - * / and brackets; a percentage, an em or a viewport unit beside a token needs layout the device does not do here.": 1
-      },
-      "opacity": {
-        "a placeholder takes only a colour on native, not 'opacity'": 1
       },
       "order": {
         "'order' has no React Native equivalent: no style prop of a native view does what it does. Yoga lays children out in the order they are written: change the order in the template.": 48
@@ -663,7 +661,7 @@
   },
   "pico": {
     "rules": 462,
-    "dropped": 311,
+    "dropped": 308,
     "emitted": [
       "$animation",
       "$animationDelay",
@@ -737,6 +735,7 @@
       "paddingRight",
       "paddingStart",
       "paddingTop",
+      "placeholderOpacity",
       "placeholderTextColor",
       "pointerEvents",
       "position",
@@ -878,9 +877,6 @@
       "min-width": {
         "min-width: expected a length, and 'fit-content' is not one": 1
       },
-      "opacity": {
-        "a placeholder takes only a colour on native, not 'opacity'": 3
-      },
       "overflow-wrap": {
         "'overflow-wrap' has no React Native equivalent: no style prop of a native view does what it does.": 1
       },
@@ -933,7 +929,7 @@
   },
   "open-props": {
     "rules": 72,
-    "dropped": 200,
+    "dropped": 199,
     "emitted": [
       "aspectRatio",
       "backgroundColor",
@@ -981,6 +977,7 @@
       "paddingRight",
       "paddingStart",
       "paddingTop",
+      "placeholderOpacity",
       "placeholderTextColor",
       "rowGap",
       "textAlign",
@@ -1048,9 +1045,6 @@
       },
       "min-block-size": {
         "min-height: unit 'lh' has no meaning on native (px, rem, em, %, vw, vh, vmin and vmax are)": 1
-      },
-      "opacity": {
-        "a placeholder takes only a colour on native, not 'opacity'": 1
       },
       "padding-block": {
         "padding-block: unit 'ch' has no meaning on native (px, rem, em, %, vw, vh, vmin and vmax are)": 1
