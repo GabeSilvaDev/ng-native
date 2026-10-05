@@ -705,6 +705,11 @@ function settleBorders(own: Record<string, unknown>): void {
     else drawn ??= own[style];
     delete own[style];
   }
+  // With no style for the box, a side's is the one the box is drawn in: native has one, and
+  // draws solid with none, so only another style is one to say.
+  if (own['borderStyle'] === undefined && drawn !== undefined && drawn !== 'solid') {
+    own['borderStyle'] = drawn;
+  }
   if (own['borderStyle'] !== 'none') return;
   if (drawn === undefined) drawNoBorder(own);
   else own['borderStyle'] = drawn;
