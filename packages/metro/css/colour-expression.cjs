@@ -180,17 +180,49 @@ function mixExpression(args, context) {
 
 /** One side of a mix: its colour, and the percentage written before or after it. */
 function mixSide(terms, context) {
-  const isPercentage = (term) => term?.type === 'token' && term.value?.type === 'percentage';
-  const percentages = terms.filter(isPercentage);
-  const colour = terms.filter((term) => !isPercentage(term));
-  if (percentages.length > 1) {
+  const shares = terms.map(shareOf);
+  const written = shares.filter((share) => share !== undefined);
+  const colour = terms.filter((_, i) => shares[i] === undefined);
+  if (written.length > 1) {
     throw new CssUnsupported(`${context}: one percentage per colour in a color-mix()`);
   }
+  return { expression: colourExpression(colour, context), percentage: written[0] };
+}
+
+const isPercentage = (term) => term?.type === 'token' && term.value?.type === 'percentage';
+
+/**
+ * The share written beside a colour in a mix: a percentage, as the number it is, or a token
+ * multiplied into one, `calc(var(--opacity) * 100%)`, as the token and what it is multiplied by,
+ * for the device to work out where the token is read. Undefined for a term that is neither.
+ */
+function shareOf(term) {
+  if (isPercentage(term)) return round(term.value.value * 100);
+  if (term?.type !== 'function' || term.value?.name !== 'calc') return undefined;
+  const [first, times, second, ...more] = meaningful(term.value.arguments);
+  if (more.length || !isTimes(times)) return undefined;
+  const token = [first, second].find((part) => part?.type === 'var');
+  const share = [first, second].find(isPercentage);
+  if (!token || !share) return undefined;
+  const fallback = numberIn(token.value.fallback);
+  // A fallback that is not a number is not a share the device can work out: left to be refused.
+  if (fallback === null) return undefined;
   return {
-    expression: colourExpression(colour, context),
-    percentage: percentages.length ? round(percentages[0].value.value * 100) : undefined,
+    reference: token.value.name.ident,
+    scale: round(share.value.value * 100),
+    ...(fallback === undefined ? {} : { fallback }),
   };
 }
+
+/** The one number a token's fallback is: undefined with no fallback, null for anything else. */
+function numberIn(fallback) {
+  if (fallback == null) return undefined;
+  const [only, ...more] = meaningful(fallback);
+  const is = !more.length && only?.type === 'token' && only.value?.type === 'number';
+  return is ? round(only.value.value) : null;
+}
+
+const isTimes = (term) => term?.type === 'token' && term.value?.value === '*';
 
 /**
  * `box-shadow` with a `var()` in a colour, as the shadow maps Fabric reads, each colour a marker
