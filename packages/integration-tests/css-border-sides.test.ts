@@ -55,6 +55,14 @@ describe('a side of a border styled none', () => {
       5,
       'the width it had before a rule between them styled it none',
     );
+    // Every side styled none at once, and one of them drawn again: that side has the width
+    // the box was given, and the others are still not drawn.
+    const again = resolvedStyle(
+      '.a { border-width: 5px; border-style: none } .b { border-top-style: solid }',
+      ['a', 'b'],
+    );
+    assert.equal(again['borderTopWidth'], 5);
+    assert.equal(again['borderRightWidth'], 0);
     assert.deepEqual(
       widths(resolvedStyle(`${none} .b { border-right: 1px solid }`, ['a', 'b'])),
       [3, 1, 3, 3],
