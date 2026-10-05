@@ -85,6 +85,17 @@ describe('a side of a border styled none', () => {
     assert.deepEqual([style['borderBottomWidth'], style['borderTopWidth']], [2, 0]);
   });
 
+  it("is the border's one style where a side's is the only one written", () => {
+    // Native has one style for the box, and a default of solid: a side styled dotted with no
+    // style for the box is what the box is drawn in, not lost with the side's own key.
+    const dotted = resolvedStyle('.a { border-width: 2px; border-top-style: dotted }', ['a']);
+    assert.equal(dotted['borderStyle'], 'dotted');
+    assert.equal('borderTopStyle' in dotted, false);
+    // A style written for the box stays what it is.
+    const dashed = resolvedStyle('.a { border: 2px dashed; border-top-style: dotted }', ['a']);
+    assert.equal(dashed['borderStyle'], 'dashed');
+  });
+
   it('leaves no style for a side in what a view is given', () => {
     const style = resolvedStyle('.a { border: 1px solid red; border-left: none }', ['a']);
     assert.deepEqual(
