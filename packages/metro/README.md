@@ -40,7 +40,8 @@ module.exports = withAngularNative(getDefaultConfig(__dirname), {
 A component library from npm draws unstyled by default: its CSS is written for a browser, and
 nothing compiles it. Name the packages whose component CSS should be compiled into native sheets,
 as the app's own is, with `{ libraryStyles: ['@acme/ui'] }`; what native cannot express is dropped,
-counted in one build warning a file, or listed with `ANGULAR_NATIVE_LIBRARY_WARNINGS=all`. See
+counted in one build warning a file, or listed with `ANGULAR_NATIVE_LIBRARY_WARNINGS=all`. The
+`@ng-native/*` packages need no entry: their component CSS is always compiled. See
 [Configuration](https://ng-native.com/packages/metro/configuration).
 
 ## What's in the package
@@ -49,6 +50,10 @@ counted in one build warning a file, or listed with `ANGULAR_NATIVE_LIBRARY_WARN
 - `angular-transform.cjs` (the package's `main`) - the Babel/Metro transformer itself, wired in by
   the preset.
 - `css/*.cjs` - the build-time CSS compiler, also used by `@ng-native/tailwind`.
+- `markdown-module.cjs` - a `.md` file as a module, `{ attributes, content, tokens }`: its front
+  matter parsed and its Markdown lexed by `marked`, an optional peer, as the app is bundled.
+  `markdown.d.ts` types the import: add `"types": ["@ng-native/metro/markdown"]` to the app's
+  `tsconfig.json`.
 - `polyfills/*.js` - the `ng-dev-mode`, `animation-globals` and `finalization-registry` polyfills
   the preset installs before `@angular/core` first runs.
 

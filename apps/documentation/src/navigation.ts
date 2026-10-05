@@ -133,6 +133,7 @@ export const PACKAGES: NavSection = {
         { path: 'packages/components/text', title: 'Text', group: 'Content' },
         { path: 'packages/components/html-elements', title: 'HTML elements' },
         { path: 'packages/components/image', title: 'Image' },
+        { path: 'packages/components/markdown', title: 'Markdown' },
         { path: 'packages/components/activity-indicator', title: 'Activity indicator' },
         { path: 'packages/components/input', title: 'Text input', group: 'Input' },
         { path: 'packages/components/switch', title: 'Switch' },
@@ -150,6 +151,7 @@ export const PACKAGES: NavSection = {
         { path: 'packages/router/screens', title: 'Screens and navigation' },
         { path: 'packages/router/header', title: 'The native header' },
         { path: 'packages/router/tabs', title: 'Tabs' },
+        { path: 'packages/router/file-routes', title: 'File routes' },
       ],
     },
     {
@@ -253,6 +255,11 @@ export const PACKAGES: NavSection = {
       ],
     },
     { path: 'packages/icons', title: 'Icons', summary: 'Icon sets, drawn as native SVG' },
+    {
+      path: 'packages/analog',
+      title: 'Analog',
+      summary: "Analog's file-based pages, as native routes",
+    },
     {
       path: 'packages/web',
       title: 'Web',
