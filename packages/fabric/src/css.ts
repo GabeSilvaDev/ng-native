@@ -1502,7 +1502,12 @@ let generations = 0;
 interface Subjects {
   readonly classes: ReadonlySet<string>;
   readonly types: ReadonlySet<string>;
-  /** A rule for anything: no class and no name, or a name every element answers to. */
+  /**
+   * The classes of the boxes that rules for anything are written inside: `.dialog > :first-child`
+   * is for any element, but only one that has an element with `dialog` over it.
+   */
+  readonly inside: ReadonlySet<string>;
+  /** A rule for anything anywhere: no class, no name, and no such box to be in. */
   readonly any: boolean;
 }
 
@@ -1519,22 +1524,38 @@ function subjectsOf(sheet: StyleSheet): Subjects {
   if (found) return found;
   const classes = new Set<string>();
   const types = new Set<string>();
+  const inside = new Set<string>();
   let any = false;
   for (const rule of sheet.rules) {
     const subject = rule.compounds.at(-1);
     // One class of several is enough to ask: a node without it matches none of them.
     if (subject?.classes.length) classes.add(subject.classes[0]!);
+    else if (boxAround(rule) !== undefined) inside.add(boxAround(rule)!);
     else if (subject?.type && subject.type !== '*') types.add(subject.type);
     else any = true;
   }
-  subjects.set(sheet, (found = { classes, types, any }));
+  subjects.set(sheet, (found = { classes, types, inside, any }));
   return found;
+}
+
+/**
+ * A class of the nearest box a rule's subject has to be in: the compound before it, where that
+ * is joined as what holds it and names a class. Nothing where it is a sibling, or has no class.
+ */
+function boxAround(rule: StyleRule): string | undefined {
+  const joined = rule.combinators.at(-1);
+  if (joined !== 'child' && joined !== 'descendant') return undefined;
+  return rule.compounds.at(-2)?.classes[0];
 }
 
 /** Whether a rule among these could be for a node: never no where one is. */
 function writtenFor(of: Subjects, node: StyleTarget): boolean {
   if (of.any || of.types.has(node.name)) return true;
   for (const name of node.classes ?? []) if (of.classes.has(name)) return true;
+  if (!of.inside.size) return false;
+  for (let over = node.parent; over; over = over.parent) {
+    for (const name of over.classes ?? []) if (of.inside.has(name)) return true;
+  }
   return false;
 }
 
@@ -1749,8 +1770,9 @@ export class StyleResolver {
     this.merged = new WeakMap();
     const before = this.generation;
     this.generation = ++generations;
-    // One that takes another's place, or names layers, can change what every node comes to.
-    if (at !== -1 || sheet.layers?.length) this.additions.length = 0;
+    // One that takes another's place can change what any node comes to. One that names layers
+    // cannot: a layer has its place from the first sheet to name it, and a new name comes last.
+    if (at !== -1) this.additions.length = 0;
     else this.additions.push({ before, after: this.generation, subjects: subjectsOf(sheet) });
     return true;
   }
@@ -1890,7 +1912,7 @@ export class StyleResolver {
       cached?.matched !== undefined &&
       !node.styleDirty &&
       cached.parentContext === parentContext &&
-      cached.generation === this.generation;
+      this.current(cached, node);
     if (!stands) return null;
     const candidates = this.rulesFor(node);
     const now = this.matched(node, node.styled ? ELEMENT_ENTRIES.concat(candidates) : candidates);
@@ -1925,7 +1947,7 @@ export class StyleResolver {
       !node.styleDirty &&
       !node.hasDirty &&
       cached.parentContext === parentContext &&
-      cached.generation === this.generation &&
+      this.current(cached, node) &&
       (node.anonymous === true || this.hasNoRules(node));
     if (!stands) return null;
     node.stateDirty = false;
