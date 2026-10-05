@@ -211,6 +211,9 @@ function line(property, list, context, linear) {
   const sides = named ?? (prefix === 'border' ? SIDES.map((side) => `border${side}`) : [prefix]);
   const widths = sides.map((side) => `${side}Width`);
   const colors = sides.map((side) => `${side}Color`);
+  // Each side's own style, which the cascade settles a border's widths from: see `sideStyles`
+  // in properties.cjs. An outline has one style and no sides.
+  const marks = sides[0].startsWith('border') ? sides.map((side) => `${side}Style`) : [];
 
   const declarations = {};
   const references = [];
@@ -261,14 +264,15 @@ function line(property, list, context, linear) {
   // line. Honouring it means turning a token into a width on device; nothing seen writes one.
   const styleInToken = style === null;
   if (style === 'none' || style === 'hidden')
-    return { declarations: every(widths, 0), deferred: [] };
+    return { declarations: { ...every(widths, 0), ...every(marks, 'none') }, deferred: [] };
   if (!withStyle && style !== 'solid' && !styleInToken) drawnSolid(context, style);
   Object.assign(declarations, width === null ? {} : every(widths, width));
   Object.assign(declarations, color === null ? {} : every(colors, color));
   if (withStyle && style !== null) declarations[`${prefix}Style`] = style;
+  if (style !== null) Object.assign(declarations, every(marks, style));
 
   if (!references.length && mixed === null) return { declarations, deferred: [] };
-  const styleProp = withStyle ? [`${prefix}Style`] : [];
+  const styleProp = withStyle ? [`${prefix}Style`, ...(styleInToken ? marks : [])] : [];
   const roles = [
     ...(width === null ? ['width'] : []),
     ...(withStyle && styleInToken ? ['style'] : []),
@@ -288,6 +292,7 @@ function line(property, list, context, linear) {
         colors,
         ...(mixed === null ? {} : { colour: mixed }),
         ...(withStyle ? { style: `${prefix}Style` } : {}),
+        ...(withStyle && styleInToken && marks.length ? { marks } : {}),
       },
     },
   ];

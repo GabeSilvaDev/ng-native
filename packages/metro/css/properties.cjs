@@ -677,8 +677,10 @@ function line(value, prefix, out, context, { style: withStyle = true } = {}) {
     // Cascades as the style does, so the engine can zero a width a later rule sets: see
     // `NO_BORDER` in css.ts.
     if (prefix === 'border') out.borderStyle = 'none';
+    sideStyles(prefix, out, 'none');
     return style;
   }
+  if (style !== undefined) sideStyles(prefix, out, style);
   const width = length(value.width, context);
   if (width !== undefined) set('Width', width);
   if (withStyle && style !== undefined) out[`${prefix}Style`] = drawnLine(style, context);
@@ -697,6 +699,19 @@ function paintColour(value, context) {
 
 /** The colour properties `currentColor` is filled in for on device. */
 const PAINT_COLOUR = /^(border-|outline-color$|background-color$|color$|text-decoration-color$)/;
+
+/**
+ * Each side's own border style, beside the one style native has for them all. CSS computes the
+ * width of a side styled `none` as 0 whatever width another rule gives it, and a rule that
+ * styles the side again draws it again: the engine settles the widths from these once the
+ * cascade is done, and sends none of them on (`settleBorders` in css.ts).
+ */
+function sideStyles(prefix, out, style) {
+  if (!prefix.startsWith('border')) return;
+  // Drawn as native draws it: dashed, dotted, or the solid line every other style is.
+  const drawn = style === 'dashed' || style === 'dotted' ? style : 'solid';
+  for (const side of lineSides(prefix)) out[`${side}Style`] = NO_LINE.has(style) ? 'none' : drawn;
+}
 
 /** The styles that draw no line at all. */
 const NO_LINE = new Set(['none', 'hidden']);
@@ -1511,14 +1526,25 @@ const TRANSLATORS = new Map([
     'border-style',
     (property, value, out) => {
       const style = uniform(value, property, 'border-style');
-      // CSS computes the width of a line styled none as 0, as the shorthand already reads it.
-      if (NO_LINE.has(style)) {
-        for (const side of lineSides('border')) out[`${side}Width`] = 0;
-        // Kept as a style too, so a width a later rule sets is zeroed as well: see css.ts.
-        out.borderStyle = 'none';
-      } else out.borderStyle = drawnLine(style, property);
+      // CSS computes the width of a line styled none as 0. No width is written here for it: a
+      // stronger rule may draw a side again, with the width an earlier rule gave it. The style
+      // is kept, and the engine zeroes each side that none is what it ends with: see css.ts.
+      if (NO_LINE.has(style)) out.borderStyle = 'none';
+      else out.borderStyle = drawnLine(style, property);
+      sideStyles('border', out, style);
     },
   ],
+  ...['Top', 'Right', 'Bottom', 'Left'].map((side) => [
+    `border-${side.toLowerCase()}-style`,
+    (property, value, out) => {
+      const style = keyword(value, property);
+      // No width here for a side styled none: a stronger rule may style the side again, and the
+      // width an earlier rule gave it is the one it then has. The engine zeroes the side where
+      // none is what it ends with: see `settleBorders` in css.ts.
+      if (!NO_LINE.has(style)) drawnLine(style, property);
+      sideStyles(`border${side}`, out, style);
+    },
+  ]),
   [
     'pointer-events',
     (property, value, out) => {

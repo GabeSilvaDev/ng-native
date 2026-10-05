@@ -33,8 +33,16 @@ const everySide = (part: 'Width' | 'Color', value: unknown) =>
   );
 
 /** The declarations a single-rule stylesheet produces. */
+/**
+ * A declaration as the props it compiles to. Without each border side's own style, which the
+ * cascade settles the widths from and sends to no view: see css-border-sides.test.ts.
+ */
 const declarationsOf = (css: string): Record<string, unknown> =>
-  compileCss(`view { ${css} }`).rules[0].declarations;
+  Object.fromEntries(
+    Object.entries(
+      compileCss(`view { ${css} }`).rules[0].declarations as Record<string, unknown>,
+    ).filter(([key]) => !/^border(Top|Right|Bottom|Left|Start|End)Style$/.test(key)),
+  );
 
 describe('shorthands that every stylesheet uses', () => {
   it('background, taking the colour and ignoring the initial layers', () => {
