@@ -1539,8 +1539,10 @@ const TRANSLATORS = new Map([
     `border-${side.toLowerCase()}-style`,
     (property, value, out) => {
       const style = keyword(value, property);
-      if (NO_LINE.has(style)) out[`border${side}Width`] = 0;
-      else drawnLine(style, property);
+      // No width here for a side styled none: a stronger rule may style the side again, and the
+      // width an earlier rule gave it is the one it then has. The engine zeroes the side where
+      // none is what it ends with: see `settleBorders` in css.ts.
+      if (!NO_LINE.has(style)) drawnLine(style, property);
       sideStyles(`border${side}`, out, style);
     },
   ]),
