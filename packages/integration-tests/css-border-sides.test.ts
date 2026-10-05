@@ -47,6 +47,14 @@ describe('a side of a border styled none', () => {
 
   it('is drawn again by a stronger rule that styles that side, or every side', () => {
     const none = '.a { border-right: none; border-width: 3px }';
+    assert.equal(
+      resolvedStyle(
+        '.a { border: 5px solid } .b { border-right-style: none } .c { border-right-style: solid }',
+        ['a', 'b', 'c'],
+      )['borderRightWidth'],
+      5,
+      'the width it had before a rule between them styled it none',
+    );
     assert.deepEqual(
       widths(resolvedStyle(`${none} .b { border-right: 1px solid }`, ['a', 'b'])),
       [3, 1, 3, 3],
