@@ -1498,6 +1498,46 @@ const NO_SHEET: StyleSheet = { rules: [] };
  */
 let generations = 0;
 
+/** What a sheet's rules are written for: the last compound of each, by its class or its name. */
+interface Subjects {
+  readonly classes: ReadonlySet<string>;
+  readonly types: ReadonlySet<string>;
+  /** A rule for anything: no class and no name, or a name every element answers to. */
+  readonly any: boolean;
+}
+
+interface Addition {
+  readonly before: number;
+  readonly after: number;
+  readonly subjects: Subjects;
+}
+
+const subjects = new WeakMap<StyleSheet, Subjects>();
+
+function subjectsOf(sheet: StyleSheet): Subjects {
+  let found = subjects.get(sheet);
+  if (found) return found;
+  const classes = new Set<string>();
+  const types = new Set<string>();
+  let any = false;
+  for (const rule of sheet.rules) {
+    const subject = rule.compounds.at(-1);
+    // One class of several is enough to ask: a node without it matches none of them.
+    if (subject?.classes.length) classes.add(subject.classes[0]!);
+    else if (subject?.type && subject.type !== '*') types.add(subject.type);
+    else any = true;
+  }
+  subjects.set(sheet, (found = { classes, types, any }));
+  return found;
+}
+
+/** Whether a rule among these could be for a node: never no where one is. */
+function writtenFor(of: Subjects, node: StyleTarget): boolean {
+  if (of.any || of.types.has(node.name)) return true;
+  for (const name of node.classes ?? []) if (of.classes.has(name)) return true;
+  return false;
+}
+
 function emptyCacheFor(epoch: number, generation: number): StyleCache {
   return {
     epoch,
@@ -1707,7 +1747,42 @@ export class StyleResolver {
     if (at === -1) this.addedSheets.push(sheet);
     else this.addedSheets[at] = sheet;
     this.merged = new WeakMap();
+    const before = this.generation;
     this.generation = ++generations;
+    // One that takes another's place, or names layers, can change what every node comes to.
+    if (at !== -1 || sheet.layers?.length) this.additions.length = 0;
+    else this.additions.push({ before, after: this.generation, subjects: subjectsOf(sheet) });
+    return true;
+  }
+
+  /**
+   * The sheets added one after another with nothing else changed between them, each with the
+   * generation it began and ended: a cache made before them still stands for a node none of
+   * them could match. Emptied by anything else that moves the generation on.
+   */
+  private readonly additions: Addition[] = [];
+
+  /** Whether a sheet could match a node: one of its rules is written for it. */
+  couldMatch(sheet: StyleSheet, node: StyleTarget): boolean {
+    return writtenFor(subjectsOf(sheet), node);
+  }
+
+  /**
+   * Whether a cache is of this generation, or of one before sheets that could not match the
+   * node were added, which leaves it as it was: it is then brought up to this one.
+   */
+  private current(cached: StyleCache, node: StyleTarget): boolean {
+    if (cached.generation === this.generation) return true;
+    // The one cache shared by every node with nothing to style is not one node's to move on.
+    if (cached.context === ROOT_CONTEXT) return false;
+    let at = cached.generation;
+    for (const added of this.additions) {
+      if (added.before !== at) continue;
+      if (writtenFor(added.subjects, node)) return false;
+      at = added.after;
+    }
+    if (at !== this.generation) return false;
+    cached.generation = at;
     return true;
   }
 
@@ -1717,17 +1792,20 @@ export class StyleResolver {
     if (at === -1) return false;
     this.addedSheets.splice(at, 1);
     this.merged = new WeakMap();
+    this.additions.length = 0;
     this.generation = ++generations;
     return true;
   }
 
   setConditions(next: Conditions): void {
     this.conditions = next;
+    this.additions.length = 0;
     this.generation = ++generations;
   }
 
   setRootTokens(next: Readonly<Record<string, TokenValue>>): void {
     this.tokensOnRoot = next;
+    this.additions.length = 0;
     this.generation = ++generations;
   }
 
@@ -1878,7 +1956,7 @@ export class StyleResolver {
       !node.hasDirty &&
       !node.stateDirty &&
       cached.parentContext === parentContext &&
-      cached.generation === this.generation
+      this.current(cached, node)
     );
   }
 

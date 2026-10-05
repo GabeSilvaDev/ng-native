@@ -2378,7 +2378,21 @@ export class Engine implements HostEngine {
     this.watchHas(sheet);
     this.watchActive(sheet);
     this.markPath(this.root);
+    this.markWrittenFor(sheet, this.root);
     return true;
+  }
+
+  /**
+   * Have styled again each node a sheet just added could match. The rest keep the style they
+   * have, which the resolver lets stand for a node none of the sheet's rules is written for,
+   * so a commit steps over them: the walk here is what finds the ones it must not step over.
+   */
+  private markWrittenFor(sheet: StyleSheet, node: EngineNode): void {
+    if (node.kind === 'element' && this.styles.couldMatch(sheet, node)) {
+      node.styleDirty = true;
+      this.markPath(node);
+    }
+    for (const child of node.children) this.markWrittenFor(sheet, child);
   }
 
   /**
