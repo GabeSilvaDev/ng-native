@@ -1526,12 +1526,11 @@ const TRANSLATORS = new Map([
     'border-style',
     (property, value, out) => {
       const style = uniform(value, property, 'border-style');
-      // CSS computes the width of a line styled none as 0, as the shorthand already reads it.
-      if (NO_LINE.has(style)) {
-        for (const side of lineSides('border')) out[`${side}Width`] = 0;
-        // Kept as a style too, so a width a later rule sets is zeroed as well: see css.ts.
-        out.borderStyle = 'none';
-      } else out.borderStyle = drawnLine(style, property);
+      // CSS computes the width of a line styled none as 0. No width is written here for it: a
+      // stronger rule may draw a side again, with the width an earlier rule gave it. The style
+      // is kept, and the engine zeroes each side that none is what it ends with: see css.ts.
+      if (NO_LINE.has(style)) out.borderStyle = 'none';
+      else out.borderStyle = drawnLine(style, property);
       sideStyles('border', out, style);
     },
   ],

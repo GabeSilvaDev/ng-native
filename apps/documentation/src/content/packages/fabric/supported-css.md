@@ -256,8 +256,9 @@ apply, so a class on one did nothing. One difference from the browser: where a s
 meets a physical one (`inset-inline-start` and `left` on the same element), the start or end
 edge wins, whichever was written last.
 
-`border-style` is likewise one value for all four sides: a native border has one style, and a
-per-side style that disagrees with the others is dropped for the same reason. `border-top` and the
+`border-style` is likewise one value for all four sides: a native border has one style, so the sides
+that are drawn are all drawn in it, and a second drawn style on one side is not one native can give
+it. Which sides are drawn at all is per side: `none` on one side is supported. `border-top` and the
 other per-side shorthands set that side's width and color, and take `solid` (native's default) or
 `none` as their style. Any other style there, as in `border-top: 1px dashed red`, is drawn solid
 with its width and color, and the build says so. A side styled `none`, by its shorthand or by

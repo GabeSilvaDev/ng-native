@@ -623,8 +623,10 @@ describe('the line styles native can draw', () => {
 
   it('reads a style of none as no line, as the shorthands already did', () => {
     // CSS computes the width of a line styled none as 0. Native has no none style, so the style
-    // is kept only for the engine, which zeroes a width a later rule sets and sends none of it.
-    const none = { ...everySide('Width', 0), borderStyle: 'none' };
+    // is kept only for the engine, which zeroes the width of each side that ends with it and
+    // sends none of it: `css-border-sides.test.ts` has what a box is committed with. No width is
+    // written here, so a side a stronger rule draws again keeps the width it was given.
+    const none = { borderStyle: 'none' };
     assert.deepEqual(declarationsOf('border-style: none'), none);
     assert.deepEqual(declarationsOf('border-style: hidden'), none);
     assert.deepEqual(declarationsOf('outline-style: none'), { outlineWidth: 0 });
