@@ -13,8 +13,13 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { compileCss } = require('@ng-native/metro/css/compile.cjs');
 
+/** Without each border side's own style, which is the cascade's: see css-border-sides.test.ts. */
 const declarationsOf = (css: string): Record<string, unknown> =>
-  compileCss(`view { ${css} }`).rules[0].declarations;
+  Object.fromEntries(
+    Object.entries(
+      compileCss(`view { ${css} }`).rules[0].declarations as Record<string, unknown>,
+    ).filter(([key]) => !/^border(Top|Right|Bottom|Left|Start|End)Style$/.test(key)),
+  );
 
 /** The same, compiled for an Android build, where every filter function is drawn. */
 const androidDeclarationsOf = (css: string): Record<string, unknown> =>

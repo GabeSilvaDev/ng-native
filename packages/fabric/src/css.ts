@@ -381,6 +381,8 @@ export interface LineTemplate {
   /** `color-mix(in srgb, var(--tint) 35%, transparent)`: the colour, written as a function. */
   readonly colour?: unknown;
   readonly style?: string;
+  /** Each side's own style, which the line's style is written to as well: see `settleBorders`. */
+  readonly marks?: readonly string[];
 }
 
 /**
@@ -682,6 +684,30 @@ function drawNoBorder(own: Record<string, unknown>): void {
   delete own['borderStyle'];
   for (const key of Object.keys(own)) if (/^border\w*Width$/.test(key)) own[key] = 0;
   own['borderWidth'] = 0;
+}
+
+/** Each side's own style, as the compiler keeps it, and the width it is the style of. */
+const SIDE_STYLES = ['Top', 'Right', 'Bottom', 'Left', 'Start', 'End'].map(
+  (side) => [`border${side}Style`, `border${side}Width`] as const,
+);
+
+/**
+ * Settle a border side by side, once the cascade has picked each side's style: a side styled
+ * `none` has no width, whichever rule set one, and the one style native has is that of a side
+ * that is drawn. With no side drawn and no style at all, there is no border. A side's own style
+ * is not sent on: native has none.
+ */
+function settleBorders(own: Record<string, unknown>): void {
+  let drawn: unknown;
+  for (const [style, width] of SIDE_STYLES) {
+    if (!(style in own)) continue;
+    if (own[style] === 'none') own[width] = 0;
+    else drawn ??= own[style];
+    delete own[style];
+  }
+  if (own['borderStyle'] !== 'none') return;
+  if (drawn === undefined) drawNoBorder(own);
+  else own['borderStyle'] = drawn;
 }
 
 /**
@@ -2100,7 +2126,7 @@ export class StyleResolver {
     if (result.deferred) {
       this.applyDeferred(result.deferred, own, tokens, parentInherited, result.important);
     }
-    if (own['borderStyle'] === 'none') drawNoBorder(own);
+    settleBorders(own);
     // `pointer-events: inherit` won the cascade: what the parent hands down stands.
     if (own['pointerEvents'] === 'inherit') delete own['pointerEvents'];
     const style = { ...parentInherited, ...own };
@@ -3171,7 +3197,8 @@ function fillRole(
   role: LineTemplate['roles'][number],
   value: unknown,
 ): void {
-  const props = { width: line.widths, color: line.colors, style: [line.style!] }[role];
+  const styles = [line.style!, ...(line.marks ?? [])];
+  const props = { width: line.widths, color: line.colors, style: styles }[role];
   for (const prop of props) values[prop] = value;
 }
 
