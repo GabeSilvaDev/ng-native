@@ -3541,10 +3541,33 @@ export class Engine implements HostEngine {
   private flushTransitionEvents(): void {
     if (this.transitionEvents.length === 0) return;
     for (const { node, type, property } of this.transitionEvents.splice(0)) {
+      // One listener that throws stops neither the rest nor the node being let go.
       for (const listener of [...(node.listeners?.get(type) ?? [])]) {
-        listener(animationEvent(type, node, property));
+        try {
+          listener(animationEvent(type, node, property));
+        } catch (error) {
+          this.reportEventError(error, type);
+        }
       }
+      if (type === 'topAnimationend') this.letGo(node);
     }
+  }
+
+  /**
+   * The nodes whose animation has ended with no fill and is still held at its last frame, until
+   * its `animationend` has been heard. A browser runs that listener before it paints again, and
+   * an exit animation's listener takes the element away: it is never seen back at rest. Here the
+   * listener runs after the commit, so the commit that ends the animation paints the last frame,
+   * and the element goes back to rest once the listener has run and left it there.
+   */
+  private readonly lettingGo = new Set<EngineNode>();
+
+  private letGo(node: EngineNode): void {
+    if (!this.lettingGo.delete(node)) return;
+    const running = node.playing;
+    if (!running?.done) return;
+    running.values = {};
+    this.markProps(node, false);
   }
 
   /** Anchors take part in sibling ordering but never reach Fabric. */
@@ -4234,6 +4257,20 @@ export class Engine implements HostEngine {
     return props;
   }
 
+  /**
+   * Whether an animation that has finished goes on holding its last frame. With a forwards fill
+   * it does, for good: without one the element falls back to whatever the cascade gives it, and
+   * 'backwards' fills the start only. Heard, it holds until whoever listens has been told: see
+   * `lettingGo`.
+   */
+  private keeps(node: EngineNode, running: RunningAnimation): boolean {
+    if (running.spec.fill === 'forwards' || running.spec.fill === 'both') return true;
+    // One that listened and has stopped leaves an empty set behind: nobody to hear it.
+    if (!node.listeners?.get('topAnimationend')?.size) return false;
+    this.lettingGo.add(node);
+    return true;
+  }
+
   /** One `@keyframes` player, one frame on. */
   private advancePlayer(node: EngineNode, now: number): void {
     const running = node.playing;
@@ -4255,10 +4292,7 @@ export class Engine implements HostEngine {
       this.playing.delete(node);
       return;
     }
-    // Without a forwards fill a finished animation stops holding anything, and the element falls
-    // back to whatever the cascade gives it. 'backwards' fills the start only.
-    const holds = running.spec.fill === 'forwards' || running.spec.fill === 'both';
-    running.values = finished && !holds ? {} : values;
+    running.values = finished && !this.keeps(node, running) ? {} : values;
     // Its end is still a commit: that is what its `animationend` is sent after.
     if (!idle || finished) this.markProps(node, false);
 
