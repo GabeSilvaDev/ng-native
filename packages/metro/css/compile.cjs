@@ -1073,6 +1073,64 @@ function isLoneLiteral(parts) {
 /** The query a rule's dark side is under: native has the app's one scheme, which this reads. */
 const DARK = { feature: 'prefers-color-scheme', value: 'dark' };
 
+/**
+ * A declaration with a token of its own rule read in place. A custom property whose value no one
+ * form of a token holds, a transform with a token and a sum inside it, is kept as written
+ * rather than refused, and a declaration of the same rule that is that token alone is the value
+ * itself: the declaration it stands in for. Null for the custom property, which is done with.
+ *
+ * ponytail: only its own rule's. The same token read by another rule, or set again by a
+ * stronger one for the same element, is not followed; give a token a form for a deferred
+ * transform if a stylesheet does that.
+ */
+function ownToken(declaration, raw) {
+  const value = declaration.value;
+  if (declaration.property === 'custom') {
+    // Only one a declaration beside it reads: any other is refused as it was, and said so.
+    return raw.has(value?.name) && unheld(value.value) ? null : declaration;
+  }
+  const own = raw.get(aloneIn(declaration));
+  return own ? { ...declaration, value: { ...value, value: own } } : declaration;
+}
+
+/** The token a declaration's whole value is, `transform: var(--move)`, or nothing. */
+function aloneIn(declaration) {
+  if (declaration.property !== 'unparsed') return undefined;
+  const [only, ...others] = meaningful(declaration.value?.value ?? []);
+  return others.length || only?.type !== 'var' ? undefined : only.value.name.ident;
+}
+
+/**
+ * The custom properties of a list of declarations that no one form holds and a declaration of
+ * the list reads whole, by name, as their value was written: the last of each name, which is the
+ * one the cascade has, wherever in the list it is read.
+ */
+function ownTokens(list) {
+  const read = new Set(list.map(aloneIn).filter(Boolean));
+  const raw = new Map();
+  for (const { property, value } of list) {
+    if (property !== 'custom' || !read.has(value?.name)) continue;
+    if (unheld(value.value)) raw.set(value.name, value.value);
+    else raw.delete(value.name);
+  }
+  return raw;
+}
+
+/** Whether a custom property's value is transform functions with a token inside one of them. */
+function unheld(parts) {
+  const terms = meaningful(parts ?? []);
+  const inside = (term) =>
+    term.type === 'var' ||
+    (term.type === 'function' && meaningful(term.value.arguments).some(inside));
+  return (
+    terms.length > 0 &&
+    terms.every((term) => term.type === 'function' && TRANSFORM_FUNCTIONS.test(term.value.name)) &&
+    terms.some((term) => meaningful(term.value.arguments).some(inside))
+  );
+}
+
+const TRANSFORM_FUNCTIONS = /^(translate|scale|rotate|skew)(X|Y|Z|3d)?$/i;
+
 /** A rule with only its declarations that have a `light-dark()` in them, on their dark side. */
 function darkSide(rule) {
   const { declarations, importantDeclarations } = rule.value.declarations;
@@ -2623,7 +2681,10 @@ function compileCss(source, context = 'styles', options = {}) {
           return true;
         },
       });
-      for (const declaration of list ?? []) {
+      const raw = ownTokens(list ?? []);
+      for (const stated of list ?? []) {
+        const declaration = ownToken(stated, raw);
+        if (declaration === null) continue;
         if (easedByToken(declaration, out, deferred, context)) continue;
         if (timedByToken(declaration, out, context)) continue;
         const before = deferred.length;
