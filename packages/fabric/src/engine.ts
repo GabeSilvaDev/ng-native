@@ -4367,10 +4367,44 @@ export class Engine implements HostEngine {
    * when it is shown again, as Modal.js creates it afresh. Committed again, it ignores every touch.
    */
   private withheld(child: EngineNode): boolean {
+    if (this.undisplayed(child)) return true;
     if (child.props['visible'] !== false || child.presented) return false;
     if (viewNameOf(child) !== MODAL_HOST) return false;
     if (child.committed) this.forgetCommitted(child);
     return true;
+  }
+
+  /**
+   * Whether an element is `display: none`, which has no box and so no view, nor has anything
+   * in it. A view that is committed and not displayed looks the same, but Yoga marks one as
+   * laid out each time it measures what holds it, and React Native clears the mark only where it
+   * reads that parent's layout: a debug build stops at the mark, on a later commit that has the
+   * parent's layout already. Shown again it is made again, as an element put back in the tree
+   * is: what its views held of their own, a scroll offset, is not kept.
+   */
+  private undisplayed(child: EngineNode): boolean {
+    if (child.kind !== 'element') return false;
+    this.styles.resolve(child, this.styleEpoch);
+    if (ownLayout(child, 'display') !== 'none') return false;
+    if (child.committed) {
+      this.forgetCommitted(child);
+      // A field in it has no view to send its blur from.
+      if (isWithin(this.focusedNode, child)) this.setFocused(null);
+    }
+    return true;
+  }
+
+  /**
+   * Whether a node hoisted into `target` is not displayed where it was written: it, or a box
+   * between it and the child of `target` it was written in. That child is asked before this is.
+   */
+  private undisplayedUnder(target: EngineNode, written: EngineNode): boolean {
+    for (let at: EngineNode | null = written; at && at.parent !== target; at = at.parent) {
+      if (!this.undisplayed(at)) continue;
+      if (written.committed) this.forgetCommitted(written);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -4393,7 +4427,9 @@ export class Engine implements HostEngine {
       if (this.hoisted.has(child)) direct.push(child);
       else handles.push(this.reconcileUnder(node, child, context));
       const moved = hoisted?.get(child);
-      if (moved) for (const written of moved) handles.push(this.land(node, written, landed));
+      for (const written of moved ?? []) {
+        if (!this.undisplayedUnder(node, written)) handles.push(this.land(node, written, landed));
+      }
     }
     for (const child of direct) handles.push(this.land(node, child, landed));
     if (node.kept) this.standIn(node, landed, handles);
