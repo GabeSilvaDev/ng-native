@@ -31,9 +31,15 @@ const FRAMES = `
   @keyframes tint { from { background-color: red } to { background-color: blue } }
 `;
 
-function scene(rule: string, classes = 'a') {
+function scene(
+  rule: string,
+  classes = 'a',
+  frame?: { x: number; y: number; width: number; height: number },
+) {
   const rec = recorder();
   const fabric = createFakeFabric();
+  // Where the fake lays the view out, for what reads its size back.
+  if (frame) fabric.frames.set('View', frame);
   let now = 0;
   const engine = new Engine(fabric, 1, {
     globalStyles: compileCss(`${FRAMES} ${rule}`) as StyleSheet,
@@ -151,6 +157,61 @@ describe('a @keyframes animation of opacity and transforms', () => {
     const s = scene(mixed);
     assert.equal(s.started().length, 0);
     assert.equal(s.engine.animating, true);
+  });
+
+  it('plays a move by a share of the box, as the points it is once the box is laid out', () => {
+    // A progress bar slides by `translateX(200%)` of its own width. Native interpolates points,
+    // so the share is worked out from the size the view is laid out at, after its first commit.
+    const sliding =
+      '@keyframes slide { from { transform: translateX(0) } 50% { transform: translateX(50%) } ' +
+      'to { transform: translateX(200%) translateY(-50%) } } .a { animation: slide 2s linear infinite }';
+    const s = scene(sliding, 'a', { x: 0, y: 0, width: 300, height: 40 });
+    assert.equal(s.started().length, 1);
+    assert.equal(s.engine.animating, false, 'no frame of it is left to JavaScript');
+    assert.deepEqual(s.at(0), { translateX: 0, translateY: 0 });
+    assert.deepEqual(s.at(0.5), { translateX: 150, translateY: 0 });
+    assert.deepEqual(s.at(1), { translateX: 600, translateY: -20 });
+  });
+
+  it('keeps its clock where it has a size and native still cannot play it', () => {
+    // A colour beside the move keeps the animation in JavaScript. Asked again after the commit,
+    // it is not handed over, and its clock is the one it started on: started again there, it
+    // would end late by however long the commit took.
+    const rec = recorder();
+    const fabric = createFakeFabric();
+    fabric.frames.set('View', { x: 0, y: 0, width: 300, height: 40 });
+    let now = 0;
+    const complete = fabric.completeRoot;
+    fabric.completeRoot = (...args: Parameters<typeof complete>) => {
+      now += 500;
+      return complete.apply(fabric, args);
+    };
+    const engine = new Engine(fabric, 1, {
+      globalStyles: compileCss(
+        '@keyframes tinted { from { transform: translateX(0); background-color: red } ' +
+          'to { transform: translateX(100%); background-color: blue } } ' +
+          '.a { animation: tinted 2s linear infinite }',
+      ) as StyleSheet,
+      nativeAnimated: rec.native,
+      now: () => now,
+    });
+    const view = engine.createElement('view');
+    engine.setClasses(view, 'a');
+    engine.appendChild(engine.root, view);
+    engine.commit();
+    assert.equal(rec.named('start').length, 0);
+    assert.equal(engine.animating, true);
+    assert.equal(view.playing!.start, 0);
+  });
+
+  it('plays a move by a share from JavaScript for as long as the box has no size', () => {
+    const s = scene(
+      '@keyframes slide { to { transform: translateX(200%) } } .a { animation: slide 2s linear infinite }',
+    );
+    assert.equal(s.started().length, 0);
+    assert.equal(s.engine.animating, true);
+    s.later(1000);
+    assert.deepEqual(s.props()['transform'], [{ translateX: '100%' }]);
   });
 
   it('plays an eased animation as the curve, sampled into what native interpolates between', () => {
