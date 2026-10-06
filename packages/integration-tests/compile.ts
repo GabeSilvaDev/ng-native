@@ -10,7 +10,7 @@
  * package barrel would pull decorated classes into Node, which cannot erase decorators.
  */
 import { createRequire } from 'node:module';
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, linkSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -45,18 +45,31 @@ function rewriteImports(code: string, file: string, seen: Set<string>): string {
 }
 
 /**
- * Write, then move into place.
+ * Write, then move into place, unless the file already says the same.
  *
  * Test files run in parallel processes and every one of them compiles the primitives its fixtures
  * import, so several write the same `.generated.ts` at once. A plain write lets another process
  * import the file halfway through it, and the failure is a `SyntaxError` about a missing export
  * from a file that plainly has it. The content is a pure function of the source, so either
  * version is correct - what has to be atomic is only the swap.
+ *
+ * A copy that is already right is left alone, and a first copy is linked into place, which fails
+ * where another process has just made one instead of replacing it. Some filesystems show a
+ * missing file for a moment while one is replaced, and a process importing it then fails. So a
+ * file is replaced only when its source changed since the last run.
  */
 function writeAtomically(out: string, code: string): void {
+  const upToDate = () => existsSync(out) && readFileSync(out, 'utf8') === code;
+  if (upToDate()) return;
   const temporary = `${out}.${process.pid}.tmp`;
   writeFileSync(temporary, code);
-  renameSync(temporary, out);
+  try {
+    linkSync(temporary, out);
+  } catch {
+    // It is there already (or this filesystem has no links): replace it unless it says the same.
+    if (!upToDate()) return renameSync(temporary, out);
+  }
+  rmSync(temporary);
 }
 
 function emit(file: string, seen: Set<string>): string {
