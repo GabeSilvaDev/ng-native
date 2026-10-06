@@ -774,6 +774,42 @@ function textScale(props: Record<string, unknown>, fontScale = 1): number {
   return typeof cap === 'number' && cap >= 1 ? Math.min(fontScale, cap) : fontScale;
 }
 
+/** A field's padding and border on its top or bottom edge, as they are written. */
+const blockEdge = (
+  props: Record<string, unknown>,
+  side: 'Top' | 'Bottom',
+  logical: 'Start' | 'End',
+): unknown[] => [
+  props[`padding${side}`] ??
+    props[`paddingBlock${logical}`] ??
+    props['paddingBlock'] ??
+    props['paddingVertical'] ??
+    props['padding'] ??
+    0,
+  props[`border${side}Width`] ?? props['borderWidth'] ?? 0,
+];
+
+/**
+ * A multiline field's `rows` as its height, where it was given none: that many lines of its
+ * line height at the system text size, inside its padding and border, as a browser sizes a `<textarea>`. A native field
+ * is as tall as its text, which is one line before anything is typed.
+ */
+function rowsTall(props: Record<string, unknown>, fontScale: number | undefined): void {
+  const rows = Number(props['rows']);
+  const line = props['lineHeight'];
+  if (props['multiline'] !== true || !(rows > 0) || typeof line !== 'number') return;
+  if (isSet(props['height']) && props['height'] !== 'auto') return;
+  // A content box's height is its lines alone: Yoga adds the padding and border itself.
+  const edges =
+    props['boxSizing'] === 'content-box'
+      ? []
+      : [...blockEdge(props, 'Top', 'Start'), ...blockEdge(props, 'Bottom', 'End')];
+  if (!edges.every((part) => typeof part === 'number')) return;
+  // At the system text size, which the field's lines are drawn at.
+  const lines = rows * line * textScale(props, fontScale);
+  props['height'] = edges.reduce<number>((sum, part) => sum + (part as number), lines);
+}
+
 /**
  * Centre the text of a single-line text field that has a line height, as Chrome centres an
  * input's, keeping the height the line height gives it.
@@ -811,15 +847,8 @@ function centreSingleLine(
   if (isSet(height) && height !== 'auto') return;
   // Android sizes the field by its line height, and centres the text in it, itself.
   if (viewName !== 'TextInput') return;
-  const edge = (side: 'Top' | 'Bottom', logical: 'Start' | 'End'): unknown[] => [
-    props[`padding${side}`] ??
-      props[`paddingBlock${logical}`] ??
-      props['paddingBlock'] ??
-      props['paddingVertical'] ??
-      props['padding'] ??
-      0,
-    props[`border${side}Width`] ?? props['borderWidth'] ?? 0,
-  ];
+  const edge = (side: 'Top' | 'Bottom', logical: 'Start' | 'End') =>
+    blockEdge(props, side, logical);
   const line = lineHeight * textScale(props, fontScale);
   const box = [line, ...edge('Top', 'Start'), ...edge('Bottom', 'End')];
   const own = props['minHeight'] ?? 0;
@@ -3423,6 +3452,7 @@ export class Engine implements HostEngine {
     if (viewName === PARAGRAPH) alignText(style, this.directionOf(node, style));
     if (this.fontsRefreshed) this.capForFonts(node, style);
     alignMultiline(viewName, style);
+    rowsTall(style, this.fontScale);
     const merged = composeTransform(node, this.animated(node, this.transitioned(node, style)));
     centreSingleLine(viewName, merged, this.fontScale);
     // Last, on what is committed: an override or an animation can hide a box, or place it.
