@@ -19,6 +19,12 @@ export interface TransitionSpec {
   readonly easing: readonly number[];
 }
 
+/** Transitions of one element native plays on one clock: what stops it, and which they are. */
+export interface EasedNatively {
+  stop(): void;
+  readonly keys: readonly string[];
+}
+
 export interface Transition {
   from: unknown;
   to: unknown;
@@ -28,6 +34,11 @@ export interface Transition {
   easing: readonly number[];
   /** What the node paints right now. Also the value a redirected transition starts from. */
   current: unknown;
+  /**
+   * The clock native plays it on, with the others started beside it, while it does. Nothing of
+   * it runs in JavaScript then, and `current` is where it started from.
+   */
+  native?: EasedNatively;
   done: boolean;
   /**
    * The value a change back is a reversal to, and the share of the full duration this one takes:
@@ -637,6 +648,19 @@ export function settled(value: unknown, rule: TransitionSpec): Transition {
     reversingFrom: value,
     shortening: 1,
   };
+}
+
+/**
+ * Whether a transition is no longer going where a commit's props say: by the value a property
+ * has when nothing sets one, and by what two values are and not which objects, as `step` reads
+ * them. What native plays is taken back only for a target that is another.
+ */
+export function aimsElsewhere(
+  transition: Transition,
+  key: string,
+  props: Record<string, unknown>,
+): boolean {
+  return !sameValue(transition.to, props[key] ?? INITIAL[key]);
 }
 
 /** Whether two values are the same, a transform list by what is in it rather than by identity. */
