@@ -139,8 +139,9 @@ from `fireEvent.changeText` or `userEvent.type` like a text field. The commands 
 ## A bottom toolbar
 
 `<native-toolbar>` is the screen's toolbar on iOS: the bar a navigation controller floats over the
-content and the tab bar, where Mail has its filter, its search field and its compose button. Each
-`<native-toolbar-item>` in it is a button, a spacer, or the place the search field goes:
+content at the bottom of a screen, where Mail has its filter, its search field and its compose
+button. It is for a screen with no tab bar. Each `<native-toolbar-item>` in it is a button, a
+spacer, or the place the search field goes:
 
 <!-- api: NativeToolbarItem -->
 
@@ -218,6 +219,14 @@ The toolbar needs iOS 18, and the search field's place in it needs iOS 26. It is
 the screen it is written in, wherever in the page that is, and it goes when the element does. A
 presented screen has no navigation controller, so no toolbar. Android has no such bar, and draws
 nothing for either element.
+
+A screen inside a tab bar is not the place for one. From iOS 26, UIKit draws a navigation
+controller's toolbar on the same row as the tab bar and behind it, so its items show only where the
+tab bar does not cover them: a button at each end poking out from under it. That is UIKit's own
+layout, and the same in an app written in Swift. In a tab, put a screen's actions in the header
+with a `<native-header-item>` at the `left` or the `right`, its search in the header's
+[search field](#search), or give search a tab of its own with
+`<native-tab systemItem="search">`.
 
 ## Colors
 
