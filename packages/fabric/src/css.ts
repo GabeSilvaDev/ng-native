@@ -520,7 +520,7 @@ export interface StyleSheet {
  * set. Keeping the two apart is what lets resolution go downwards.
  */
 /** What a node's matched rules come to: shared between nodes that match the same way. */
-type Styled = Pick<StyleCache, 'style' | 'inherited' | 'tokens'>;
+type Styled = Pick<StyleCache, 'style' | 'inherited' | 'tokens' | 'important'>;
 
 export interface StyleCache {
   epoch: number;
@@ -557,6 +557,11 @@ export interface StyleCache {
    * with it, where otherwise an inline style changes nothing a child resolves to.
    */
   heirs?: true;
+  /**
+   * The properties a rule declared `!important`, where any did: an inline style is the last of
+   * the plain declarations, so for these what the rules say stands over it.
+   */
+  important?: ReadonlySet<string>;
 }
 
 /**
@@ -1725,12 +1730,30 @@ export function candidateRules(
   return offered;
 }
 
+/**
+ * The properties the rules matching a node declared `!important`, or nothing where none did:
+ * each by its own name and by the other form of it, so `margin-left` stands over an inline
+ * `marginStart` as it does over an inline `marginLeft`.
+ */
+function importantNames(
+  result: CascadeResult,
+  twin: () => Readonly<Record<string, string>>,
+): ReadonlySet<string> | undefined {
+  const deferred = result.deferred?.filter((one) => one.important) ?? [];
+  if (!result.important && !deferred.length) return undefined;
+  const names = [...Object.keys(result.important ?? {}), ...deferred.flatMap((one) => one.props)];
+  const sided = names.filter((name) => name in TWIN.ltr);
+  return new Set(sided.length ? [...names, ...sided.map((name) => twin()[name]!)] : names);
+}
+
 /** What the rules matching one node add up to. */
 interface CascadeResult {
   readonly declarations: Record<string, unknown>;
   /** The important declarations alone, which a deferred value that is not important cannot beat. */
   readonly important: Record<string, unknown> | null;
   readonly tokens: Record<string, TokenValue> | null;
+  /** The custom properties among `tokens` declared `!important`, which the element's own do not take. */
+  readonly importantTokens: Record<string, TokenValue> | null;
   readonly deferred: DeferredDeclaration[] | null;
 }
 
@@ -2675,7 +2698,12 @@ export class StyleResolver {
 
     // Tokens are in scope for this node's own declarations as well as its descendants', so they
     // are merged before any `var()` here is resolved.
-    const tokens = tokensInScope(parentTokens, result.tokens, node.customProperties);
+    const tokens = tokensInScope(
+      parentTokens,
+      result.tokens,
+      node.customProperties,
+      result.importantTokens,
+    );
 
     const own = result.declarations;
     if (result.deferred) {
@@ -2685,7 +2713,10 @@ export class StyleResolver {
     // `pointer-events: inherit` won the cascade: what the parent hands down stands.
     if (own['pointerEvents'] === 'inherit') delete own['pointerEvents'];
     const style = { ...parentInherited, ...own };
-    return { style, inherited: decorate(style, inheritFrom(parentInherited, own), own), tokens };
+    const inherited = decorate(style, inheritFrom(parentInherited, own), own);
+    const rtl = (style['direction'] ?? this.conditions.direction) === 'rtl';
+    const important = importantNames(result, () => TWIN[rtl ? 'rtl' : 'ltr']);
+    return important ? { style, inherited, tokens, important } : { style, inherited, tokens };
   }
 
   /** The rules that apply to a node, weakest first. */
@@ -2731,6 +2762,7 @@ export class StyleResolver {
       declarations: hasImportant ? { ...normal, ...important } : normal,
       important: hasImportant ? important : null,
       tokens,
+      importantTokens,
       deferred,
     };
   }
@@ -2874,6 +2906,14 @@ export class StyleResolver {
   /** That parent's inline style, which is over what its rules gave it. */
   private parentInline: unknown;
 
+  /** What the parent's inline style sets, under what its rules marked important, as on the parent. */
+  private parentSet(): Readonly<Record<string, unknown>> {
+    if (!this.parentInline) return EMPTY;
+    const inline = flattenInline(this.parentInline, {});
+    for (const prop of this.parentOf?.important ?? []) delete inline[prop];
+    return inline;
+  }
+
   /**
    * `inherit`: each prop as the parent has it, handed down or its own, and gone where the parent
    * has none, which is what a weaker rule's value for it gives way to.
@@ -2884,7 +2924,7 @@ export class StyleResolver {
     parentInherited: Record<string, unknown>,
     important: Record<string, unknown> | null,
   ): void {
-    const inline = this.parentInline ? flattenInline(this.parentInline, {}) : EMPTY;
+    const inline = this.parentSet();
     for (const prop of declaration.props) {
       if (!declaration.important && important !== null && prop in important) continue;
       const value = inline[prop] ?? parentInherited[prop] ?? this.parentOf?.style[prop];
@@ -3104,8 +3144,10 @@ function tokensInScope(
   parentTokens: Readonly<Record<string, TokenValue>>,
   ruleTokens: Readonly<Record<string, TokenValue>> | null,
   custom: Readonly<Record<string, TokenValue>> | null | undefined,
+  important: Readonly<Record<string, TokenValue>> | null = null,
 ): Readonly<Record<string, TokenValue>> {
-  const own = custom ? { ...ruleTokens, ...custom } : ruleTokens;
+  // What the element sets is over its rules' definitions, but for the ones marked important.
+  const own = custom ? { ...ruleTokens, ...custom, ...important } : ruleTokens;
   if (!own || changesNothing(own, parentTokens)) return parentTokens;
   return resolveAliases(own, { ...parentTokens, ...own }, parentTokens);
 }

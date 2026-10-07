@@ -873,6 +873,22 @@ function centreSingleLine(
   props['minHeight'] = Math.max(own as number, Math.min(content, max as number));
 }
 
+const NO_STYLE: Readonly<Record<string, unknown>> = {};
+
+/**
+ * An element's inline style, less each property a rule it matches declared `!important`: an
+ * inline style is the last of the plain declarations, under every important one.
+ *
+ * ponytail: by the name a property is committed under, so an inline `padding` is not taken out
+ * by an important `padding-top`. Expand the inline shorthand here if one is ever written so.
+ */
+function inlineOf(node: EngineNode): Readonly<Record<string, unknown>> {
+  if (!node.props['style']) return NO_STYLE;
+  const inline = flattenStyle(node.props['style'], {});
+  for (const key of node.styleCache?.important ?? []) delete inline[key];
+  return inline;
+}
+
 /**
  * What a container's own style says for `key`, in the order `mergeProps` applies them: a
  * component's override, inline, a prop, its stylesheet, its default.
@@ -880,7 +896,7 @@ function centreSingleLine(
 function ownLayout(node: EngineNode, key: string): unknown {
   return (
     flattenStyle(node.props[STYLE_OVERRIDE], {})[key] ??
-    flattenStyle(node.props['style'], {})[key] ??
+    inlineOf(node)[key] ??
     node.props[key] ??
     node.styleCache?.style[key] ??
     node.defaultStyle?.[key]
@@ -1166,12 +1182,7 @@ const STACK_SCREEN = 'RNSScreen';
 
 /** What an element's `touch-action` is: bound on it, or from the rules it matches. */
 function touchActionOf(node: EngineNode): unknown {
-  const bound = node.props['style'];
-  const inline =
-    bound && typeof bound === 'object' && !Array.isArray(bound)
-      ? (bound as Record<string, unknown>)['touchAction']
-      : undefined;
-  return inline ?? node.styleCache?.style['touchAction'];
+  return inlineOf(node)['touchAction'] ?? node.styleCache?.style['touchAction'];
 }
 
 /** Where a touch is on the screen: its own point, or its first finger's. */
@@ -3616,7 +3627,8 @@ export class Engine implements HostEngine {
   /**
    * Everything a node renders with, unprocessed. Precedence, weakest first: native defaults, the
    * node's `defaultStyle`, matched CSS, explicit props, inline style, a component's
-   * `styleOverride`. Inline wins over CSS for the same reason it does on the web.
+   * `styleOverride`. Inline wins over CSS as it does on the web, but for a declaration marked
+   * `!important`, which stands over it: see `inlineOf`.
    *
    * Raw, because this is what the next commit diffs against. Colours and asset ids are converted
    * on the way out instead (`processed`), and only for the keys that changed: the converters
@@ -3640,10 +3652,9 @@ export class Engine implements HostEngine {
     writeOwnProps(node.props, props, node.attributeOnly);
     withTextContent(node, viewName, props);
     const cascaded = props['transform'];
-    const style = boundTransform(node, flattenStyle(node.props['style'], props), cascaded);
-    if (node.props['style']) {
-      this.styles.overOtherForms(flattenStyle(node.props['style'], {}), style);
-    }
+    const inline = inlineOf(node);
+    const style = boundTransform(node, Object.assign(props, inline), cascaded);
+    if (inline !== NO_STYLE) this.styles.overOtherForms(inline, style);
     nativePointerEvents(node, style, resolved);
     // Before an image's own size: `fit-content` is no size, so the image's is what it gets.
     fitContent(node, style);
@@ -3682,9 +3693,7 @@ export class Engine implements HostEngine {
     if (node.paintsOn) for (const key of PAINT_KEYS) delete merged[key];
     const from = node.parent?.paintsOn === node ? node.parent : null;
     if (!from) return;
-    const paint = flattenStyle(from.props['style'], {
-      ...this.styles.resolve(from, this.styleEpoch).style,
-    });
+    const paint = { ...this.styles.resolve(from, this.styleEpoch).style, ...inlineOf(from) };
     for (const key of PAINT_KEYS) if (paint[key] !== undefined) merged[key] = paint[key];
   }
 
@@ -3740,7 +3749,7 @@ export class Engine implements HostEngine {
     const own = textDirection(props['direction']);
     if (!this.inlineDirection) return own;
     for (let at: EngineNode | null = node; at; at = at.parent) {
-      const inline = textDirection(flattenStyle(at.props['style'], {})['direction']);
+      const inline = textDirection(inlineOf(at)['direction']);
       if (inline) return inline;
       const cascaded = textDirection(at.styleCache?.style['direction']);
       if (cascaded && cascaded !== textDirection(at.parent?.styleCache?.style['direction'])) {
