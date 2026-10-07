@@ -1,3 +1,84 @@
+## 0.7.0 (2026-10-07)
+
+### 🩹 Fixes
+
+- A press no longer restyles the whole screen under a stylesheet that uses Tailwind's `group-active:` or `peer-active:`. ([#653](https://github.com/ng-native/ng-native/pull/653))
+
+  Tailwind writes those as `:is(.group):active .label`, where the element asked about is named inside `:is()`. The engine read a compound with no class of its own as one any element could be, so every element from the pressed one up to the root was restyled with all under it, on touch down and again on release. It now reads the classes inside `:is()` too, and restyles the group alone.
+
+- A press on an element named as one alternative of `:is()` restyles what a rule styles inside it again. ([#655](https://github.com/ng-native/ng-native/pull/655))
+
+  `:is(.group, .card):active .label` lost its pressed style on a `.group` after the last release: only the last alternative was read as the element pressed. Every alternative is.
+
+- `<virtual-list>` and `<section-list>` now fire `endReached` when the rows are shorter than the viewport, and again when a page is appended while the list rests at the end, without waiting for a drag. ([#647](https://github.com/ng-native/ng-native/pull/647))
+
+  `viewableItemsChanged` now reports again when the items change: rows that arrive after the first layout, a filter that leaves fewer rows, or new rows in place of as many old ones.
+
+- A unitless `line-height` in an app's global stylesheet is now a multiple of the element's own font size, whichever rule that size comes from, as CSS has it. ([#638](https://github.com/ng-native/ng-native/pull/638))
+
+  The Tailwind build multiplied the number by the `font-size` written in the same rule and kept the result, so `.icons { font-size: 24px; line-height: 1 }` on an element another rule made `16px` kept a 24-point line: an icon font drawn smaller sat low in its box. Tailwind's own text sizes come to the same points as before. An element that relied on the larger line now has the one CSS gives it.
+
+- A transition of an `opacity` or a `background-color` that no rule sets now runs, from or to the property's initial value (1, and `transparent`), as in a browser. It jumped instead. ([#641](https://github.com/ng-native/ng-native/pull/641))
+
+  `.closed { opacity: 0 }` with `transition: opacity 200ms` on the element fades out and back in without the element also writing `opacity: 1`, and a background colour a class adds eases in from `transparent`. A `@keyframes` list that leaves out its first or last frame for a background colour nothing sets now starts or ends at `transparent` too, where it stepped.
+
+- `transition: all` now eases an `opacity` or a `background-color` that no rule sets from or to its initial value, as a transition that names the property does. `view { transition: all 200ms }` with `.closed { opacity: 0 }` fades out and back, where it jumped. ([#649](https://github.com/ng-native/ng-native/pull/649))
+- A `steps()`, `step-start` or `step-end` easing in an `animation` or `transition` now drops only that declaration, with a warning naming it, and the rest of the rule is kept. It used to drop the whole rule, so a spinner lost its size and a fading dot its opacity. In a rule that names no animation or no transition properties, where each longhand cascades on its own, only the `animation-timing-function` or `transition-timing-function` is dropped, and so is only the `transition-duration` or `transition-delay` list with no `transition-property` beside it. A step `animation-timing-function` inside a keyframe still drops the whole `@keyframes`, so the animation does not play rather than play eased. ([#640](https://github.com/ng-native/ng-native/pull/640))
+- `@ng-native/router` gains a screen's bottom toolbar on iOS: `<native-toolbar>` with `<native-toolbar-item>`s, each a button with an SF Symbol or a title and a `(press)` output, a fixed or fluid spacer, or the place the integrated search field goes, so buttons can sit either side of it. ([#658](https://github.com/ng-native/ng-native/pull/658), [#657](https://github.com/ng-native/ng-native/issues/657))
+
+  react-native-screens has no toolbar, so the two elements commit as Expo Router's native toolbar views: an app that uses them installs `expo-router` for its native half, with `npx expo install expo-router`. None of its JavaScript is imported, and Expo Go has it built in. The toolbar needs iOS 18, and the search field's place in it iOS 26. Android draws nothing for either element.
+
+- A transition turned back part way now takes as long to return as it had been going, as in a browser. It took its full duration, so a press fade released half way through came back at half speed. ([#643](https://github.com/ng-native/ng-native/pull/643))
+- A colour transition or `@keyframes` animation now mixes the two colours in premultiplied alpha, as a browser does. Halfway from `transparent` to red is red at half opacity, where it was a dark red, and a colour at part opacity pulls the mix less than an opaque one does. ([#642](https://github.com/ng-native/ng-native/pull/642))
+- `max-content` is read as a size: `width` and `height` as `fit-content`, and `max-width` and `max-height` as a cap that keeps a box that would fill its container to its content. ([#654](https://github.com/ng-native/ng-native/pull/654))
+
+  Tailwind's `w-max`, `h-max`, `max-w-max` and `max-h-max` were dropped with a warning. A box is as big as its content along its container's main axis already, so `max-content` is the same as `fit-content` here. A `max-width: max-content` beside a width in points leaves the width as written, since the content is not measured. `min-content`, and `max-content` as a minimum, are still refused.
+
+- A `nativeRouterLink` to a url that is already on the stack pushes a new screen over it, as `NativeNavigation.push()` does, and Back returns to the page the link was on, where the press popped back to the earlier screen and destroyed everything above it. A link whose `[extras]` set `replaceUrl: true` replaces the screen as the `replace` attribute does, rather than leaving the replaced screen mounted under one its history entry no longer leads back to. ([#645](https://github.com/ng-native/ng-native/pull/645))
+- `NativeNavigation.reset()`, `replace()` and `present()` to a page whose guard redirects, by returning a `UrlTree`, do to the page it redirects to what they were asked to do. A reset to a page whose guard sends a signed-out user to `/login` left the old stack under the sign-in page, a replace pushed it over the screen it was meant to replace, and a presentation pushed it instead of presenting it. A reset to the url already showing, or one a guard redirects there, takes the screens under it off the stack too, where the router skipped it and left them. ([#646](https://github.com/ng-native/ng-native/pull/646))
+- A unitless `line-height` is inherited as the number, as on the web. Under `.card { font-size: 10px; line-height: 2 }`, a text with `font-size: 20px` now has lines 40 points tall, where it took the card's 20. The same goes for a number in the `font` shorthand, `font: 10px/2 serif`, and for one held in a custom property. A percentage or an `em` is still worked out where it is written, and those points are what a descendant inherits. ([#639](https://github.com/ng-native/ng-native/pull/639))
+- A single-line text field whose `min-height` is `auto` now has its text centred by its line height on iOS, as a field with no `min-height` has. ([#644](https://github.com/ng-native/ng-native/pull/644))
+
+  The centring was skipped for any `min-height` that was not a number, `auto` included, which left the text 3 to 5 points low in the field. `auto` is no minimum of the field's own.
+
+- On iOS a single-line text field in a row with `align-items: baseline` now sits on the same baseline as the text beside it. ([#650](https://github.com/ng-native/ng-native/pull/650))
+
+  The field's text is centred in its line by leaving `lineHeight` out, which left the field saying its baseline was the font's own: higher than a paragraph's in a line as tall, so the row lifted the text beside the field by the difference, about 2.5 points for 16-point text in a 24-point line. Half the room the line has over the font is now kept as padding over and under the field's text. The field is as tall as before; its `paddingTop` and `paddingBottom` are larger by that half where it is in such a row.
+
+- A `ui-bottom-sheet` shows the system's close button on iOS: a `<ui-toolbar-item>` written inside it goes in a toolbar across the top of the sheet, and `<ui-button role="close">` in one is the button iOS 26 draws itself. ([#656](https://github.com/ng-native/ng-native/pull/656), [#652](https://github.com/ng-native/ng-native/issues/652))
+
+  `@ng-native/expo` gains `UiNavigationStack`, `UiToolbar` and `UiToolbarItem` for SwiftUI's `NavigationStack`, `toolbar` and `ToolbarItem`, registered as `ui-navigation-stack`, `ui-toolbar` and `ui-toolbar-item`, and `UiButton`'s `role` takes `close`. They are iOS only and need `@expo/ui` 57.0.20 or later in the native build. Android's sheet has no toolbar and draws no item, and an iOS build without the views, as Expo Go can be, warns and shows the sheet without one.
+
+- A debug build no longer stops with "Attempt to mutate a sealed object" when a row with `align-items: baseline` is laid out again and one of its boxes holds text. ([#637](https://github.com/ng-native/ng-native/pull/637))
+
+  The text a baseline row takes a baseline from, where it is inside one of the row's boxes, is now measured again in every commit that commits the row again. Release builds were not affected: the assertion is compiled into debug builds only.
+
+- Fix four things in the Markdown and Analog support: ([#648](https://github.com/ng-native/ng-native/pull/648))
+
+  - `<markdown>` no longer breaks a paragraph where its source wrapped a line. A line break in a paragraph is a space, as CommonMark reads it; two spaces or a backslash at the end of a line still break the text there.
+  - `<markdown>` decodes every named HTML entity, such as `&rarr;`, `&eacute;`, `&euro;` and `&hearts;`, not only a short list of common ones.
+  - `injectContent()` and `contentFileResource()` from `@ng-native/analog` find a file whose slug has a space or an accent in it by the encoded slug `injectContentFiles()` lists it with, so a link to `post.slug` opens the post, as in Analog.
+  - `fileRoutes` tries a dotted static page such as `users.new.page.ts` before a `users` folder whose `[id].page.ts` would take `new`, as Analog does.
+
+- Fix four things in the Markdown and Analog support: ([#648](https://github.com/ng-native/ng-native/pull/648))
+
+  - `<markdown>` no longer breaks a paragraph where its source wrapped a line. A line break in a paragraph is a space, as CommonMark reads it; two spaces or a backslash at the end of a line still break the text there.
+  - `<markdown>` decodes every named HTML entity, such as `&rarr;`, `&eacute;`, `&euro;` and `&hearts;`, not only a short list of common ones.
+  - `injectContent()` and `contentFileResource()` from `@ng-native/analog` find a file whose slug has a space or an accent in it by the encoded slug `injectContentFiles()` lists it with, so a link to `post.slug` opens the post, as in Analog.
+  - `fileRoutes` tries a dotted static page such as `users.new.page.ts` before a `users` folder whose `[id].page.ts` would take `new`, as Analog does.
+
+- Fix four things in the Markdown and Analog support: ([#648](https://github.com/ng-native/ng-native/pull/648))
+
+  - `<markdown>` no longer breaks a paragraph where its source wrapped a line. A line break in a paragraph is a space, as CommonMark reads it; two spaces or a backslash at the end of a line still break the text there.
+  - `<markdown>` decodes every named HTML entity, such as `&rarr;`, `&eacute;`, `&euro;` and `&hearts;`, not only a short list of common ones.
+  - `injectContent()` and `contentFileResource()` from `@ng-native/analog` find a file whose slug has a space or an accent in it by the encoded slug `injectContentFiles()` lists it with, so a link to `post.slug` opens the post, as in Analog.
+  - `fileRoutes` tries a dotted static page such as `users.new.page.ts` before a `users` folder whose `[id].page.ts` would take `new`, as Analog does.
+
+### ❤️ Thank You
+
+- Ashley Hunter
+- erKam @erkamyaman
+
 ## 0.6.0 (2026-10-07)
 
 ### 🚀 Features
