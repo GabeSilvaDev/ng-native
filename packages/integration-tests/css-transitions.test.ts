@@ -512,7 +512,85 @@ describe('running a transition', () => {
     `);
     s.classes('on');
     s.tick(50);
-    assert.match(String(s.painted('backgroundColor')), /^rgba\(\d+, 0, 0, 0\.5\)$/, 'half opaque');
+    // Mixed with its alpha multiplied in, as a browser does: red at half strength, not a dark red.
+    assert.equal(s.painted('backgroundColor'), 'rgba(255, 0, 0, 0.5)');
+  });
+
+  it('eases a white background in without passing through grey', () => {
+    const s = scene(`
+      view { transition: background-color 100ms linear; }
+      view.on { background-color: rgb(255, 255, 255); }
+    `);
+    s.classes('on');
+    s.tick(50);
+    assert.equal(s.painted('backgroundColor'), 'rgba(255, 255, 255, 0.5)');
+  });
+
+  it('fades from the opacity nothing set under transition: all', () => {
+    // `all` names no property, and one the element does not set is still one it transitions.
+    const s = scene(`
+      view { transition: all 100ms linear; }
+      view.closed { opacity: 0; }
+    `);
+    s.classes('closed');
+    s.tick(50);
+    assert.equal(s.painted('opacity'), 0.5, 'halfway from 1');
+  });
+
+  it('stops a fade whose transition and opacity both go away at once', () => {
+    // Neither the element nor a transition names the property any more, and it is still one in
+    // flight: left alone it ran on with no rule, and ended with an event nobody asked for.
+    const s = scene(
+      `
+      .eased { transition: all 100ms linear; }
+      .closed { opacity: 0; }
+    `,
+      'eased',
+    );
+    s.classes('eased closed');
+    s.tick(50);
+    assert.equal(s.painted('opacity'), 0.5);
+    s.classes('');
+    s.tick(10);
+    assert.equal(s.engine.animating, false, 'nothing left in flight');
+    assert.equal(s.painted('opacity') ?? null, null);
+  });
+
+  it('does the same where a property is named beside all', () => {
+    const s = scene(`
+      view { transition: all 100ms linear, width 200ms linear; }
+      view.closed { opacity: 0; }
+    `);
+    s.classes('closed');
+    s.tick(50);
+    assert.equal(s.painted('opacity'), 0.5);
+  });
+
+  it('fades back to it under transition: all, and out again', () => {
+    const s = scene(
+      `
+      view { transition: all 100ms linear; }
+      view.closed { opacity: 0; }
+    `,
+      'closed',
+    );
+    s.classes('');
+    s.tick(50);
+    assert.equal(s.painted('opacity'), 0.5, 'halfway to 1');
+    s.tick(50);
+    s.classes('closed');
+    s.tick(50);
+    assert.equal(s.painted('opacity'), 0.5, 'halfway back to 0');
+  });
+
+  it('eases a background colour nothing set in under transition: all', () => {
+    const s = scene(`
+      view { transition: all 100ms linear; }
+      view.on { background-color: red; }
+    `);
+    s.classes('on');
+    s.tick(50);
+    assert.equal(s.painted('backgroundColor'), 'rgba(255, 0, 0, 0.5)');
   });
 
   it('leaves a property with no transition to jump', () => {
