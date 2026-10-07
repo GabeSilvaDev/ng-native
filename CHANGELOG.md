@@ -1,3 +1,194 @@
+## 0.6.0 (2026-10-07)
+
+### 🚀 Features
+
+- An element that is `display: none` has no native view, nor has anything inside it; before, its views stayed mounted and were not displayed. ([#604](https://github.com/ng-native/ng-native/pull/604), [#587](https://github.com/ng-native/ng-native/issues/587))
+
+  What a view holds of its own, such as a scroll offset, is no longer kept across a spell of `display: none`: the views are made again when the element is displayed. To keep a view while it is out of sight, take it out of the flow and give it no opacity (`position: absolute; opacity: 0; pointer-events: none`), which is how `<virtual-list>` now keeps its recycled rows. A debug build no longer stops on React Native's layout assertion for a hidden view. In `@ng-native/testing`, a `display: none` element is not found by any query, `includeHiddenElements` or not, and a view with no opacity that takes no touch counts as hidden.
+
+- `@ng-native/analog`, a new package, routes an app with Analog's file-based pages: the pages in `src/app/pages`, found by Metro's `require.context` and routed by `createRoutes` from `@analogjs/router` itself, on a native stack. ([#509](https://github.com/ng-native/ng-native/pull/509))
+
+  `pageRoutes(pages)` takes the `require.context` of the pages, or an `import.meta.glob` of them in a Vitest test, and returns the routes for `provideNativeRouter`, with `[id]` parameters, `(group)` folders, layouts and each page's `routeMeta` as Analog has them. `withAnalog(config)` from `@ng-native/analog/metro` turns on `require.context` and resolves `@analogjs/router`'s import of `@analogjs/content`, which only a Markdown page needs, to an empty module, so the bundle leaves it out whether or not the package manager installed it. `examples/analog` is a showroom of each of these features.
+
+- `@ng-native/analog` reads Analog's content files and routes its Markdown pages on native. `provideContentFiles(require.context('../content', true, /\.md$/))` feeds `injectContent`, `injectContentFiles`, `contentFilesResource` and `contentFileResource`, named and shaped as `@analogjs/content` has them, with each file's `tokens` for `<markdown>`. A `.md` file in `src/app/pages` is a page, titled by its front matter, drawn by the component given as `pageRoutes(pages, { markdownPage })`, which reads its file with `injectMarkdownPage()`: `@ng-native/router`'s, under the same route data key, so one component draws a `.md` page under `fileRoutes` and `pageRoutes` alike. `rxjs` and `@ng-native/router` are new peer dependencies. ([#509](https://github.com/ng-native/ng-native/pull/509))
+- `fileRoutes(pages)` in `@ng-native/router` routes an app by its files, with no Analog: each file in `src/app/pages`, found by Metro's `require.context` or, in a Vitest test, an `import.meta.glob`, is the page at the URL its path names, with Analog's file names (`index.page.ts`, `[id].page.ts`, `[...slug].page.ts` with the rest of the URL as `slug`, `(group)` folders, `blog.[slug].page.ts`, and `products.page.ts` as the layout of `products/`), each page's default export and `routeMeta`, and `.md` pages drawn by the component given as `fileRoutes(pages, { markdownPage })`, which reads its file with `injectMarkdownPage()`. `MARKDOWN_PAGE` and `markdownPageFile` are exported for a package that routes `.md` pages itself, as `@ng-native/analog`'s `pageRoutes` does. Pages from a lazy context load on their first navigation, static paths are tried before parameters and catch-alls, a `canMatch` that refuses a page passes it over to the next route, and two files at one URL or a malformed name throw at startup, naming the files. `examples/markdown` is routed this way. ([#509](https://github.com/ng-native/ng-native/pull/509))
+- A `.md` file is a module in any app bundled with `withAngularNative`: `import post from './post.md'` is `{ attributes, content, tokens }`, its front matter parsed with `front-matter` and its Markdown lexed by `marked` as the app is bundled, each token without its `raw` source text, so `<markdown [tokens]="post.tokens">` parses nothing on the device. `marked` is a new optional peer dependency of `@ng-native/metro`, needed only when the app has a `.md` file; a new version of it rebuilds every cached one. `"types": ["@ng-native/metro/markdown"]` types the import, and `MarkdownFile` from `@ng-native/metro/markdown-file` names its attributes. The `ngNative()` Vitest plugin and the `@ng-native/testing/register` hook import a `.md` file the same way, and the plugin leaves one to a Vite plugin ahead of it that already made the file a module. ([#509](https://github.com/ng-native/ng-native/pull/509))
+- `<markdown>`, from the new `@ng-native/components/markdown` entry point, draws a Markdown document as native text and views: headings, paragraphs with nested emphasis, code spans and links, quotes, ordered, unordered and task lists, code blocks in a horizontal scroll view, rules, tables and images. It parses with `marked`, a new optional peer dependency the main entry point never imports. `source` takes the Markdown and `tokens` takes tokens lexed already; `classes` replaces an element's default `md-*` class; `(linkPress)` reports a pressed link, and an absolute one is opened with `DeepLinks.open` unless the handler calls `preventDefault()`. Raw HTML is drawn as text, links are followed only to `http`, `https`, `mailto`, `tel` and relative targets, and images load only over `http` and `https`. ([#509](https://github.com/ng-native/ng-native/pull/509))
+- Every component library's own CSS is compiled into native sheets with nothing to configure, in the Metro preset and in the Vitest plugin; before, a library drew unstyled unless its package was listed in `libraryStyles`. A list in `libraryStyles` still names the only packages compiled, so a config that has one builds as it did. An app with no list now gets each library's styles, and one build warning for each library file that drops something native cannot express; set `libraryStyles: false` to compile none but the `@ng-native/*` packages', as before. ([#592](https://github.com/ng-native/ng-native/pull/592))
+
+### 🩹 Fixes
+
+- A component whose CSS is not scoped (`ViewEncapsulation.None`) styles again only the views its rules could match the first time it renders, where every view in the app was styled again. On a screen of several hundred views that is the difference between a menu opening at once and after a visible pause. ([#572](https://github.com/ng-native/ng-native/pull/572))
+- A component whose CSS is not scoped and names a cascade layer, as the CDK's overlay styles do, no longer has every view in the app styled again when it first renders, nor does one whose views join the tree in the same commit as its sheet. The first menu, select or dialog to open on a screen waited several hundred milliseconds for that. ([#575](https://github.com/ng-native/ng-native/pull/575))
+- `LayoutAnimation.animate()` animates its own change while a CSS transition or animation driven from JavaScript is playing, where the change landed in one step and a frame of the other animation took the configured animation. ([#624](https://github.com/ng-native/ng-native/pull/624))
+
+  `animate()` now runs change detection and commits the change before it returns, and configures the animation as that commit is handed to the platform. A change that commits nothing configures nothing, so a later unrelated commit is no longer animated in its place, and the promise resolves at once. A change made after `animate()` returns, rather than inside the function passed to it, lands in a later commit and is not animated.
+
+- The `@ng-native/metro` config plugin takes an `android.layoutAnimations` option that makes `LayoutAnimation.animate()` animate on Android, where every layout change otherwise lands in one step. ([#622](https://github.com/ng-native/ng-native/pull/622), [#569](https://github.com/ng-native/ng-native/issues/569))
+
+  React Native 0.86 ships its `enableLayoutAnimationsOnAndroid` feature flag off, and with it off Fabric never hands a commit to the driver that plays a layout animation. With `["@ng-native/metro", { "android": { "layoutAnimations": true } }]` in `app.json`, the plugin turns the flag on in the `MainApplication.kt` that `expo prebuild` writes. The option is off by default, and without it the Android project is as `expo prebuild` wrote it. Expo Go on Android is built with the flag off and does not animate; iOS is unchanged.
+
+- A row whose place in a list changed keeps its style, and everything under it is left alone, where it still matches the rules it did. ([#625](https://github.com/ng-native/ng-native/pull/625), [#588](https://github.com/ng-native/ng-native/issues/588))
+
+  A row added or removed under a stylesheet that counts its children (`:nth-child()`) or asks about earlier ones (`~`, which is every Tailwind `peer-*` variant) had every row its place could reach styled again, and everything under each. Those rows are now matched again, and one that matches the rules it did keeps its style and its subtree. A 300-row list of nine views a row gaining a row at its start goes from about 15ms to 0.8ms under `.row ~ .row` and from 19ms to 4ms under `.row:nth-child(3)`, in Node with V8's optimising tiers off. A list whose every row matches differently after the change, as stripes from `:nth-child(odd)` do, costs what it did. So does one under a rule that reads a row's place from inside the row, such as `.row:nth-child(odd) .label` or `.a + .b .c`: the rows such a rule could mean are styled again with everything under them, as before.
+
+- `inherit` is taken for a property that has a value a child can simply have: `border-radius` and its corners, `width`, `height` and their limits, the font properties, `letter-spacing`, `text-align`, `text-transform`, `background-color` and `opacity`. The element has its parent's value, and none where the parent has none. It was refused as a CSS-wide keyword, so `border-radius: inherit` on a layer over a button left the layer square, and Tailwind's `bg-inherit` did nothing. For any other property it is still refused with a warning. ([#561](https://github.com/ng-native/ng-native/pull/561))
+- A declaration a stylesheet marks `!important` now stands over the same property in an element's inline style, as it does in a browser. ([#633](https://github.com/ng-native/ng-native/pull/633))
+
+  Before, an inline style won over every rule, so `.measuring { height: auto !important }` did nothing on an element with a `[style.height]` binding. An element that relied on its inline style beating an `!important` rule now takes the rule's value: drop the `!important`, or mark the inline value's rule the same way.
+
+- Hot reload keeps the app's state and its route for far more edits, where only a template or a style edit did. An edited method, getter or lifecycle hook is patched onto the live component, service or directive, and an edited function onto every module that calls it; a template or a `computed` that called one shows the result at once. An edit that still needs a full reload, to a field, a constructor, a constant or a route file, comes back on the page it left with its back stack, where it returned to the first route. In Expo Go on Android such an edit now reloads the app, where it was dropped and the app went on running the code from before it. A file two lazy routes share no longer reloads the app for an edit that could be applied. ([#600](https://github.com/ng-native/ng-native/pull/600))
+- A field that already has the focus does not hear a second `focus` event for it. ([#603](https://github.com/ng-native/ng-native/pull/603))
+
+  A `topFocus` for the node the engine already holds as focused is dropped before any listener runs, so a focus dispatched from JavaScript and native's answer to it are one event. A focus after a blur, or on another field, is heard as before.
+
+- A `flex-basis` that changes after a view is first laid out is followed, and a percentage `flex-basis` follows the box it is a share of. ([#613](https://github.com/ng-native/ng-native/pull/613))
+
+  React Native works a `flexBasis` out once for a view and never again when its props change, so a bar bound from `flex-basis: 100%` to `60%` stayed at full width. A `flex-basis` that is a length or a percentage is now committed as the size it is along its container's main axis, a `width` in a row and a `height` in a column, which React Native reads on every layout and takes as the basis. A basis of `0` (`flex: 1`) and `auto` are committed as before. A view reading its committed props sees `width` or `height` where it saw `flexBasis`.
+
+- A token that falls back to a value with several parts is read for two more properties: `border-radius: var(--r, 50% 50% 50% 0)` gives each corner its own radius, and `transform: var(--t, translateX(-50%) rotate(-45deg))` takes the list. The first gave every corner the token and no fallback, without a warning; the second was dropped with one. ([#591](https://github.com/ng-native/ng-native/pull/591))
+- `UiBottomSheet` in `@ng-native/expo/expo-ui-components` opens the system's sheet from any component, with no route: `<ui-bottom-sheet [(open)]="open" fitToContents>` is SwiftUI's sheet on iOS and Material's on Android, and what is written inside it is the app's own components. ([#621](https://github.com/ng-native/ng-native/pull/621), [#576](https://github.com/ng-native/ng-native/issues/576))
+
+  It type-checks in a strict template, where `<ui-bottom-sheet>` on its own is an unknown element. `open` presents and dismisses the sheet and is written back when the user dismisses it, `dismissed` is emitted once the sheet has finished closing, `fitToContents` makes it as tall as its content rather than resting at half height, `detents` sets the heights it rests at on iOS (`'medium'`, `'large'`, `{ fraction }` or `{ height }`, as SwiftUI's `presentationDetents`; Android takes no notice of it), and `showDragIndicator` hides the grabber. The component mounts the sheet as each platform needs and wraps the content in the `ui-host` and `ui-view-host` a sheet's content takes, at the window's width.
+
+  `registerExpoUiViews` now also registers the sheet's native view as `ui-bottom-sheet-view`, the name the component's template uses. `<ui-bottom-sheet>` in a template that does not import `UiBottomSheet` is the native view, as before.
+
+  `UiGroup` types SwiftUI's `Group` (`<ui-group>`, iOS only), which carries modifiers for the views inside it.
+
+- One of HTML's text elements with nothing in it is a view, where it was a paragraph with no text. ([#610](https://github.com/ng-native/ng-native/pull/610), [#584](https://github.com/ng-native/ng-native/issues/584))
+
+  `<span class="dot"></span>` styled as an 8 by 8 box was committed as an empty paragraph, which is not sized or painted as the box it is styled as. An empty `span`, `p`, `label` or other text element is now a view, as it is where it holds an element, and becomes a paragraph when it is given text. `<text>` is a paragraph whatever it holds.
+
+- `:empty` matches an element whose only child is a text node with no characters, which is what `<span>{{ label }}</span>` holds while `label` is empty, and the element is restyled when the text gets its first character or loses its last. Any text node, an empty one included, used to stop the match. ([#571](https://github.com/ng-native/ng-native/pull/571))
+- An animation whose keyframes hold nothing no longer commits a frame for as long as it runs. ([#618](https://github.com/ng-native/ng-native/pull/618))
+
+  A `@keyframes` whose only declarations are refused at build time, as one with a `var()` in it is, left an animation with nothing to paint that was still restyled and committed on every frame, forever where it is `infinite`. It now commits nothing while it plays, its `animationstart` and `animationend` are sent as before, and one that never ends leaves the frame loop nothing to run for.
+
+- A `color-mix()` whose share is a token, `color-mix(in srgb, var(--ink) calc(var(--share) * 100%), transparent)`, mixes by the token's value where the rule applies, on its own and as the fallback of another token. It was dropped with a warning, so the colour was never set. ([#565](https://github.com/ng-native/ng-native/pull/565))
+- A class set on an element restyles only what the stylesheet rules that name the class are written for, where it restyled the element and everything under it. ([#596](https://github.com/ng-native/ng-native/pull/596))
+
+  A class in no rule restyles nothing, and one named only as what a rule's element is inside, as `.busy .row` names `busy`, restyles the elements under it those rules are for. A component library that marks an overlay while it animates no longer restyles the whole overlay each time: opening Angular Material's datepicker restyled its 300 views twice over for two such classes. What is drawn is unchanged.
+
+- A text element that is a flex container and holds one text element places it, as it places a run of text. ([#608](https://github.com/ng-native/ng-native/pull/608), [#585](https://github.com/ng-native/ng-native/issues/585))
+
+  `<span class="content"><span class="label">First</span></span>` with `display: flex; align-items: center; height: 48px` on the outer span was committed as one paragraph, so the label sat at the top. The outer span is now a view around the inner one's paragraph, which the alignment centres, and is one paragraph again once it stops aligning.
+
+- A border side styled `none` has no width whatever width another rule gives it, as CSS computes it: `border-right: none` under a later `border-width: 1px` drew the side. Each side's style is kept through the cascade, so a rule that styles the side again draws it again, and `border-top-style`, `border-right-style`, `border-bottom-style` and `border-left-style` are supported where they were dropped with a warning. ([#560](https://github.com/ng-native/ng-native/pull/560))
+- A row with `align-items: baseline` keeps its height, and places what is in it, where an item's first box has `display: none`. Yoga read the item's baseline from the hidden box, which has no layout, so the row came to no height and nothing in it was drawn. ([#568](https://github.com/ng-native/ng-native/pull/568))
+- `@media (prefers-reduced-motion)` with no value is read as `(prefers-reduced-motion: reduce)`. ([#615](https://github.com/ng-native/ng-native/pull/615), [#586](https://github.com/ng-native/ng-native/issues/586))
+
+  The rule was dropped with a warning that named `prefers-reduced-motion` as a feature a device cannot answer, in a list of the ones it can. A media feature with no value is true for any value but its "none", which for the motion asked for is `reduce`. `prefers-color-scheme` and `orientation` with no value are still refused, and the warning now says it is the missing value that is not read.
+
+- `background: inherit` is now the parent's background colour, where it was dropped with a warning. ([#636](https://github.com/ng-native/ng-native/pull/636))
+
+  `background-color: inherit` already was; the shorthand is taken the same way, for the colour, which is the part of a background a view has a value of to hand on. A box that relied on `background: inherit` doing nothing now takes its parent's colour.
+
+- `aspect-ratio` is now left out for a box that has both a width and a height, as CSS has it: the ratio only works out a size that is `auto`. ([#634](https://github.com/ng-native/ng-native/pull/634))
+
+  Before, the ratio was committed with both sizes and Yoga took it over one of them: a box `24px` by `10px` with `aspect-ratio: 1 / 2` was 5 by 10 in a column and 24 by 48 in a row. A box that relied on the ratio beating a size it was given now takes the size: drop the size the ratio should work out, or set it to `auto`.
+
+- An `animation` shorthand whose duration is a `calc()` on a token is read. ([#607](https://github.com/ng-native/ng-native/pull/607), [#582](https://github.com/ng-native/ng-native/issues/582))
+
+  `animation: spin calc(2000ms * var(--speed, 1)) linear infinite` was dropped with "'animation' mixes var() with other values". The shorthand is now read with that time left out, and the time as `animation-duration` reads one, so the animation plays over the time the token scales it to.
+
+- An element whose exit animation ends is no longer seen back at rest for a frame before its `animationend` listener removes it. ([#628](https://github.com/ng-native/ng-native/pull/628))
+
+  An animation with no `forwards` fill ended by committing the element's resting style, and its `animationend` was delivered after that commit, so an overlay that fades out and is removed on `animationend` flashed fully opaque for one frame. An ended animation that something listens to now keeps its last frame for that commit, and the element goes back to rest once the listener has run and left it in the tree. With no listener it is back at rest at once, as before.
+
+- A transform is eased into a longer or shorter list of functions that starts the same way. ([#606](https://github.com/ng-native/ng-native/pull/606))
+
+  `transform: translateY(4px)` to `translateY(8px) scale(0.5)` jumped to its end state, because lists of different lengths were not interpolated. The shorter list is now padded with the longer one's functions at rest, as CSS has it, so the functions gained ease in from their identity and the ones lost ease out toward it. Lists that start with different functions still step.
+
+- `touch-action` is read. On iOS 26 and later, a touch that starts on an element with `touch-action: pan-y` or `none`, or on anything inside one, holds the screen's swipe back off until the finger lifts, so a slider or anything else dragged sideways keeps its drag without the screen being opened with `fullScreenSwipeEnabled: false`. Tailwind's `touch-none`, `touch-auto` and `touch-manipulation` are read with it; the `touch-pan-*` utilities, which Tailwind composes from tokens, are still dropped, with a warning that says to write the value. A drag that sets off across such an element is also kept from a scroll view it is in, so a slider in a page that scrolls keeps its drag when the finger drifts up or down. ([#590](https://github.com/ng-native/ng-native/pull/590))
+- A stylesheet with a rule that gives every element the same custom properties, as Tailwind's base rule does, no longer has each element's custom properties copied. ([#632](https://github.com/ng-native/ng-native/pull/632))
+
+  Tailwind writes `--tw-translate-x: 0`, `--tw-blur: initial` and about forty more on `*`, so every element defined custom properties and each one copied the whole map in scope, a few hundred entries with a theme loaded, though almost none changed what its parent had. An element whose own definitions leave every custom property as its parent has it is now handed the parent's map. Mounting a page of about 1,100 views went from about 193ms to about 151ms in Node. What a `var()` reads does not change.
+
+- `rows` on a multiline `<text-input>` sizes it: that many lines of its line height, with its padding and border. ([#609](https://github.com/ng-native/ng-native/pull/609), [#580](https://github.com/ng-native/ng-native/issues/580))
+
+  A multiline field with `rows="3"` and nothing typed was one line tall, because native sizes a field by its text. A multiline field with `rows`, a `line-height` and no height of its own is now given that height, as a browser sizes a `<textarea>`. A height written for the field still wins.
+
+- `ngNative()` from `@ng-native/testing/vitest` takes `libraryStyles`, the list of npm packages the Metro preset takes by the same name, and compiles those packages' component stylesheets in a test. Without it a library's components drew with no styles under Vitest, whatever the app's Metro config named. ([#563](https://github.com/ng-native/ng-native/pull/563))
+- `light-dark()` in a stylesheet built with the Tailwind preset is the two colour schemes it names. It was lowered to a pair of `var()`s the compiler drops, so a custom property written with it, as every colour of an Angular Material theme is, had no value, and a declaration written with it was dropped with a warning. ([#559](https://github.com/ng-native/ng-native/pull/559))
+- A screen of a component library's components is styled faster on its first render. ([#630](https://github.com/ng-native/ng-native/pull/630))
+
+  A library adds a stylesheet for each of its components as the component first renders, and each one had every stylesheet filed again, for every pair of component sheets on the screen. Each sheet's rules are now filed once and a later sheet is added to what is there. A rule that names no class, id or element of its own but says whose child it is, `.row > *`, or is a bare `:is(.a, .b)`, is offered only to the elements it could match, where it was tried against every element. Mounting a page of about 1,100 views from Angular Material went from about 305ms to about 208ms in Node. What an element is styled with does not change.
+
+- `margin: var(--gap, 0 24px)` and `padding: var(--gap, 1px 2px 3px 4px)` use the fallback, each side taking its own part of it, where the token is not set. A fallback with more than one value was discarded with no warning, leaving the box with no margin or padding at all. ([#562](https://github.com/ng-native/ng-native/pull/562))
+- A list gaining or losing a row no longer has every row styled again where the stylesheets only ask which element is first and which is last. ([#616](https://github.com/ng-native/ng-native/pull/616))
+
+  With a `:first-child`, `:last-child`, `:only-child` or `:not(:last-child)` rule in any stylesheet, which Tailwind's `space-y-*` and `divide-y` are, a change to a child list restyled the parent and every child, and everything under them. Now only the two elements at each end are styled again, and the parent only when it stops or starts being empty. A 300-row list gaining a row goes from about 3.4ms to 0.15ms in Node. A stylesheet that counts (`:nth-child(odd)`) or asks about a neighbour (`+`, `~`) still has every child styled again.
+
+- A list gaining or losing a row under a stylesheet that counts its children has only the rows the change can reach styled again. ([#620](https://github.com/ng-native/ng-native/pull/620))
+
+  With an `:nth-child()` rule in any stylesheet, or one that asks about the element before (`+`, `~`), a change to a child list restyled every child and everything under them. A row's place from the start hangs only on the rows before it, so now only the rows from the change on are styled again, with the two at each end: a row added at the end of a striped list restyles none of the rows before it. An `:nth-last-child()` rule is the other way about, and reaches the rows before the change. A 300-row list of nine views a row, striped with `:nth-child(odd)`, gaining a row at its end goes from about 19ms to 0.45ms in Node with V8's optimising tiers off, and one in the middle from 19ms to 9.4ms. A row added at the start still restyles every row, as do stylesheets that between them count from both ends.
+
+- A side of a `padding`, `margin`, `inset` or `gap` shorthand that is a `calc()` of more than one step around a `var()` is worked out. ([#602](https://github.com/ng-native/ng-native/pull/602))
+
+  `padding: calc((var(--height, 72px) - 24px) / 2) 24px` was refused with a warning and the whole declaration dropped, where the same `calc()` in `padding-top` was worked out. A shorthand side now takes the sum the longhand takes, and follows the token being set and unset.
+
+- `opacity` in a `::placeholder` rule fades the placeholder's colour, so `opacity: 0` hides a placeholder and `opacity: 1` shows it again. It was dropped with a warning, which left a placeholder a stylesheet hides drawn over whatever was meant to show in its place. ([#567](https://github.com/ng-native/ng-native/pull/567))
+- A translate is eased between a percentage and a length, in a transition and between keyframes. ([#619](https://github.com/ng-native/ng-native/pull/619), [#606](https://github.com/ng-native/ng-native/issues/606), [#583](https://github.com/ng-native/ng-native/issues/583))
+
+  `transform: translateY(-50%)` to `translateY(-34px) scale(0.75)`, as Material's floating label moves, stepped to its end, because a share of the box and a length are not on one scale. So did `translateY(100%)` to `translateY(0)`, a zero with no unit being a length. The frames between are now two translates along the axis, `translateY(-25%) translateY(-17px)` halfway, which add up to the `calc(-25% - 17px)` a browser eases through whatever size the box is; where one of the two is nothing, the frame is the other alone. A transition turned round part way carries on from the frame it had reached. The `translate` property is eased the same way. Keyframes that go from one to the other are played from JavaScript, as any keyframes with a percentage translate are.
+
+- `height: 100%` under a parent stretched across a row that is as tall as its content is no height, where it was the height of the screen. ([#611](https://github.com/ng-native/ng-native/pull/611), [#579](https://github.com/ng-native/ng-native/issues/579))
+
+  A box stretched across a row counted as having a height a percentage could be taken of, whether or not the row had one. Under a row sized by its content, Yoga then took the percentage of the space on offer: the screen, or everything a scroll view holds. The percentage is now kept only where the row has a height of its own, and the box is otherwise as tall as what it holds, as in a browser.
+
+- A percentage height on an absolutely positioned box is kept where the box that holds it has no height written. ([#612](https://github.com/ng-native/ng-native/pull/612), [#578](https://github.com/ng-native/ng-native/issues/578))
+
+  `position: absolute; height: 100%` under a parent sized by its content had its height removed, as a percentage height in the flow is, so the box had no height. A box out of the flow takes the percentage of the box that holds it, which is laid out first, so the percentage is now left for Yoga to resolve.
+
+- A view that is pressed and has `opacity: 0` takes the press on iOS, as it does on Android and in a browser. iOS sends no touch to a view whose alpha is under a hundredth, so a see-through layer laid over the page to hear a press, such as the backdrop behind a menu, heard nothing and the press went to what was under it. ([#574](https://github.com/ng-native/ng-native/pull/574))
+- `outline: none`, and any other outline of no width, is no longer sent to the native view, which fixes text vanishing from a focused text field on Android. ([#635](https://github.com/ng-native/ng-native/pull/635))
+
+  On Android a text field given an outline prop after it is first drawn has its background set again, and the padding Android gives a text field comes back over the padding the field was laid out with. A field as tall as its line then clips all of its text. A stylesheet that takes the focus ring off with `:focus { outline: none }` was such an update: the field's text disappeared when it was focused, and stayed gone.
+
+- An app that installs the `@ng-native/*` packages from npm gets their components' own styles, such as `<markdown>`'s default `md-*` classes and `<touchable-opacity>`'s press fade, with no `libraryStyles` entry. The transformer compiles every `@ng-native/*` package's component CSS into native sheets, as it does in a workspace; before, those components drew unstyled unless the package was listed. ([#509](https://github.com/ng-native/ng-native/pull/509))
+- A list gaining or losing a row under a stylesheet that asks about the element just before (`+`) has only the rows next to the change styled again. ([#623](https://github.com/ng-native/ng-native/pull/623))
+
+  With a `.row + .row` rule in any stylesheet, which is how a list is often given its gaps and separators, a row added or removed restyled every row after it and everything under them. A `+` reads the one element before, so now a change restyles as many rows after it as a rule steps along: one for `.a + .b`, two for `.a + .b + .c`. A 300-row list of nine views a row under `.row + .row` gaining a row at its start goes from about 15.8ms to 0.46ms in Node with V8's optimising tiers off, and one in the middle from 8.1ms to 0.56ms. A stylesheet that asks about any earlier element (`~`) or counts from the start (`:nth-child()`) still restyles every row after the change.
+
+- A `detectChanges()` called from a lifecycle hook no longer commits the screen on its own. ([#631](https://github.com/ng-native/ng-native/pull/631))
+
+  Angular tells the renderer when each change-detection pass ends, and the renderer committed every time, including a pass a component begins on itself from `ngAfterViewInit` while the application's pass is still running. A library that does this in each of its components committed the whole screen once for every one of them as the screen was first built. A pass begun inside another is now part of it, and the screen is committed once, when the outermost pass ends. A `detectChanges()` with no pass around it commits as before.
+
+- A `@keyframes` animation whose transform gains or loses a function between frames is played by native. ([#617](https://github.com/ng-native/ng-native/pull/617))
+
+  An animation from `transform: rotate(180deg) translateX(-10px)` to the element's own `rotate(180deg)` was played from JavaScript, a commit a frame for as long as it ran, because the two lists are of different lengths. A list that is the start of a longer one is now the longer one with the rest at their identity, as CSS eases it, so native plays the animation and JavaScript does nothing while it runs. Lists that start with different functions are still played from JavaScript.
+
+- A `@keyframes` animation that moves an element by a percentage of its own size, `translateX(200%)`, is played by native. ([#629](https://github.com/ng-native/ng-native/pull/629))
+
+  Native interpolates points, so an animation with a percentage translate in a frame was played from JavaScript, a restyle and a commit on every frame for as long as it ran. The percentage is now worked out from the size the view is laid out at, after its first commit, and the animation is handed to native from there. An indeterminate progress bar that slid this way cost about a sixth of the JavaScript thread while it was on screen, and now costs none. A view that changes size while its animation runs keeps moving by the points of the size it started at until the animation starts again.
+
+- A `@keyframes` animation of opacity or transforms no longer leaves its view at its first frame when the view is made in a long task. ([#595](https://github.com/ng-native/ng-native/pull/595))
+
+  Native plays such an animation, and one shorter than the task that made its view finished before
+  the view was mounted: the view then stayed transparent or scaled, as an overlay's panel did the
+  first time it opened. Native now writes the animation's last frame as it ends.
+
+- A property named in `transition` with a time of 0ms is eased when one change gives it both a new value and a time, as `.grown { transform: scale(1); transition-duration: 100ms }` does. It went straight to the new value, because nothing remembered where the property was while its time was zero. ([#566](https://github.com/ng-native/ng-native/pull/566))
+- A tab whose route has no component of its own, a `loadChildren` wrapper or a group of routes as Analog's file routes make, now opens, where `<native-tabs-outlet>` threw `no <native-tab> has path=""`, and switching away from it and back keeps it as it was, its own stack included. ([#509](https://github.com/ng-native/ng-native/pull/509))
+
+  A tab at `path=""` now works beside routes outside the bar: `present()` of one of its pages from another tab shows the page over that tab, a push into it uses the stack it already has, and returning to it returns where it was left. A push into any tab that has been opened no longer builds a second stack in the tab's screen.
+
+  A sheet or modal presented in a tab's own stack is now dismissed when another tab comes in front, where it stayed on screen over that tab, and returning to its tab returns to the page beneath it.
+
+- A `<virtual-list>` or `<section-list>` with `listHeader` or `listFooter` content no longer stops the app on Android with "ScrollView can host only one direct child". The header, the rows and the footer are held by one content view, as `<scroll-view>`'s children are, so the native scroll view has a single child on both platforms. ([#589](https://github.com/ng-native/ng-native/pull/589), [#558](https://github.com/ng-native/ng-native/issues/558))
+- A `var()` whose fallback is a `calc()` of a viewport or font unit and a length, `max-width: var(--max, calc(100vw - 32px))`, takes that fallback where nothing sets the token. The fallback was lost with no warning, so the declaration set nothing and still hid what an earlier rule had set. ([#570](https://github.com/ng-native/ng-native/pull/570))
+- A `transition` shorthand whose time is a token, `transition: opacity linear var(--duration, 0ms)`, is eased over the time the token is set to, and a time set on an element (`style.setProperty('--duration', '150ms')`, or a bound `[style.--duration]`) is read as one. The shorthand was dropped with a warning and the time was read as a word, so what a library opens with such a transition was there at once. ([#577](https://github.com/ng-native/ng-native/pull/577))
+- A `transform` that is a token of its own rule is read where the token's value is transform functions with a `var()` or a `calc()` inside them. ([#605](https://github.com/ng-native/ng-native/pull/605), [#581](https://github.com/ng-native/ng-native/issues/581))
+
+  `--move: translateY(calc(6px + var(--h) / 2)) scale(var(--s)); transform: var(--move)` was refused with a warning, because no one form of a token holds a transform with a sum and tokens inside it, and the element had no transform. The compiler now reads the token's value in place of the `var()` in the same rule, so the transform follows `--h` and `--s` as it would written out. A token another rule reads stays a token.
+
+- `scale3d()`, `translate3d()` and `translateZ(0)` are read as the flat transform they are on a view, in a stylesheet and on an element, where each was dropped with a warning. A move along z that is not zero is still refused, and says a native view is flat. ([#564](https://github.com/ng-native/ng-native/pull/564))
+
+### ❤️ Thank You
+
+- Ashley Hunter
+- erKam @erkamyaman
+
 ## 0.5.0 (2026-10-05)
 
 ### 🚀 Features
