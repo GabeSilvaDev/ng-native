@@ -13,6 +13,7 @@ import {
   mixChannels,
   mixColours,
 } from './color-mix.ts';
+import { type BackgroundLayers, backgroundLayers } from './background-layers.ts';
 import { ELEMENT_STYLES } from './element-styles.ts';
 import { type Channel, relativeColour } from './relative-colour.ts';
 import type { Keyframe } from './transition.ts';
@@ -275,6 +276,11 @@ export interface DeferredDeclaration {
    * unambiguous given a single-valued token, so `padding: var(--gap)` writes all four.
    */
   readonly props: readonly string[];
+  /**
+   * `background: var()`: the token may hold gradients over a colour, so `props` names the image
+   * beside the colour and each is written from its own part of the token. See `layersOf`.
+   */
+  readonly layers?: true;
   /**
    * `inherit`, written for these props: each is the parent's value for it, or nothing where the
    * parent has none.
@@ -2941,10 +2947,9 @@ export class StyleResolver {
       if (unread && this.onUnreadDisplay && !outranked('display')) {
         this.reportDisplay(declaration, tokens);
       }
-      const value = settled ?? declaration.unset;
+      const layers = settled === undefined ? layersOf(declaration, tokens) : undefined;
       for (const prop of declaration.props) {
-        if (outranked(prop)) continue;
-        write(own, prop, value, declaration.line !== undefined);
+        if (!outranked(prop)) writeSettled(own, prop, declaration, settled, layers);
       }
     }
   }
@@ -3715,6 +3720,54 @@ function displayOf(value: unknown): string | undefined {
 function tokenForm(token: TokenValue, kind: TokenKind): unknown {
   const value = formOf(token, kind);
   return value === undefined && kind === 'color' && isCurrentColour(token) ? CURRENT_COLOUR : value;
+}
+
+/** What a deferred declaration settled to, written to one of its props. */
+function writeSettled(
+  own: Record<string, unknown>,
+  prop: string,
+  declaration: DeferredDeclaration,
+  settled: unknown,
+  layers: BackgroundLayers | undefined,
+): void {
+  const value = settled ?? declaration.unset;
+  if (declaration.layers) writeLayer(own, prop, value, layers);
+  else write(own, prop, value, declaration.line !== undefined);
+}
+
+/**
+ * One prop of a `background: var()`, whose token may hold the images as well as the colour. The
+ * image is written only where the token holds one: a token that is a colour leaves an image
+ * another rule declared as it is. Each prop is ranked in the cascade by itself, so an image a
+ * later rule declares, or an important one, is not written over by the token's.
+ */
+function writeLayer(
+  own: Record<string, unknown>,
+  prop: string,
+  value: unknown,
+  layers: BackgroundLayers | undefined,
+): void {
+  if (prop !== BACKGROUND_IMAGE) write(own, prop, layers?.color ?? value, false);
+  else if (layers) own[prop] = layers.images;
+}
+
+const BACKGROUND_IMAGE = 'experimental_backgroundImage';
+
+/**
+ * The gradients a `background: var()` reads where its token is no colour: see `backgroundLayers`.
+ * Only the shorthand, which the compiler marks: `background-color: var()` is a colour or nothing.
+ * And only where the token is set as text on an element, which is where a library sets one as the
+ * app runs; a stylesheet's is refused where it is written. The token is the one the declaration
+ * settles on, the first that is set.
+ */
+function layersOf(
+  declaration: DeferredDeclaration,
+  tokens: Readonly<Record<string, TokenValue>>,
+): BackgroundLayers | undefined {
+  if (!declaration.layers) return undefined;
+  const names = [declaration.reference!, ...(declaration.alternatives ?? [])];
+  const text = firstSet(names, tokens)?.keyword;
+  return text && /gradient\(/i.test(text) ? backgroundLayers(text) : undefined;
 }
 
 const BOUND_NUMBERS = new Set([

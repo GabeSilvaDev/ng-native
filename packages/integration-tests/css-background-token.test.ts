@@ -29,7 +29,8 @@ function tree(css: string, parent: string[] = []) {
   engine.appendChild(engine.root, outer);
   engine.commit();
   const background = () => fabric.committed[0]!.children[0]!.props['backgroundColor'];
-  return { engine, outer, node, background, warnings };
+  const image = () => fabric.committed[0]!.children[0]!.props['experimental_backgroundImage'];
+  return { engine, outer, node, background, image, warnings };
 }
 
 describe('background: var()', () => {
@@ -70,6 +71,144 @@ describe('background: var()', () => {
     engine.setCustomProperty(node, '--bg', 'rgb(0, 0, 255)');
     engine.commit();
     assert.equal(background(), 'rgb(0, 0, 255)');
+  });
+
+  it('draws a gradient a token set on the element holds, with the colour under it', () => {
+    // A colour slider's track: the library works the gradient out and sets it as a token.
+    const { engine, node, background, image } = tree('.a { background: var(--bg) }');
+    engine.setCustomProperty(node, '--bg', 'linear-gradient(to right, rgba(255, 0, 0, 1), #00f)');
+    engine.commit();
+    assert.deepEqual(image(), [
+      {
+        type: 'linear-gradient',
+        direction: { type: 'angle', value: 90 },
+        colorStops: [
+          { color: 'rgba(255, 0, 0, 1)', position: null },
+          { color: 'rgba(0, 0, 255, 1)', position: null },
+        ],
+      },
+    ]);
+    assert.equal(background() ?? null, null);
+    // A colour area: two gradients over a colour, the first written on top.
+    const area =
+      'linear-gradient(to top, #000, transparent), linear-gradient(45deg, #fff 10%, transparent 90%), rgb(255, 0, 0)';
+    engine.setCustomProperty(node, '--bg', area);
+    engine.commit();
+    const layers = image() as { direction: unknown; colorStops: { position: unknown }[] }[];
+    assert.deepEqual(
+      layers.map((layer) => layer.direction),
+      [
+        { type: 'angle', value: 0 },
+        { type: 'angle', value: 45 },
+      ],
+    );
+    assert.deepEqual(
+      layers[1]!.colorStops.map((stop) => stop.position),
+      ['10%', '90%'],
+    );
+    assert.equal(background(), 'rgb(255, 0, 0)');
+    // A colour again, and then nothing: the gradient goes with the token that held it.
+    engine.setCustomProperty(node, '--bg', 'rgb(0, 128, 0)');
+    engine.commit();
+    assert.equal(image() ?? null, null);
+    assert.equal(background(), 'rgb(0, 128, 0)');
+  });
+
+  const RED_TO_BLUE = 'linear-gradient(to right, rgb(255, 0, 0), rgb(0, 0, 255))';
+  const BLUE_TO_GREEN = [
+    {
+      type: 'linear-gradient',
+      direction: { type: 'angle', value: 180 },
+      colorStops: [
+        { color: 'rgb(0, 0, 255)', position: null },
+        { color: 'rgb(0, 128, 0)', position: null },
+      ],
+    },
+  ];
+  /** The direction of each gradient committed: 90 for the token's, 180 for a rule's own. */
+  const directions = (image: unknown) =>
+    ((image ?? []) as { direction: { value: number } }[]).map((layer) => layer.direction.value);
+
+  it('ranks the gradient with the image and its colour with the colour, each on its own', () => {
+    // An important colour is no reason to drop the image the shorthand's token holds.
+    const colour = tree('.a { background: var(--bg) } .a { background-color: #0f0 !important }');
+    colour.engine.setCustomProperty(colour.node, '--bg', `${RED_TO_BLUE}, rgb(255, 0, 0)`);
+    colour.engine.commit();
+    assert.deepEqual(directions(colour.image()), [90], "the token's gradient is drawn");
+    assert.equal(colour.background(), 'rgb(0, 255, 0)', 'under the important colour');
+
+    // An important image stands over the token's.
+    const image = tree(
+      '.a { background: var(--bg) } .a { background-image: linear-gradient(blue, green) !important }',
+    );
+    image.engine.setCustomProperty(image.node, '--bg', `${RED_TO_BLUE}, rgb(255, 0, 0)`);
+    image.engine.commit();
+    assert.deepEqual(image.image(), BLUE_TO_GREEN);
+    assert.equal(image.background(), 'rgb(255, 0, 0)', "and the token's colour is still read");
+  });
+
+  it('gives way to an image a later rule declares, and stands over an earlier one', () => {
+    const later = tree(
+      '.a { background: var(--bg) } .a { background-image: linear-gradient(blue, green) }',
+    );
+    later.engine.setCustomProperty(later.node, '--bg', RED_TO_BLUE);
+    later.engine.commit();
+    assert.deepEqual(later.image(), BLUE_TO_GREEN, 'the later declaration wins the cascade');
+
+    const earlier = tree(
+      '.a { background-image: linear-gradient(blue, green) } .a { background: var(--bg) }',
+    );
+    earlier.engine.setCustomProperty(earlier.node, '--bg', RED_TO_BLUE);
+    earlier.engine.commit();
+    assert.deepEqual(directions(earlier.image()), [90]);
+
+    // Important, the shorthand stands over a later image that is not.
+    const important = tree(
+      '.a { background: var(--bg) !important } .a { background-image: linear-gradient(blue, green) }',
+    );
+    important.engine.setCustomProperty(important.node, '--bg', RED_TO_BLUE);
+    important.engine.commit();
+    assert.deepEqual(directions(important.image()), [90]);
+  });
+
+  it('draws no image for background-color, whose token holding a gradient is no colour', () => {
+    const { engine, node, background, image } = tree('.a { background-color: var(--bg) }');
+    engine.setCustomProperty(node, '--bg', RED_TO_BLUE);
+    engine.commit();
+    assert.equal(image() ?? null, null, 'a colour declaration sets no image');
+    assert.equal(background() ?? null, null);
+  });
+
+  it('reads the gradient from the token the declaration settles on, the first that is set', () => {
+    const { engine, node, image } = tree('.a { background: var(--missing, var(--backup)) }');
+    engine.setCustomProperty(node, '--backup', RED_TO_BLUE);
+    engine.commit();
+    assert.deepEqual(directions(image()), [90]);
+  });
+
+  it('reads a gradient written in capitals, as CSS does', () => {
+    const { engine, node, image } = tree('.a { background: var(--bg) }');
+    engine.setCustomProperty(
+      node,
+      '--bg',
+      'LINEAR-GRADIENT(TO RIGHT, RGB(255, 0, 0), RGB(0, 0, 255))',
+    );
+    engine.commit();
+    assert.deepEqual(directions(image()), [90]);
+  });
+
+  it('draws nothing for a gradient native has none of, and none for one it cannot read', () => {
+    const { engine, node, background, image } = tree('.a { background: var(--bg) }');
+    for (const unread of [
+      'conic-gradient(red, blue)',
+      'linear-gradient(to right, red)',
+      'url(a.png)',
+    ]) {
+      engine.setCustomProperty(node, '--bg', unread);
+      engine.commit();
+      assert.equal(image() ?? null, null, unread);
+      assert.equal(background() ?? null, null, unread);
+    }
   });
 
   it('leaves the colour unset for a token holding a gradient, which is refused where it is set', () => {
