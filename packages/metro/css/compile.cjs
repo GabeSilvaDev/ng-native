@@ -2443,6 +2443,27 @@ function compileCss(source, context = 'styles', options = {}) {
   }
 
   /**
+   * A part put together once its rule is read, as a transition is from its longhands, or with
+   * `onUnsupported` given, the report of why it was dropped. It is reported as the declaration it
+   * came from and costs only itself, as that declaration would: what it wrote to `out` before it
+   * was refused is taken out again. A longhand that cascades on its own is refused on its own.
+   */
+  function finishing(name, context, finish, out) {
+    if (!onUnsupported) return finish();
+    const drop = (dropped, error) => {
+      if (!(error instanceof CssUnsupported)) throw error;
+      onUnsupported(reported(context, `dropped '${dropped}'`, error.message));
+    };
+    const before = new Set(Object.keys(out));
+    try {
+      finish(drop);
+    } catch (error) {
+      for (const key of Object.keys(out)) if (!before.has(key)) delete out[key];
+      drop(name, error);
+    }
+  }
+
+  /**
    * A rule this compiler cannot express is dropped and reported to `onUnsupported`, and throws
    * when there is none to report to.
    *
@@ -2705,8 +2726,8 @@ function compileCss(source, context = 'styles', options = {}) {
       }
       // The transition longhands are meaningless one at a time: a duration list is sized by the
       // property list, which may be declared after it. This is where the rule is complete.
-      finishTransition(out, context);
-      finishAnimation(out, context);
+      finishing('transition', context, (refuse) => finishTransition(out, context, refuse), out);
+      finishing('animation', context, (refuse) => finishAnimation(out, context, refuse), out);
       // A spec with a token in its timing is settled on device, as any value with one is.
       if (out['$animation'] && JSON.stringify(out['$animation']).includes('"__calc"')) {
         deferred.push({ props: ['$animation'], within: out['$animation'] });

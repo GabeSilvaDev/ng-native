@@ -881,11 +881,11 @@ const cycle = (list, index) => (list?.length ? list[index % list.length] : undef
  * A property list that names nothing, as `transition: none` does, is still kept, so it can stop a
  * weaker rule's transition.
  */
-function finishTransition(out, context) {
+function finishTransition(out, context, refuse) {
   const parts = out[LONGHANDS];
   if (!parts) return;
   delete out[LONGHANDS];
-  if (!parts['property']) return finishTiming(parts, out, context);
+  if (!parts['property']) return finishTiming(parts, out, context, refuse);
 
   const spec = {};
   for (const [index, entry] of parts['property'].entries()) {
@@ -902,7 +902,9 @@ function finishTransition(out, context) {
   }
   // Not `transition`: that is also a prop some native views take, `expo-image`'s among them.
   out['$transition'] = spec;
-  cascadingTiming(parts, out, context);
+  // A list that names nothing transitions nothing, and still stops a weaker rule's: a timing
+  // part refused there costs only itself.
+  cascadingTiming(parts, out, context, Object.keys(spec).length ? undefined : refuse);
 }
 
 /**
@@ -911,12 +913,17 @@ function finishTransition(out, context) {
  * replaced. A list of more than one pairs with this rule's properties alone, so it is baked into
  * the spec and replaces a weaker part without standing in for itself.
  */
-function cascadingTiming(parts, out, context) {
+function cascadingTiming(parts, out, context, refuse) {
   for (const [part, key] of Object.entries(TIMING_KEYS)) {
     const list = parts[part];
     if (!list) continue;
-    if (list.length > 1) out[key] = null;
-    else out[key] = part === 'timing-function' ? easing(list[0], context) : milliseconds(list[0]);
+    try {
+      if (list.length > 1) out[key] = null;
+      else out[key] = part === 'timing-function' ? easing(list[0], context) : milliseconds(list[0]);
+    } catch (error) {
+      if (!refuse) throw error;
+      refuse(`transition-${part}`, error);
+    }
   }
 }
 
@@ -931,20 +938,26 @@ const TIMING_KEYS = {
  * Timing with no property list: `.duration-700` beside `.transition`, which names the properties.
  *
  * On the web each longhand cascades on its own, so this is kept for the engine to lay over the
- * spec a matching rule builds, rather than dropped for having nothing to apply to.
+ * spec a matching rule builds, rather than dropped for having nothing to apply to. So one that is
+ * refused goes to `refuse`, where there is one, and the others are kept.
  */
-function finishTiming(parts, out, context) {
+function finishTiming(parts, out, context, refuse) {
   for (const [part, key] of Object.entries(TIMING_KEYS)) {
     const list = parts[part];
     if (!list) continue;
-    // Which entry goes with which property depends on the property list in some other rule.
-    if (list.length > 1) {
-      throw new CssUnsupported(
-        `${context}: a transition-${part} list needs the transition-property it pairs with in ` +
-          `the same rule. Write a single value, or the property list beside it.`,
-      );
+    try {
+      // Which entry goes with which property depends on the property list in some other rule.
+      if (list.length > 1) {
+        throw new CssUnsupported(
+          `${context}: a transition-${part} list needs the transition-property it pairs with in ` +
+            `the same rule. Write a single value, or the property list beside it.`,
+        );
+      }
+      out[key] = part === 'timing-function' ? easing(list[0], context) : milliseconds(list[0]);
+    } catch (error) {
+      if (!refuse) throw error;
+      refuse(`transition-${part}`, error);
     }
-    out[key] = part === 'timing-function' ? easing(list[0], context) : milliseconds(list[0]);
   }
 }
 
@@ -1205,16 +1218,21 @@ function frameEasing(out, context) {
   return timing === undefined ? undefined : easing(timing, context);
 }
 
-function finishAnimation(out, context) {
+/** Whether a rule's animation parts say to play none, which stops a weaker rule's animation. */
+const stopsAnimation = (name, parts) => name?.type === 'none' || parts.timeline === 'none';
+
+function finishAnimation(out, context, refuse) {
   const parts = out[ANIMATION_PARTS];
   if (!parts) return;
   delete out[ANIMATION_PARTS];
   const first = (part) => parts[part]?.[0];
   const name = first('name');
-  cascadingAnimation(parts, first, out, context);
+  // With no name, or `none`, the rule plays nothing itself, and a part refused costs only itself.
+  const stopped = stopsAnimation(name, parts);
+  cascadingAnimation(parts, first, out, context, !name || stopped ? refuse : undefined);
   if (!name) return;
   // Not `animation`, for the same reason as `$transition`.
-  if (name.type === 'none' || parts.timeline === 'none') {
+  if (stopped) {
     out['$animation'] = null;
     return;
   }
@@ -1230,7 +1248,7 @@ function finishAnimation(out, context) {
   out['$animation'] = spec;
 }
 
-function cascadingAnimation(parts, first, out, context) {
+function cascadingAnimation(parts, first, out, context, refuse) {
   for (const [part, key] of Object.entries(ANIMATION_KEYS)) {
     const value = first(part);
     if (value === undefined) continue;
@@ -1242,7 +1260,12 @@ function cascadingAnimation(parts, first, out, context) {
         break;
       }
       case 'timing-function':
-        out[key] = easing(value, context);
+        try {
+          out[key] = easing(value, context);
+        } catch (error) {
+          if (!refuse) throw error;
+          refuse(`animation-${part}`, error);
+        }
         break;
       case 'iteration-count':
         out[key] = value.type === 'infinite' ? 'infinite' : value.value;
