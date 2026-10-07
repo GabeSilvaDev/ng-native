@@ -65,6 +65,20 @@ function toPropertyName(name: string): string {
     .replace(/^([A-Z])/, (match) => match.toLowerCase());
 }
 
+/**
+ * A size in points: a number, a number as a string, or one with the unit a web app writes it
+ * with, `18px` or `1.5rem`. Anything else is no size, and the icon is as big as the text around it.
+ */
+function pointsOf(value: number | string | undefined): number | undefined {
+  if (value === undefined || value === '') return undefined;
+  const text = typeof value === 'string' ? value.trim() : '';
+  const rem = /^([\d.]+)rem$/.exec(text);
+  const px = /^([\d.]+)px$/.exec(text);
+  // `..rem` fits the pattern and is no number: NaN either way, and so no size.
+  const points = rem ? Number(rem[1]) * 16 : numberAttribute(px ? px[1] : value, Number.NaN);
+  return Number.isNaN(points) ? undefined : points;
+}
+
 @Component({
   selector: 'ng-icon',
   template: '',
@@ -112,8 +126,7 @@ export class NgIcon {
    * text around it, and sized by a `font-size` on it or above it, or by a width and height.
    */
   readonly size = input(undefined, {
-    transform: (value: number | string | undefined) =>
-      value === undefined || value === '' ? undefined : numberAttribute(value, undefined),
+    transform: (value: number | string | undefined) => pointsOf(value),
   });
   /** What a `currentColor` stroke or fill paints as. Native resolves it, so binding is cheap. */
   readonly color = input<string>();
