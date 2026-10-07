@@ -1,6 +1,6 @@
 /**
- * A screen's bottom toolbar, iOS only: the bar a navigation controller floats over the content
- * and the tab bar, where Mail has its filter, its search field and its compose button.
+ * A screen's bottom toolbar, iOS only: the bar a navigation controller floats over the content at
+ * the bottom of a screen, where Mail has its filter, its search field and its compose button.
  *
  * ```html
  * <native-toolbar>
@@ -17,6 +17,11 @@
  *
  * It needs iOS 18. Written anywhere in a screen's page, it is that screen's toolbar, and it goes
  * when the element does. A presented screen has no navigation controller, so no toolbar either.
+ *
+ * For a screen with no tab bar. From iOS 26, UIKit draws the toolbar of a stack inside a tab bar on
+ * the tab bar's row and behind it, where only the ends of it show. In a tab, a screen's actions go
+ * in its header, as a `native-header-item` at the `left` or the `right`, and its search in the
+ * header's search field, or in a tab of its own: `<native-tab systemItem="search">`.
  */
 import { Component, DestroyRef, ElementRef, inject, input, output } from '@angular/core';
 import { type EngineNode, HostEngine } from '@ng-native/fabric';
