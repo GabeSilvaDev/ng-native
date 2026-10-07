@@ -53,7 +53,7 @@ import { Location, PlatformLocation } from '@angular/common';
 import { SCREEN_IN_FRONT } from '@ng-native/device';
 import { bindRouteInputs } from './bind-route-inputs.ts';
 import { NativeBack, isShowing } from './native-back.ts';
-import { intentOf, type NativeIntent } from './native-navigation.ts';
+import { navigationIntent, type NativeIntent } from './native-navigation.ts';
 import { NativePlatformLocation } from './native-platform-location.ts';
 import { PRESENTED, withoutPresented } from './presented-route.ts';
 import { markScreenRoute } from './tab-routes.ts';
@@ -191,6 +191,11 @@ export class NativeStackOutlet implements RouterOutletContract, OnInit {
       popTo: (url) => {
         const index = this.entries.findIndex((entry) => this.urlOf(entry) === url);
         return index !== -1 && index < this.entries.length - 1 ? this.popToEntry(index) : null;
+      },
+      dropUnderTop: () => {
+        if (this.entries.length < 2) return false;
+        for (const entry of this.entries.slice(0, -1)) this.remove(entry);
+        return true;
       },
     });
     // Optional for the same reason as the router: the outlet's own tests stand one in without it.
@@ -548,7 +553,7 @@ export class NativeStackOutlet implements RouterOutletContract, OnInit {
    * because the router is mid-navigation for exactly as long as an activation takes.
    */
   private currentIntent(): NativeIntent | null {
-    return intentOf(this.router?.getCurrentNavigation()?.extras.state);
+    return this.router ? navigationIntent(this.router, this.router.getCurrentNavigation()) : null;
   }
 
   /**
