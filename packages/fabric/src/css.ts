@@ -1635,7 +1635,34 @@ export function ruleKeys(rule: StyleRule): readonly string[] {
   if (key.type !== undefined) return [`type:${key.type}`];
   const held = parentClass(rule, key);
   if (held !== undefined) return [`in:${held}`];
-  return alternativeKeys(key) ?? EVERY_NODE;
+  return alternativeKeys(key) ?? attributeKey(key) ?? ancestorKeys(rule, key) ?? EVERY_NODE;
+}
+
+/**
+ * The buckets of a rule for anything inside an element with a class, `.item:focus *`: under the
+ * class, or each class the element may have instead. Offered to what has such an element
+ * somewhere over it, where the universal bucket has every element walk to the root to find none.
+ */
+function ancestorKeys(rule: StyleRule, key: Compound): string[] | undefined {
+  const joined = rule.combinators[rule.combinators.length - 1];
+  const above =
+    key.ancestors?.[0] ??
+    (joined === 'descendant' ? rule.compounds[rule.compounds.length - 2] : undefined);
+  if (!above) return undefined;
+  if (above.classes.length) return [`under:${above.classes[0]}`];
+  const any = above.is?.[0];
+  if (!any?.length || any.some((one) => !one.classes.length)) return undefined;
+  return any.map((one) => `under:${one.classes[0]}`);
+}
+
+/**
+ * The bucket of a rule that names its element by an attribute and nothing else, `[ngpButton]`:
+ * a prop the element has to have, which is how a headless library names every element it
+ * styles. Not `class`, which is no prop of the element's to find the bucket by.
+ */
+function attributeKey(key: Compound): string[] | undefined {
+  const named = key.attributes?.find((test) => test.name !== 'class');
+  return named ? [`attr:${named.name}`] : undefined;
 }
 
 /** A class the node's parent has to have for the rule to match, where its selector says one. */
@@ -1681,6 +1708,10 @@ interface IndexedEntry {
 export interface RuleIndex {
   readonly buckets: Map<string, IndexedEntry[]>;
   readonly universal: IndexedEntry[];
+  /** Whether any rule is filed under an attribute, which a node's props are then looked up for. */
+  attributes?: boolean;
+  /** Whether any is filed under the class of an element its own is inside. */
+  under?: boolean;
 }
 
 /**
@@ -1701,6 +1732,8 @@ export function indexRules(
         into.universal.push(indexed);
         continue;
       }
+      if (key.startsWith('attr:')) into.attributes = true;
+      else if (key.startsWith('under:')) into.under = true;
       const bucket = into.buckets.get(key);
       if (bucket) bucket.push(indexed);
       else into.buckets.set(key, [indexed]);
@@ -1726,6 +1759,24 @@ function reach(node: StyleTarget, index: RuleIndex, found: IndexedEntry[]): void
   // What is written for any child of an element with one of the parent's classes.
   const around = node.parent?.classes;
   if (around) for (const name of around) take(`in:${name}`);
+  if (index.attributes) reachByAttribute(node, take);
+  if (index.under) reachUnder(node, take);
+}
+
+/** The buckets of the classes of every element over a node. */
+function reachUnder(node: StyleTarget, take: (key: string) => void): void {
+  for (let above = node.parent; above; above = above.parent) {
+    if (above.classes) for (const name of above.classes) take(`under:${name}`);
+  }
+}
+
+/** The buckets of the attributes a node has: a prop of its own that is set. */
+function reachByAttribute(node: StyleTarget, take: (key: string) => void): void {
+  for (const name in node.props) {
+    const value = node.props[name];
+    // As `matchesAttribute` has it: a prop that is false is an attribute that is not there.
+    if (value !== undefined && value !== null && value !== false) take(`attr:${name}`);
+  }
 }
 
 /**

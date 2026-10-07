@@ -59,17 +59,36 @@ describe('the key selector a rule is bucketed by', () => {
   });
 
   it('falls back to the universal bucket for anything not keyed on a name', () => {
-    // An attribute test, `:host`, and `*` can match a node whose classes say nothing, so they
-    // have to be offered to every node or they would silently stop applying.
-    assert.deepEqual(keys('[data-open] { flex: 1 }'), ['*']);
+    // `:host` and `*` can match a node whose classes say nothing, so they have to be offered to
+    // every node or they would silently stop applying. So is a test of the `class` attribute,
+    // which is no prop of the node's to look it up by.
+    assert.deepEqual(keys('[class~="a"] { flex: 1 }'), ['*']);
     assert.deepEqual(keys(':host { flex: 1 }'), ['*']);
     assert.deepEqual(keys('* { flex: 1 }'), ['*']);
+  });
+
+  it('files a rule that names its element by an attribute alone under the attribute', () => {
+    // A headless library styles by attribute and never by class: `[ngpButton]`. In the universal
+    // bucket every one of its rules is tried against every element of the screen.
+    assert.deepEqual(keys('[data-open] { flex: 1 }'), ['attr:data-open']);
+    assert.deepEqual(keys('[ngpButton][data-press] { flex: 1 }'), ['attr:ngpButton']);
+    assert.deepEqual(keys('.a[data-open] { flex: 1 }'), ['class:a']);
+  });
+
+  it('files a rule for anything inside an element with a class under that class', () => {
+    // `.item:focus *`, and Tailwind's `group-focus:` on an element with no class of its own:
+    // tried against every element of the screen, each one walks to the root to find no `.item`.
+    assert.deepEqual(keys('.row * { flex: 1 }'), ['under:row']);
+    assert.deepEqual(keys(':is(.group:focus *) { flex: 1 }'), ['under:group']);
+    const either = sheetOf(':is(:is(.s, .t) *) { flex: 1 }').rules.map((rule) => ruleKeys(rule));
+    assert.deepEqual(either, [['under:s', 'under:t']]);
+    assert.deepEqual(keys('view * { flex: 1 }'), ['*']);
   });
 
   it('gives every selector in a list its own bucket', () => {
     // A selector list compiles to one rule each, and the compiler emits them in specificity
     // order - `view` before `.a` - which is the order the cascade wants anyway.
-    assert.deepEqual(keys('.a, view, [x] { flex: 1 }'), ['type:view', 'class:a', '*']);
+    assert.deepEqual(keys('.a, view, [x] { flex: 1 }'), ['type:view', 'class:a', 'attr:x']);
   });
 });
 
@@ -83,7 +102,7 @@ describe('a rule that names no key of its own', () => {
     assert.deepEqual(keysOf('.row > [data-open] { flex: 1 }'), [['in:row']]);
     // A name of its own is still the better key, and a descendant is not a child.
     assert.deepEqual(keysOf('.row > view { flex: 1 }'), [['type:view']]);
-    assert.deepEqual(keysOf('.row * { flex: 1 }'), [['*']]);
+    assert.deepEqual(keysOf('view * { flex: 1 }'), [['*']]);
     assert.deepEqual(keysOf('view > * { flex: 1 }'), [['*']]);
   });
 
@@ -127,6 +146,26 @@ describe('the candidates a node is offered', () => {
     const offered = candidateRules(target('view', []), indexRules(entries));
     assert.equal(offered.length, 1);
     assert.equal(ruleKey(offered[0]!.rule), '*');
+  });
+
+  it('offers a rule filed under an attribute to the elements that have it, and no other', () => {
+    const index = indexRules(entriesOf('[data-open] { flex: 1 } .other { flex: 2 }'));
+    const open = { ...target('view', []), props: { 'data-open': '' } } as StyleTarget;
+    const shut = { ...target('view', []), props: { 'data-open': false } } as StyleTarget;
+    assert.equal(candidateRules(open, index).length, 1);
+    assert.equal(candidateRules(shut, index).length, 0);
+    assert.equal(candidateRules(target('view', []), index).length, 0);
+  });
+
+  it('offers a rule filed under an ancestor\u2019s class to what is inside one, however deep', () => {
+    const index = indexRules(entriesOf('.row * { flex: 1 } .other { flex: 2 }'));
+    const row = target('view', ['row']);
+    const child = { ...target('view', []), parent: row } as StyleTarget;
+    const deep = { ...target('view', []), parent: child } as StyleTarget;
+    assert.equal(candidateRules(deep, index).length, 1);
+    assert.equal(candidateRules(child, index).length, 1);
+    assert.equal(candidateRules(row, index).length, 0, 'not the element itself');
+    assert.equal(candidateRules(target('view', []), index).length, 0);
   });
 
   it('keeps the order the rules were merged in, across buckets', () => {
