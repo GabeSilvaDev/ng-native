@@ -554,6 +554,10 @@ export interface EngineNode extends HostNode {
   committedUnder: EngineNode | null;
   /** The hoisted views this node keeps committed for, by element name. See `HoistOptions`. */
   kept?: Map<string, KeptHoist>;
+  /** On a text field, the row aligned by baseline that takes a baseline from it: `lineBaseline`. */
+  onBaseline?: EngineNode;
+  /** On such a row, the fields it has marked, which it unmarks when they are no longer its own. */
+  baselineFields?: Set<EngineNode>;
   /** Commit this node again with its children so Fabric measures it again. `remeasureText`. */
   remeasure?: true;
   /**
@@ -776,11 +780,25 @@ const PARAGRAPH = 'Paragraph';
  */
 function firstInFlow(node: EngineNode): EngineNode | undefined {
   for (const child of node.children ?? []) {
-    if (child.kind === 'text' && child.box) return child.box;
+    // Not the paragraph itself, which holds the words it was made around.
+    if (child.kind === 'text' && child.box) return child.box === node ? undefined : child.box;
     if (child.kind !== 'element' || ownLayout(child, 'display') === 'none') continue;
     if (ownLayout(child, 'position') !== 'absolute') return child;
   }
   return undefined;
+}
+
+const isNode = (node: EngineNode | undefined): node is EngineNode => node !== undefined;
+
+/** Whether a row lays a child out among its others, and so can take its baseline from it. */
+const inFlow = (child: EngineNode): boolean =>
+  child.kind === 'element' && ownLayout(child, 'position') !== 'absolute';
+
+/** The text field a row's box takes its baseline from: itself, or the first in its flow down. */
+function fieldOnBaseline(item: EngineNode): EngineNode | undefined {
+  let at: EngineNode | undefined = item;
+  while (at?.kind === 'element' && !TEXT_INPUTS.has(viewNameOf(at))) at = firstInFlow(at);
+  return at?.kind === 'element' ? at : undefined;
 }
 
 type TextDirection = 'ltr' | 'rtl';
@@ -838,6 +856,69 @@ function rowsTall(props: Record<string, unknown>, fontScale: number | undefined)
 /** A field's own minimum height: none where it says `auto`, which a web element starts with. */
 const ownMinimum = (minHeight: unknown): unknown => (minHeight === 'auto' ? 0 : (minHeight ?? 0));
 
+/** How tall the system's font is, as a share of its size: its rise over the baseline and fall under. */
+const FONT_LINE = 0.95 + 0.24;
+
+/**
+ * How tall a field is by its line: the line, padding and border of a border-box field, Yoga's
+ * default, and its content alone for a content-box one, which Yoga adds the padding and border
+ * to itself. In a row aligned by baseline some of the line is kept as padding: `lineBaseline`.
+ */
+function lineBox(
+  props: Record<string, unknown>,
+  box: readonly number[],
+  onBaseline: boolean,
+  fontScale: number | undefined,
+): number {
+  const half = onBaseline ? lineBaseline(props, box[0]!, box, fontScale) : 0;
+  if (props['boxSizing'] === 'content-box') return box[0]! - 2 * half;
+  return box.reduce((sum, part) => sum + part, 0);
+}
+
+/**
+ * `lineBaseline` for a field a height sizes: the room is what the height leaves its text, and
+ * the field stays that height. A content-box field's height is its content's, so what is now
+ * padding comes out of it.
+ */
+function heightBaseline(
+  props: Record<string, unknown>,
+  height: number,
+  onBaseline: boolean,
+  fontScale: number | undefined,
+): void {
+  if (!onBaseline) return;
+  const edges = [...blockEdge(props, 'Top', 'Start'), ...blockEdge(props, 'Bottom', 'End')];
+  if (!edges.every((part) => typeof part === 'number')) return;
+  const content = props['boxSizing'] === 'content-box';
+  const room = content ? height : (edges as number[]).reduce((left, part) => left - part, height);
+  const half = lineBaseline(props, room, [room, ...(edges as number[])], fontScale);
+  if (content) props['height'] = height - 2 * half;
+}
+
+/**
+ * Give a field with its line height left out the baseline of a paragraph in a line as tall, for
+ * a field in a row aligned by baseline: half the room the line has over the font is kept as
+ * padding over and under the text. React Native says a field's baseline from its text and its
+ * top padding, so without this it is the font's own, and the row lifts the paragraphs beside the
+ * field to it: a form field's prefix and suffix sit higher than what is typed. Answers the half.
+ *
+ * ponytail: the font is taken to be as tall as the system's, `FONT_LINE` of its size. Read from
+ * the font if a field in another face is seen a point off its prefix.
+ */
+function lineBaseline(
+  props: Record<string, unknown>,
+  line: number,
+  [, top, , bottom]: readonly number[],
+  fontScale: number | undefined,
+): number {
+  const size = props['fontSize'];
+  if (typeof size !== 'number') return 0;
+  const half = Math.max(0, (line - size * textScale(props, fontScale) * FONT_LINE) / 2);
+  props['paddingTop'] = top! + half;
+  props['paddingBottom'] = bottom! + half;
+  return half;
+}
+
 /**
  * Centre the text of a single-line text field that has a line height, as Chrome centres an
  * input's, keeping the height the line height gives it.
@@ -862,6 +943,7 @@ function centreSingleLine(
   viewName: string,
   props: Record<string, unknown>,
   fontScale: number | undefined,
+  onBaseline = false,
 ): void {
   const lineHeight = props['lineHeight'];
   if (!TEXT_INPUTS.has(viewName) || typeof lineHeight !== 'number') return;
@@ -869,6 +951,7 @@ function centreSingleLine(
   const height = props['height'];
   if (typeof height === 'number') {
     delete props['lineHeight'];
+    heightBaseline(props, height, onBaseline, fontScale);
     return;
   }
   // A percentage is a fixed height only where the parent's is definite, known at layout alone.
@@ -883,11 +966,7 @@ function centreSingleLine(
   const max = props['maxHeight'] ?? Infinity;
   if (![...box, own, max].every((part) => typeof part === 'number')) return;
   delete props['lineHeight'];
-  // A content-box field's minHeight is its content's: Yoga adds the padding and border itself.
-  const content =
-    props['boxSizing'] === 'content-box'
-      ? line
-      : (box as number[]).reduce((sum, part) => sum + part, 0);
+  const content = lineBox(props, box as number[], onBaseline, fontScale);
   props['minHeight'] = Math.max(own as number, Math.min(content, max as number));
 }
 
@@ -3694,7 +3773,11 @@ export class Engine implements HostEngine {
     alignMultiline(viewName, style);
     rowsTall(style, this.fontScale);
     const merged = composeTransform(node, this.animated(node, this.transitioned(node, style)));
-    centreSingleLine(viewName, merged, this.fontScale);
+    // On iOS: Android's field says the baseline of the line it is sized and centred by.
+    // Still under the row that marked it: a row taken away is not committed again to unmark it.
+    const row = node.onBaseline;
+    const onBaseline = viewName === 'TextInput' && row !== undefined && isWithin(node, row);
+    centreSingleLine(viewName, merged, this.fontScale, onBaseline);
     // After a transition, which eases the basis as the basis it was written as.
     basisAsSize(node, merged);
     // After the basis, which is a size given where it is committed as one.
@@ -4537,6 +4620,30 @@ export class Engine implements HostEngine {
   }
 
   /**
+   * Mark the text field each box of a row aligned by baseline takes its baseline from, before
+   * the field is merged, and unmark it when the row is aligned another way.
+   */
+  private noteBaselineFields(row: EngineNode): void {
+    const aligned = ownLayout(row, 'alignItems') === 'baseline';
+    const before = row.baselineFields;
+    if (!aligned && !before) return;
+    const now = new Set(
+      aligned ? row.children.filter(inFlow).map(fieldOnBaseline).filter(isNode) : [],
+    );
+    // One that is no longer this row's, and that no other row has marked since.
+    for (const field of before ?? []) {
+      if (!now.has(field) && field.onBaseline === row) this.onBaselineOf(field, undefined);
+    }
+    for (const field of now) if (field.onBaseline !== row) this.onBaselineOf(field, row);
+    row.baselineFields = now.size ? now : undefined;
+  }
+
+  private onBaselineOf(field: EngineNode, row: EngineNode | undefined): void {
+    field.onBaseline = row;
+    this.markProps(field, false);
+  }
+
+  /**
    * Have the text a row aligned by baseline takes a baseline from measured again, where that
    * text is inside one of the row's boxes and the row is committed again. React Native keeps
    * what a paragraph measured on the one copy of its node that was measured, and Yoga copies a
@@ -4604,6 +4711,7 @@ export class Engine implements HostEngine {
 
     const viewName = committedViewName(node);
     this.forgetRenamed(node, viewName);
+    this.noteBaselineFields(node);
     this.freshBaselines(node);
     const childHandles = this.reconcileChildren(node, viewName, style);
     noteTouches(node, style);

@@ -290,3 +290,126 @@ describe('a single-line iOS text input with a line height, at a larger text size
     assert.equal(props()['minHeight'], 24 * 2 + 17);
   });
 });
+
+describe('a single-line iOS text input in a row aligned by baseline', () => {
+  // A form field: a prefix, the field in a box of its own, and a suffix, in a row aligned by
+  // baseline. With its line height left out the field says its baseline is the font's own,
+  // higher than that of a paragraph in a line as tall, and the row lifts the paragraphs beside it
+  // to match. Half the room the line has over the font is kept as padding over and under the
+  // text, which puts the baseline where a paragraph's is and leaves the field as tall.
+  function inRow(rowStyle: Record<string, unknown>, fieldStyle: Record<string, unknown> = {}) {
+    const fabric = createFakeFabric();
+    const engine = new Engine(fabric, 1, {
+      conditions: { width: 390, height: 844, colorScheme: 'light' },
+    });
+    const row = engine.createElement('view');
+    engine.setProp(row, 'style', { flexDirection: 'row', ...rowStyle });
+    const infix = engine.createElement('view');
+    const input = engine.createElement('text-input', sheet);
+    engine.addClass(input, 'field');
+    engine.setProp(input, 'style', fieldStyle);
+    engine.appendChild(infix, input);
+    engine.appendChild(row, infix);
+    engine.appendChild(engine.root, row);
+    engine.commit();
+    const props = () => fabric.committed[0]!.children[0]!.children[0]!.props;
+    return { engine, row, props, fabric };
+  }
+  // A line of 24 over a font of 16, which is 19.04 tall: 2.48 over and under.
+  const HALF = (24 - 16 * 1.19) / 2;
+  const near = (value: unknown, expected: number) =>
+    assert.ok(
+      Math.abs((value as number) - expected) < 0.001,
+      `${String(value)} is not ${expected}`,
+    );
+
+  it('keeps half the room over the font as padding over and under its text', () => {
+    const { props } = inRow({ alignItems: 'baseline' });
+    assert.equal(props()['lineHeight'], undefined);
+    near(props()['paddingTop'], 8 + HALF);
+    near(props()['paddingBottom'], 6 + HALF);
+    assert.equal(props()['minHeight'], 41, 'and is as tall as it was');
+  });
+
+  it('is as tall as its line where its height is its content', () => {
+    const { props } = inRow({ alignItems: 'baseline' }, { boxSizing: 'content-box' });
+    near(props()['minHeight'], 24 - 2 * HALF);
+    near(props()['paddingTop'], 8 + HALF);
+  });
+
+  it('is left as it is in a row aligned any other way', () => {
+    const { props } = inRow({ alignItems: 'center' });
+    assert.equal(props()['paddingTop'], 8);
+    assert.equal(props()['minHeight'], 41);
+  });
+
+  it('does the same in a field a height sizes, which stays that height', () => {
+    // Forty-four tall with 8 and 6 of padding and 1 and 2 of border: 27 for the text, of
+    // which the font takes 19.04, so 3.98 over and under.
+    const half = (44 - 8 - 6 - 1 - 2 - 16 * 1.19) / 2;
+    const { props } = inRow({ alignItems: 'baseline' }, { height: 44 });
+    near(props()['paddingTop'], 8 + half);
+    near(props()['paddingBottom'], 6 + half);
+    assert.equal(props()['height'], 44);
+    // Its content alone is the height of a content-box field, less what is now padding.
+    const content = inRow({ alignItems: 'baseline' }, { height: 44, boxSizing: 'content-box' });
+    const inner = (44 - 16 * 1.19) / 2;
+    near(content.props()['paddingTop'], 8 + inner);
+    near(content.props()['height'], 44 - 2 * inner);
+    assert.equal(inRow({ alignItems: 'center' }, { height: 44 }).props()['paddingTop'], 8);
+  });
+
+  it('is left as it was once its box is moved to a row aligned another way', () => {
+    const { engine, row, fabric } = inRow({ alignItems: 'baseline' });
+    const other = engine.createElement('view');
+    engine.setProp(other, 'style', { flexDirection: 'row', alignItems: 'center' });
+    engine.appendChild(engine.root, other);
+    const infix = row.children[0]!;
+    engine.removeChild(row, infix);
+    engine.appendChild(other, infix);
+    engine.commit();
+    const moved = fabric.committed[1]!.children[0]!.children[0]!.props;
+    assert.equal(moved['paddingTop'], 8);
+  });
+
+  it('is left as it was once its box is moved out and the row it was in is taken away', () => {
+    // The row is not there to be committed again and say so: the field is asked.
+    const { engine, row, fabric } = inRow({ alignItems: 'baseline' });
+    const other = engine.createElement('view');
+    engine.setProp(other, 'style', { flexDirection: 'row', alignItems: 'center' });
+    engine.appendChild(engine.root, other);
+    const infix = row.children[0]!;
+    engine.removeChild(row, infix);
+    engine.appendChild(other, infix);
+    engine.removeChild(engine.root, row);
+    engine.commit();
+    const moved = fabric.committed[0]!.children[0]!.children[0]!.props;
+    assert.equal(moved['paddingTop'], 8);
+  });
+
+  it('is left as it is where it is placed out of the row, which takes no baseline from it', () => {
+    const fabric = createFakeFabric();
+    const engine = new Engine(fabric, 1, {
+      conditions: { width: 390, height: 844, colorScheme: 'light' },
+    });
+    const row = engine.createElement('view');
+    engine.setProp(row, 'style', { flexDirection: 'row', alignItems: 'baseline' });
+    const input = engine.createElement('text-input', sheet);
+    engine.addClass(input, 'field');
+    engine.setProp(input, 'style', { position: 'absolute' });
+    engine.appendChild(row, input);
+    engine.appendChild(engine.root, row);
+    engine.commit();
+    assert.equal(fabric.committed[0]!.children[0]!.props['paddingTop'], 8);
+  });
+
+  it('follows the row coming to be aligned by baseline, and no longer', () => {
+    const { engine, row, props } = inRow({ alignItems: 'center' });
+    engine.setProp(row, 'style', { flexDirection: 'row', alignItems: 'baseline' });
+    engine.commit();
+    near(props()['paddingTop'], 8 + HALF);
+    engine.setProp(row, 'style', { flexDirection: 'row', alignItems: 'center' });
+    engine.commit();
+    assert.equal(props()['paddingTop'], 8);
+  });
+});
