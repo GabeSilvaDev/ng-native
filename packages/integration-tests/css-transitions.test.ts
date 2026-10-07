@@ -8,7 +8,15 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { createRequire } from 'node:module';
-import { Engine, interpolate, type StyleSheet } from '@ng-native/fabric';
+import {
+  Engine,
+  interpolate,
+  redirect,
+  settled,
+  step,
+  type StyleSheet,
+  type Transition,
+} from '@ng-native/fabric';
 import { createFakeFabric, type FakeFabricNode } from '@ng-native/testing';
 
 const require = createRequire(import.meta.url);
@@ -720,8 +728,48 @@ describe('running a transition', () => {
     s.classes('');
 
     assert.equal(s.painted('opacity'), 0.5, 'no jump when the target changes');
-    s.tick(50);
+    s.tick(25);
     assert.equal(s.painted('opacity'), 0.75, 'halfway back from where it was, not from 0');
+  });
+
+  it('takes as long to turn back as it had been going, as CSS shortens a reversed transition', () => {
+    // Half way out, the way back is half the distance, so it takes half the time: CSS's
+    // reversing shortening factor. It took the whole duration, and moved at half speed.
+    const s = scene(css);
+    s.classes('faded');
+    s.tick(50);
+    s.classes('');
+    s.tick(25);
+    assert.equal(s.painted('opacity'), 0.75);
+    s.tick(25);
+    assert.equal(s.painted('opacity'), 1, 'back where it started, in 50ms');
+    assert.equal(s.engine.animating, false);
+  });
+
+  it('shortens it again when it turns round a second time', () => {
+    // Out a quarter of the way after turning, three quarters of the way from the end: the factor
+    // is the old one's progress times its factor, plus what the old factor left out.
+    const s = scene(css);
+    s.classes('faded');
+    s.tick(50);
+    s.classes('');
+    s.tick(25);
+    s.classes('faded');
+    assert.equal(s.painted('opacity'), 0.75, 'no jump as it turns');
+    s.tick(25);
+    assert.equal(s.painted('opacity'), 0.5, 'a third of the way, over 75ms');
+    s.tick(50);
+    assert.equal(s.painted('opacity'), 0);
+    assert.equal(s.engine.animating, false);
+  });
+
+  it('takes the whole duration when it turns towards a new value rather than back', () => {
+    const s = scene(`${css} view.dim { opacity: 0.2; }`);
+    s.classes('faded');
+    s.tick(50);
+    s.classes('dim');
+    s.tick(50);
+    assert.equal(s.painted('opacity'), 0.35, 'halfway from 0.5 to 0.2');
   });
 
   it('reads `all` as whatever changed', () => {
@@ -891,15 +939,16 @@ describe('transitioning a translate between a percentage and a length', () => {
     s.tick(50);
     s.classes('');
     assert.deepEqual(placed(s.painted()), { y: -27, scale: 0.875 }, 'no jump as it turns');
-    s.tick(50);
+    // Back over the 50ms it had been going, as CSS shortens a transition turned round.
+    s.tick(25);
     assert.deepEqual(placed(s.painted()), { y: -23.5, scale: 0.9375 }, 'halfway back from there');
 
     // And up again from part way down: the frame it is on is a pair, and the rule one length.
     s.classes('up');
     assert.deepEqual(placed(s.painted()), { y: -23.5, scale: 0.9375 }, 'no jump this way either');
-    s.tick(50);
+    s.tick(37.5);
     assert.deepEqual(placed(s.painted()), { y: -28.75, scale: 0.84375 });
-    s.tick(50);
+    s.tick(37.5);
     assert.deepEqual(s.painted(), [{ translateY: -34 }, { scaleX: 0.75 }, { scaleY: 0.75 }]);
   });
 
@@ -941,7 +990,7 @@ describe('transitioning a translate between a percentage and a length', () => {
       { rotate: '45deg' },
     ]);
     s.classes('');
-    s.tick(50);
+    s.tick(25);
     assert.deepEqual(s.painted(), [
       { translateX: '-37.5%' },
       { translateX: 2.5 },
@@ -1337,5 +1386,32 @@ describe('a transition it cannot compile', () => {
     assert.deepEqual(declarations!['$transition'], {
       opacity: { duration: 1000, delay: 0, easing: [0.42, 0, 1, 1] },
     });
+  });
+});
+
+describe('turning a transition back', () => {
+  it('counts a new transform list equal to where it started as a reversal', () => {
+    const rule = { duration: 100, delay: 0, easing: [0, 0, 1, 1] };
+    const transition = settled([{ translateY: 0 }], rule);
+    redirect(transition, [{ translateY: -10 }], rule, 0);
+    redirect(transition, [{ translateY: 0 }], rule, 50);
+    assert.equal(transition.duration, 50);
+  });
+
+  it('takes a new transform list equal to where it is heading as no change at all', () => {
+    // A bound style hands over a new array each time. Taking one equal to the target as a new
+    // target started the transition again from part way, and the way back then took its full
+    // duration, as it no longer knew where it had come from.
+    const rule = { duration: 100, delay: 0, easing: [0, 0, 1, 1] };
+    const state = new Map<string, Transition>();
+    const to = (translateY: number, now: number) =>
+      step(state, 'transform', { transform: [{ translateY }] }, rule, now);
+    to(0, 0);
+    to(-10, 0);
+    const transition = state.get('transform')!;
+    transition.current = interpolate(transition.from, transition.to, 0.5);
+    assert.equal(to(-10, 50), false, 'the same list again is not a change');
+    to(0, 50);
+    assert.equal(transition.duration, 50);
   });
 });

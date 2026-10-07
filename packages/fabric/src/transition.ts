@@ -29,6 +29,12 @@ export interface Transition {
   /** What the node paints right now. Also the value a redirected transition starts from. */
   current: unknown;
   done: boolean;
+  /**
+   * The value a change back is a reversal to, and the share of the full duration this one takes:
+   * CSS's reversing-adjusted start value and reversing shortening factor. See `redirect`.
+   */
+  reversingFrom: unknown;
+  shortening: number;
 }
 
 /**
@@ -586,7 +592,7 @@ export function step(
   // `flex-direction`: CSS changes it at once rather than transitioning it, and `transition: all`
   // covers it. Holding the old one for the duration kept a `display: none` on screen until the
   // end and then made it vanish.
-  const started = !Object.is(seen.to, target);
+  const started = !sameValue(seen.to, target);
   if (started && !interpolable(seen.current, target)) {
     state.set(key, settled(target, rule));
     return false;
@@ -620,20 +626,47 @@ export function settled(value: unknown, rule: TransitionSpec): Transition {
     easing: rule.easing,
     current: value,
     done: true,
+    reversingFrom: value,
+    shortening: 1,
   };
 }
 
-/** Aim an existing transition at a new value, starting from wherever it had got to. */
+/** Whether two values are the same, a transform list by what is in it rather than by identity. */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * Aim an existing transition at a new value, starting from wherever it had got to.
+ *
+ * One turned back to where it came from before it got there takes as long as it had been going,
+ * as CSS has it: half way out, the way back is half the distance and half the duration. The
+ * factor is how far the old one had eased, of the share it was itself, plus the share it left
+ * out, so a transition turned round twice comes back by the same rule. A negative delay is
+ * shortened with it; a positive one is waited out in full.
+ */
 export function redirect(
   transition: Transition,
   target: unknown,
   rule: TransitionSpec,
   now: number,
 ): void {
+  const reversing = !transition.done && sameValue(target, transition.reversingFrom);
+  let shortening = 1;
+  if (reversing) {
+    const elapsed = transition.duration <= 0 ? 1 : (now - transition.start) / transition.duration;
+    const eased = bezier(transition.easing, elapsed);
+    const factor = eased * transition.shortening + 1 - transition.shortening;
+    shortening = Math.min(1, Math.abs(factor));
+  }
+  transition.reversingFrom = reversing ? transition.to : transition.current;
+  transition.shortening = shortening;
   transition.from = transition.current;
   transition.to = target;
-  transition.start = now + rule.delay;
-  transition.duration = rule.duration;
+  transition.start = now + (rule.delay < 0 ? rule.delay * shortening : rule.delay);
+  transition.duration = rule.duration * shortening;
   transition.easing = rule.easing;
   transition.done = false;
 }
