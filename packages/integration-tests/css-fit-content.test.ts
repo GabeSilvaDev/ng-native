@@ -100,6 +100,92 @@ describe('width: fit-content', () => {
   });
 });
 
+describe('max-content', () => {
+  // As big as its content, which is what a box is along its container's main axis already and
+  // what `fit-content` makes it across: a box here is never wider than its content needs.
+  it('is read as fit-content where it is a width or a height', () => {
+    for (const size of ['width', 'height']) {
+      const s = scene(
+        `.p { flex-direction: ${size === 'width' ? 'column' : 'row'} } .c { ${size}: max-content }`,
+      );
+      const props = s.props();
+      assert.equal(props['alignSelf'], 'flex-start', size);
+      assert.equal(size in props, false, size);
+      assert.deepEqual(s.reports, [], size);
+    }
+  });
+
+  it('keeps a box that fills its container to its content, as a max-width', () => {
+    // Tailwind's `max-w-max`: a bar that would stretch is no wider than what is in it.
+    for (const width of ['', 'width: 100%;', 'width: auto;']) {
+      const s = scene(`.c { ${width} max-width: max-content }`);
+      const props = s.props();
+      assert.equal(props['alignSelf'], 'flex-start', width);
+      assert.equal('width' in props, false, width);
+      assert.equal('maxWidth' in props, false, width);
+      assert.deepEqual(s.reports, [], width);
+    }
+  });
+
+  it('leaves a width in points as it is, with nothing to cap it by', () => {
+    const props = scene('.c { width: 120px; max-width: max-content }').props();
+    assert.equal(props['width'], 120);
+    assert.equal('maxWidth' in props, false);
+    assert.equal('alignSelf' in props, false);
+  });
+
+  it('caps a height the same way, across a row', () => {
+    const props = scene('.p { flex-direction: row } .c { max-height: max-content }').props();
+    assert.equal(props['alignSelf'], 'flex-start');
+    assert.equal('maxHeight' in props, false);
+  });
+
+  it('stops a box growing along its container past its content', () => {
+    // A growing item is clamped by its maximum in a browser. There is no cap to hand Yoga, so
+    // the box does not grow: it starts from its content and may still shrink.
+    for (const grows of ['flex-grow: 1', 'flex: 1', 'flex: 2 1 0%']) {
+      const row = scene(`.p { flex-direction: row } .c { ${grows}; max-width: max-content }`);
+      const props = row.props();
+      assert.equal(props['flexGrow'] ?? 0, 0, grows);
+      assert.equal(props['flex'] ?? null, null, grows);
+      assert.equal(props['flexBasis'] ?? 'auto', 'auto', grows);
+      assert.equal('maxWidth' in props, false, grows);
+    }
+    const column = scene('.c { flex-grow: 1; max-height: max-content }').props();
+    assert.equal(column['flexGrow'] ?? 0, 0);
+    // Across its container it is not growing, and what it shares along it is its own.
+    const across = scene('.c { flex-grow: 1; max-width: max-content }').props();
+    assert.equal(across['flexGrow'], 1);
+    assert.equal(across['alignSelf'], 'flex-start');
+  });
+
+  it('stops one that is its content size already, by fit-content or max-content, growing too', () => {
+    // The size says how big it starts and the cap how big it may get: both are its content, and
+    // a browser's item with `flex-grow: 1` stays that wide.
+    for (const size of ['fit-content', 'max-content']) {
+      const row = scene(
+        `.p { flex-direction: row } .c { flex-grow: 1; width: ${size}; max-width: max-content }`,
+      ).props();
+      assert.equal(row['flexGrow'] ?? 0, 0, `width: ${size}`);
+      assert.equal('width' in row, false, `width: ${size}`);
+      assert.equal('maxWidth' in row, false, `width: ${size}`);
+      const column = scene(`.c { flex-grow: 1; height: ${size}; max-height: max-content }`).props();
+      assert.equal(column['flexGrow'] ?? 0, 0, `height: ${size}`);
+      assert.equal('height' in column, false, `height: ${size}`);
+    }
+    // With no cap the size is only where it starts from, and it grows as written.
+    const uncapped = scene('.p { flex-direction: row } .c { flex-grow: 1; width: fit-content }');
+    assert.equal(uncapped.props()['flexGrow'], 1);
+  });
+
+  it('goes when the rule no longer applies', () => {
+    const s = scene('.c { max-width: max-content }');
+    assert.equal(s.props()['alignSelf'], 'flex-start');
+    s.engine.removeClass(s.inner, 'c');
+    assert.equal(s.props()['alignSelf'] ?? null, null);
+  });
+});
+
 describe('fit-content and the rest of what a node is merged from', () => {
   it('reads the alignment a component overrides its container with', () => {
     const s = scene(FIT);
@@ -180,11 +266,13 @@ describe('height: fit-content', () => {
 
 describe('the other intrinsic sizes', () => {
   it('are still refused, by name', () => {
-    for (const value of ['max-content', 'min-content']) {
-      const s = scene(`.c { width: ${value} }`);
-      s.props();
-      assert.equal(s.reports.length, 1, value);
-    }
+    // As narrow as its longest word: nothing a box here is laid out as.
+    const narrow = scene('.c { width: min-content }');
+    narrow.props();
+    assert.equal(narrow.reports.length, 1);
+    const least = scene('.c { min-width: max-content }');
+    least.props();
+    assert.equal(least.reports.length, 1);
     const s = scene('.c { max-width: fit-content }');
     s.props();
     assert.equal(s.reports.length, 1);
