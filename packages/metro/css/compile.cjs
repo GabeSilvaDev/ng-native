@@ -1023,7 +1023,7 @@ function compound(parts, context) {
           out.host = true;
           classes++;
           const inner = compound(tokensToCompoundParts(part.arguments, context), context);
-          out.hostContext = [inner.compound];
+          (out.hostContext ??= []).push(inner.compound);
           ids += inner.ids;
           classes += inner.classes;
           types += inner.types;
@@ -1389,10 +1389,12 @@ function functionalPseudo(part, context) {
   for (const argument of args) {
     const { list, parts } = functionalArgument(part, argument, context);
     const built = compound(parts, context);
-    found[list].push(under(built.compound, parts.under, context));
+    const scope = parts.under && compound(parts.under, context);
+    found[list].push(under(built.compound, scope?.compound));
+    const whole = scope ? sum(built, scope) : built;
     // The single most specific argument wins, taken whole. Not the maximum of each component
     // independently: `:is(.a, #b)` is as specific as `#b`, not as `#b.a`.
-    if (weight(built) > weight(top)) top = built;
+    if (weight(whole) > weight(top)) top = whole;
   }
 
   return { ...found, ids: top.ids, classes: top.classes, types: top.types };
@@ -1400,11 +1402,17 @@ function functionalPseudo(part, context) {
 
 const weight = (built) => pack(built.ids, built.classes, built.types);
 
+/** The specificity parts of two compounds together. */
+const sum = (a, b) => ({
+  ids: a.ids + b.ids,
+  classes: a.classes + b.classes,
+  types: a.types + b.types,
+});
+
 /** A compound that is itself under another, where its argument said so: see `aboveArgument`. */
-function under(tested, scope, context) {
+function under(tested, scope) {
   if (!scope) return tested;
-  const ancestors = [...(tested.ancestors ?? []), compound(scope, context).compound];
-  return { ...tested, ancestors };
+  return { ...tested, ancestors: [...(tested.ancestors ?? []), scope] };
 }
 
 /**

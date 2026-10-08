@@ -93,6 +93,19 @@ describe(':is(<compound> > *)', () => {
     assert.equal(where.opacity('child'), 1);
   });
 
+  it('counts the scope a compound is under, as a browser does', () => {
+    const s = scene('.x:is(.p .x) { opacity: 0.5 } .x.x { opacity: 1 }');
+    assert.equal(s.opacity('child'), 0.5);
+    const parent = scene('.x:is(.p .x > *) { opacity: 0.5 } .x.x { opacity: 1 }');
+    assert.equal(parent.opacity('grandchild'), 0.5);
+    const where = scene('.x:is(:where(.p) .x) { opacity: 0.5 } .x.x { opacity: 1 }');
+    assert.equal(where.opacity('child'), 1);
+    const nested = scene('.p .x, .q .x { &.on { opacity: 0.5 } } .x.on { opacity: 1 }');
+    nested.engine.addClass(nested.child, 'on');
+    assert.equal(nested.opacity('child'), 0.5);
+    assert.deepEqual(nested.reports, []);
+  });
+
   it('holds alongside what comes before it in the selector', () => {
     const s = scene('.outer .x:is(.p > *) { opacity: 0.5 }', 'p outer');
     // The parent is both the `.outer` above the child and the `.p` it is a child of.
