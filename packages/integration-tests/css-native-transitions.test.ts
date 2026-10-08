@@ -136,6 +136,36 @@ describe('a transition of opacity or a transform', () => {
     assert.deepEqual(s.events, ['start opacity']);
   });
 
+  it('ends a fade to nothing where the view still takes a touch, as it is committed', () => {
+    // A see-through backdrop fades to no opacity and hears the press that closes its menu:
+    // iOS passes over a view at none, so native stops where the view is committed.
+    const s = scene(FADE);
+    s.engine.setResponder(s.view, {});
+    s.classes('a gone');
+    assert.deepEqual(s.at(1), { opacity: 0.011 });
+    s.finish(s.started()[0]!);
+    assert.equal(s.props()['opacity'], 0.011);
+    // One told to take no touch has none to miss.
+    const untouched = scene(`${FADE} .a { pointer-events: none }`);
+    untouched.engine.setResponder(untouched.view, {});
+    untouched.classes('a gone');
+    assert.deepEqual(untouched.at(1), { opacity: 0 });
+  });
+
+  it('takes a fade back from native where the view comes to take a touch part way', () => {
+    // Native was given the fade to nothing before the view had a responder, and would end it
+    // there: it is eased from JavaScript from where it has got to, and committed short of it.
+    const s = scene(FADE);
+    s.classes('a gone');
+    s.later(50);
+    s.engine.setResponder(s.view, {});
+    s.engine.commit();
+    assert.equal(s.rec.named('stop').length, 1);
+    assert.equal(s.props()['opacity'], 0.75);
+    s.later(200);
+    assert.equal(s.props()['opacity'], 0.011);
+  });
+
   it('is committed where it ends when native says it has, and says so itself', () => {
     const s = scene(FADE);
     s.classes('a gone');
