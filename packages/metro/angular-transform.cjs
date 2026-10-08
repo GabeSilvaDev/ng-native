@@ -142,13 +142,31 @@ function relativeSpecifier(url) {
   return /^\.\.?[\\/]/.test(url) || path.isAbsolute(url) ? url : `./${url}`;
 }
 
+/**
+ * The templates and stylesheets the last transform of each file read, as absolute paths, for the
+ * transform worker to take once it has the result: see `resource-cache.cjs`. A file's import of a
+ * stylesheet names what Metro resolves, a platform file or a resolver's replacement, and not
+ * always a file at that name, so the cache is told what was read rather than what was imported.
+ */
+const resourcesRead = new Map();
+
+/** What the transform of `filename` read, once: a second ask is empty. */
+function takeResourcesRead(filename) {
+  const files = resourcesRead.get(filename) ?? [];
+  resourcesRead.delete(filename);
+  return files;
+}
+
 function readResources(dependencies, filename) {
   const directory = path.dirname(filename);
   const templates = {};
   const styles = {};
+  const read = [];
+  resourcesRead.set(filename, read);
   for (const dependency of dependencies) {
     const resolved = path.resolve(directory, dependency);
     const content = readFileSync(resolved, 'utf8');
+    read.push(resolved);
     if (IS_STYLE.test(dependency)) styles[dependency] = [content];
     else templates[dependency] = content;
   }
@@ -1386,6 +1404,7 @@ function reasonOf(message) {
  * @returns {{ code: string, dependencies: string[], map?: string, mapLineOffset?: number }}
  */
 function transformAngular(src, filename, options = {}) {
+  resourcesRead.delete(filename);
   // A template or stylesheet is only in the graph to carry its component's edits: empty in a
   // release build, and the hot update for its owners in a native dev build. A web build - a DOM
   // component's page - has no native hot update to carry, and its stylesheets are a browser's.
@@ -1423,8 +1442,9 @@ function transformAngular(src, filename, options = {}) {
 
     // An external template is not an import, so without an edge Metro would never watch it. The
     // edge does not re-transform this file when the template changes - Metro caches a transform
-    // on the file's own content - so the template's module carries the update instead, and is
-    // empty in a release build. See `resourceBlock`.
+    // on the file's own content - so in dev the template's module carries the update instead (see
+    // `resourceBlock`), and a cached transform of this file is a miss once the template has
+    // changed (see `resource-cache.cjs`).
     const edges = dependencies
       .map((dependency) => `import ${JSON.stringify(relativeSpecifier(dependency))};\n`)
       .join('');
@@ -1494,6 +1514,7 @@ function functionsBlock(src, filename, options) {
 
 module.exports = {
   transformAngular,
+  takeResourcesRead,
   isResource,
   // Exported for `apps/documentation/vite.config.ts`'s own small Vite plugin, which runs the same
   // two checks against `@oxc-angular/vite`'s Vite output - the docs site compiles its own Angular
