@@ -95,4 +95,14 @@ describe('a selector reading the class attribute', () => {
     s.engine.removeClass(panel, 'animating');
     assert.equal(s.opacity('cell') ?? 1, 1);
   });
+
+  it('follows the same classes set again in another order', () => {
+    const s = scene('[class^="first"] { opacity: 0.5 }');
+    const node = s.add('first second', 'node');
+    assert.equal(s.opacity('node'), 0.5);
+    s.engine.setClasses(node, 'second first');
+    assert.equal(s.opacity('node') ?? 1, 1);
+    s.engine.setClasses(node, 'first second');
+    assert.equal(s.opacity('node'), 0.5);
+  });
 });

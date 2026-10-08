@@ -2612,6 +2612,13 @@ function sameHandles(a: readonly FabricNode[], b: readonly FabricNode[]): boolea
   return a.length === b.length && a.every((handle, i) => handle === b[i]);
 }
 
+/** Whether two sets of the same classes hold them in the same order. */
+function inOrder(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  const other = b.values();
+  for (const name of a) if (other.next().value !== name) return false;
+  return true;
+}
+
 /**
  * Whether a node could be the element a compound is written for, by its classes alone: its own,
  * and those of one alternative of each `:is()` on it, which is where Tailwind names a group or
@@ -3195,7 +3202,10 @@ export class Engine implements HostEngine {
     this.markProps(node);
   }
 
-  /** `class="a b"` from a template. Replaces the set rather than adding to it. */
+  /**
+   * `class="a b"` from a template. Replaces the set rather than adding to it. The same classes in
+   * another order are a change too, to a selector that reads the class attribute, `[class^="a"]`.
+   */
   setClasses(node: EngineNode, value: string): void {
     const names = value.split(/\s+/).filter(Boolean);
     const before = node.classes;
@@ -3203,7 +3213,9 @@ export class Engine implements HostEngine {
     // Each class that came or went: one in both changes nothing.
     const changed = [...names.filter((name) => !before?.has(name))];
     for (const name of before ?? []) if (!node.classes?.has(name)) changed.push(name);
-    this.markClasses(node, changed);
+    const reordered =
+      !changed.length && !!before && !!node.classes && !inOrder(before, node.classes);
+    this.markClasses(node, reordered ? node.classes! : changed);
   }
 
   /** Angular's `@if`/`@for`/`ViewContainerRef` markers. Ordered, never committed. */
