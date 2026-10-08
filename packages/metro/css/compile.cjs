@@ -1023,7 +1023,7 @@ function compound(parts, context) {
           out.host = true;
           classes++;
           const inner = compound(tokensToCompoundParts(part.arguments, context), context);
-          out.hostContext = [inner.compound];
+          (out.hostContext ??= []).push(inner.compound);
           ids += inner.ids;
           classes += inner.classes;
           types += inner.types;

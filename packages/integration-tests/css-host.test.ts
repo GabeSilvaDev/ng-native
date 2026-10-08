@@ -112,6 +112,21 @@ describe('a host node, straight from the resolver', () => {
     assert.equal(matches(hostOf(sheet, []), sheet.rules[0], sheet), false);
   });
 
+  it('needs every :host-context() written in one compound, each on the host or above it', () => {
+    const sheet = compileCss(':host-context(.dark):host-context(.compact) { color: red }', 'host');
+    const under = (classes: string[], parent: StyleTarget): StyleTarget => ({
+      ...hostOf(sheet, classes),
+      parent,
+    });
+    const both = under([], under(['compact'], hostOf(null, ['dark'])));
+    assert.equal(matches(both, sheet.rules[0], sheet), true);
+    assert.equal(matches(hostOf(sheet, ['dark', 'compact']), sheet.rules[0], sheet), true);
+    const compactOnly = under([], hostOf(null, ['compact']));
+    assert.equal(matches(compactOnly, sheet.rules[0], sheet), false);
+    const darkOnly = under([], hostOf(null, ['dark']));
+    assert.equal(matches(darkOnly, sheet.rules[0], sheet), false);
+  });
+
   it('reads a bare name in :host-context() as an element type', () => {
     const sheet = compileCss(':host-context(view) { color: red }', 'host');
     assert.equal(matches(hostOf(sheet, []), sheet.rules[0], sheet), true, 'the host is a view');

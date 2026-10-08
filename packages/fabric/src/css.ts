@@ -41,7 +41,7 @@ export interface Compound {
   readonly not?: readonly Compound[];
   /** `:host`: the node must be the host of the component whose sheet is being evaluated. */
   readonly host?: true;
-  /** `:host-context()`: the host, or one of its ancestors, must match one of these. */
+  /** `:host-context()`, once for each written: the host, or one of its ancestors, must match it. */
   readonly hostContext?: readonly Compound[];
   /**
    * `:is(<compound> *)`: every one of these must match some ancestor, the node itself excluded.
@@ -954,12 +954,14 @@ function matchesCompound(node: StyleTarget, compound: Compound, sheet: StyleShee
     }
   }
   if (compound.hostContext) {
-    // The host itself counts, as it does on the web.
-    let found = false;
-    for (let n: StyleTarget | null = node; n && !found; n = n.parent) {
-      found = compound.hostContext.some((option) => matchesCompound(n!, option, sheet));
+    for (const context of compound.hostContext) {
+      // The host itself counts, as it does on the web.
+      let found = false;
+      for (let n: StyleTarget | null = node; n && !found; n = n.parent) {
+        found = matchesCompound(n, context, sheet);
+      }
+      if (!found) return false;
     }
-    if (!found) return false;
   }
   return true;
 }
