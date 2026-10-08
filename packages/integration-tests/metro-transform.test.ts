@@ -154,6 +154,49 @@ describe('the transform chain', () => {
     }
   });
 
+  it('requires the font of a styleUrl sheet in another directory from beside that sheet', () => {
+    const { transformAngular } = require('@ng-native/metro/angular-transform.cjs');
+    const dir = mkdtempSync(path.join(tmpdir(), 'css-font-url-'));
+    try {
+      writeFileSync(path.join(dir, 'package.json'), '{}');
+      mkdirSync(path.join(dir, 'app'));
+      mkdirSync(path.join(dir, 'shared', 'fonts'), { recursive: true });
+      const sheet = path.join(dir, 'shared', 'fonts', 'fonts.css');
+      writeFileSync(
+        sheet,
+        "@font-face { font-family: Inter; src: url('./Inter.ttf') }\n.t { font-family: Inter }\n",
+      );
+      const template = path.join(dir, 'app', 'card.html');
+      writeFileSync(template, '<text class="t">a</text>\n');
+      const file = path.join(dir, 'app', 'card.ts');
+      writeFileSync(
+        file,
+        [
+          "import { Component } from '@angular/core';",
+          '@Component({',
+          "  selector: 'x-card',",
+          "  templateUrl: './card.html',",
+          "  styleUrl: '../shared/fonts/fonts.css',",
+          '})',
+          'export class Card {}',
+        ].join('\n'),
+      );
+      const font = path.join(dir, 'shared', 'fonts', 'Inter.ttf');
+      const required = (module: string, options?: object) => {
+        const { code } = transformAngular(readFileSync(module, 'utf8'), module, options);
+        const found = [...code.matchAll(/require\("([^"]+\.ttf)"\)/g)];
+        assert.ok(found.length, `${path.basename(module)} requires the font`);
+        return found.map((match) => path.resolve(path.dirname(module), match[1]!));
+      };
+      for (const at of required(file)) assert.equal(at, font);
+      for (const at of required(file, { dev: true })) assert.equal(at, font);
+      for (const at of required(template, { dev: true })) assert.equal(at, font);
+      for (const at of required(sheet, { dev: true })) assert.equal(at, font);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("puts a component's inline styles after its styleUrl sheet, as Angular does, so they win", () => {
     // Angular compiles the styleUrl sheets first and the inline styles after them, so an inline
     // rule overrides a shared one of the same specificity. The cascade has to agree.

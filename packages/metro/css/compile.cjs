@@ -2412,7 +2412,9 @@ function undrawn(name, context) {
  *   `CssUnsupported` with the same message. CSS that does not parse throws either way, unless
  *   `recover` is set: then a rule that does not parse is dropped and reported as the rest are,
  *   which is what a browser does with it. That is for a library's CSS, which the app cannot fix;
- *   the app's own fails the build, where the mistake is its author's to see.
+ *   the app's own fails the build, where the mistake is its author's to see. `asset` is given each
+ *   font's url and the line of the sheet it is on, and answers the path to require it by: a caller
+ *   that joined sheets from several directories resolves each url against its own sheet.
  */
 function compileCss(source, context = 'styles', options = {}) {
   const rules = [];
@@ -2546,6 +2548,15 @@ function compileCss(source, context = 'styles', options = {}) {
   function locationOf(rule) {
     const loc = rule.value?.loc;
     return loc?.line === undefined ? context : where(loc.line + 1);
+  }
+
+  /** A face with its file as the caller requires it, where it said how: see `asset`. */
+  function locatedFace(face, rule) {
+    const line = rule.value?.loc?.line;
+    if (options.asset && line !== undefined) {
+      face.source.asset = options.asset(face.source.asset, flattened.lineOf(line + 1));
+    }
+    return face;
   }
 
   /** Compile one plain style rule into the flat list. */
@@ -2893,7 +2904,7 @@ function compileCss(source, context = 'styles', options = {}) {
 
   function compileRule(rule) {
     if (rule.type === 'font-face') {
-      fonts.push(fontFace(rule.value, context));
+      fonts.push(locatedFace(fontFace(rule.value, context), rule));
       return [];
     }
     if (rule.type === 'keyframes') {
