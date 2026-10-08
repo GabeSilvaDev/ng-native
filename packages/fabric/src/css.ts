@@ -846,16 +846,21 @@ const attributeText = (actual: unknown, test: AttributeTest): string =>
  *
  * A prop set to `false` or `null` counts as absent, matching the web, where an attribute is either
  * present or not and a `disabled` binding that evaluates false removes it. Everything else is
- * compared as a string, so `[tabIndex="0"]` works against a numeric prop.
+ * compared as a string, so `[tabIndex="0"]` works against a numeric prop. `class` is no prop: it
+ * is the element's class list, as the attribute would spell it.
  */
 function matchesAttribute(node: StyleTarget, test: AttributeTest): boolean {
-  const actual = node.props[test.name];
+  const actual = test.name === 'class' ? classAttribute(node) : node.props[test.name];
   if (actual === undefined || actual === null || actual === false) return false;
   if (test.operator === undefined) return true;
   // `^=`, `$=`, `*=` and `~=` with an empty value match nothing, as Selectors 4 says.
   if (test.value === '' && !EMPTY_MATCHES.has(test.operator)) return false;
   return matchesValue(attributeText(actual, test), test.operator, test.value!);
 }
+
+/** The classes of a node in the order they were set, one space between each; none is absent. */
+const classAttribute = (node: StyleTarget): string | undefined =>
+  node.classes?.size ? [...node.classes].join(' ') : undefined;
 
 /** The operators an empty value can still match by: `=` and `|=`. */
 const EMPTY_MATCHES: ReadonlySet<AttributeTest['operator']> = new Set(['equal', 'dash-match']);
