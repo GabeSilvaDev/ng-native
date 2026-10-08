@@ -1,3 +1,75 @@
+## 0.8.0 (2026-10-08)
+
+### 🩹 Fixes
+
+- An attribute selector with an empty value matches what it does in a browser. ([#667](https://github.com/ng-native/ng-native/pull/667))
+
+  `[data-x^=""]`, `[data-x$=""]` and `[data-x*=""]` matched every element with a `data-x`, and `[data-x~=""]` matched one whose `data-x` was empty or began or ended with a space. All four match nothing, as Selectors 4 says. `[data-x=""]` and `[data-x|=""]` are unchanged.
+
+- `background: var(--x)` draws a gradient that a custom property set on an element holds, with the colour under it. ([#664](https://github.com/ng-native/ng-native/pull/664))
+
+  A library that works a gradient out as the app runs sets it as a custom property: a colour slider's track, or a colour area's two fades over a colour. It was read as a colour and came to nothing. `linear-gradient()` with a side or an angle and colour stops at percentages is read, in layers, over a last colour. A gradient in a stylesheet's own custom property is still refused where it is written, and native has no conic gradient. Only the shorthand reads one: `background-color: var(--x)` is a colour or nothing. The gradient is ranked in the cascade as a `background-image` is, so one a later rule declares, or an important one, stands over it.
+
+- A prop no selector names no longer has its element, and everything in it, matched against the stylesheets again. ([#673](https://github.com/ng-native/ng-native/pull/673))
+
+  Any prop can be what a selector asks about, so one changing restyled the element and its subtree: a progress bar's `aria-valuenow` on every tick, a field's text on every key. Only the attributes a loaded stylesheet's selectors mention, and the id, do so now.
+
+- A transition or a `@keyframes` animation now eases a padding, a margin or a `border-radius` that no rule sets from or to 0, as a browser does. `view { transition: padding 200ms }` with `.open { padding: 20px }` eases the padding in and back out, where it jumped. ([#670](https://github.com/ng-native/ng-native/pull/670))
+- A text field focused while a view around it fades in keeps its focus: a plain view with a `transition` is now a native view for as long as it has one. ([#665](https://github.com/ng-native/ng-native/pull/665), [#663](https://github.com/ng-native/ng-native/issues/663))
+
+  React Native gives a view a native view of its own for an opacity under 1 and takes it away at 1, moving everything inside it to the view above, and that move made a focused field lose its focus as the fade ended. From 0.7.0 this showed for `transition-[opacity]` with `opacity-0` taken off, which now eases where it jumped; a fade between two written opacities did it before then too. A view with a transition commits `collapsable: false`, unless `collapsable` is written on the element.
+
+- A rule that names its element by an attribute alone, or as anything inside an element with a class, is no longer tried against every element. ([#674](https://github.com/ng-native/ng-native/pull/674))
+
+  `[data-open] { }` and `.item:focus * { }` say nothing of the element's own name or class, so each was offered to every element of the screen, and the second walked to the root each time to find no `.item`. They are filed under the attribute and under the class, and offered to the elements that have the one or sit inside the other.
+
+- `NativeNavigation.reset()` to a url that lands on the screen already on top, such as the same page with another query, a route config that redirects to it, or a guard that redirects there with a query, takes the screens under it off the stack. It left them, so Back still went to the old stack. ([#669](https://github.com/ng-native/ng-native/pull/669))
+- A release build from a warm Metro cache ships a `templateUrl` or `styleUrl` file edited since the last build. ([#681](https://github.com/ng-native/ng-native/pull/681))
+
+  Metro caches a transform against the file's own content, and a component's template and sheet are compiled into its own module, so two `npx expo export` runs with only the `.html` or `.css` edited between them shipped the old template or styles until `--clear`. The transform worker now records the templates and stylesheets a component's transform read, and the cache stores `withAngularNative` wraps treat that transform as a miss once one of them has changed or been deleted. Set your own `cacheStores` before calling `withAngularNative`, so they are wrapped too.
+
+- `Permission.ensure()` checks a refused permission again before answering, so one the person turns on in Settings works on the next call, without a dialog. ([#682](https://github.com/ng-native/ng-native/pull/682))
+
+  It used to ask the platform only once, so after a refusal for good it answered no, and `blocked()` stayed true, until the app restarted, which neither platform does when a permission is turned on. This reached `Location`, `Notifications`, `ImagePicker`, `MediaLibrary`, `ScreenCapture` and `Tracking`. A `Permission` built in an injection context also checks a no again when the app comes back to the front, so a screen that shows `blocked()` changes by itself. A granted answer is still kept, and the dialog still shows only when the platform will show one.
+
+- A `@media` inside another `@media` applies where both hold, and `:not()` around a list with an ancestor test in it excludes each alternative, so Tailwind's stacked `md:max-lg:` and `not-dark:` variants work. ([#675](https://github.com/ng-native/ng-native/pull/675))
+
+  The inner `@media` was refused as an at-rule a style rule cannot hold, so `md:max-lg:` and `md:motion-reduce:` were dropped at every width. `.x:not(:where(.dark, .dark *))` excluded only an element that was dark and inside something dark, so `not-dark:` with Tailwind's class-based dark mode still applied in dark mode. It now excludes an element that is dark or inside something dark, as Selectors 4 says.
+
+- A CSS transition of `opacity`, a transform, a `background-color` or a border color is played by native, with no frame of it in JavaScript. ([#672](https://github.com/ng-native/ng-native/pull/672))
+
+  A press that fades, slides or tints something was a commit on every frame for as long as it took, on press and again on release. It is now a commit to start and a commit to end, as a `@keyframes` animation of opacity and transforms already was. A transition of a size, a text color or a shadow, and one with a delay, is eased from JavaScript as before.
+
+- A CSS transition of a size or a place (`width`, `height`, margins, insets, `flex-basis`) is one commit, which native animates, where nothing else in that commit moves a box. ([#676](https://github.com/ng-native/ng-native/pull/676))
+
+  It was a commit on every frame from JavaScript. Native's layout animation has four curves (linear, ease-in, ease-out, ease-in-out), so a transition with a `cubic-bezier()` of its own is played by the nearest of them when native lays it out. Where another box is resized in the same commit, text changes length or an element comes or goes, the transition is eased from JavaScript by its own curve, as before.
+
+- `:is(<scope> <compound> > *)` and `:is(<scope> <compound> *)` are read: a parent or ancestor test of a compound that is itself under another. ([#659](https://github.com/ng-native/ng-native/pull/659))
+
+  Tailwind's `*:` and `group-*` variants written inside a scope, `.theme { .card { @apply *:data-[slot=title]:font-medium } }`, compile to that shape, and the whole rule was dropped with a warning. A longer selector inside `:is()` is still refused.
+
+- `:is(<scope> <compound>)` is read: the element itself, where it is somewhere under the scope. ([#662](https://github.com/ng-native/ng-native/pull/662))
+
+  A class written inside a scope and then named by a Tailwind variant, `in-data-[slot=dialog]:` or `rtl:` on a class under `.theme { ... }`, compiles to that shape, and the rule was dropped with a warning. Two compounds in front, or a child combinator, are still refused.
+
+- A `@keyframes` animation leaves a property a rule declares `!important` where the rule puts it, as a browser does. ([#666](https://github.com/ng-native/ng-native/pull/666))
+
+  `view { opacity: 0.3 !important; animation: fade 1s }` faded the view from 0 to 1 over its own important opacity. An important declaration is above an animation in the cascade, so the view stays at 0.3, and the animation still moves every property that is not important. That holds where native plays the animation, which is no longer handed an important opacity or transform, and for one played by a scroll. A transition still eases an important property.
+
+- An icon's `size` is read with the unit a web app writes it with: `size="18px"` or `size="1.5rem"`. ([#668](https://github.com/ng-native/ng-native/pull/668))
+
+  `@ng-icons/core` documents the size as a CSS length. Read as a number alone, `18px` was not one, and the icon was drawn with no size at all. One that cannot be read is now left the size of the text around it.
+
+- Upgrading or removing an `@ng-icons` set rebuilds the files that import it, without a `--clear`. ([#683](https://github.com/ng-native/ng-native/pull/683))
+
+  Metro reads the icons out of the set while it builds the app's own file, and the set's version was not in Metro's cache key. After an upgrade that redrew an icon, a release build, or a dev server after a restart, kept the old icon until the cache was cleared by hand. The installed sets and their versions are in the key now, found in the app's `node_modules` folders and in pnpm's store.
+
+### ❤️ Thank You
+
+- Ashley Hunter
+- erKam
+- Gabriel Silva @GabeSilvaDev
+
 ## 0.7.0 (2026-10-07)
 
 ### 🩹 Fixes
