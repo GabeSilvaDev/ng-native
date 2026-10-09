@@ -1,3 +1,55 @@
+## 0.9.0 (2026-10-09)
+
+### 🚀 Features
+
+- ICU plurals and selects render, `i18n-` attributes keep their text, and a method shorthand in decorator metadata compiles, on `@oxc-angular/vite` 0.0.40. ([#687](https://github.com/ng-native/ng-native/pull/687))
+
+  `{count(), plural, =0 {...} one {...} other {...}}` and `{value, select, ...}` in a template threw on first render and now work on iOS and Android, in the source language and translated; the web host does not support them yet. `i18n-accessibilityLabel` and the other `i18n-` attributes compiled with empty source text and now carry it. `providers: [{ useValue: { attach() {} } }]` failed the build and now compiles.
+
+  **Translation files need one edit.** The placeholders for an element or a control-flow block inside a message are now named as Angular's own compiler names them, with underscores between the words: `{$STARTTAGTEXT}` is `{$START_TAG_TEXT}`, `{$CLOSETAGSCROLLVIEW}` is `{$CLOSE_TAG_SCROLL_VIEW}` and `{$STARTBLOCKIF}` is `{$START_BLOCK_IF}`. `{$INTERPOLATION}` and `{$INTERPOLATION_1}` are unchanged. A translation still using the old names is not applied and the message shows its source text. Extract again with `localize-extract` and copy the new names into each translation file.
+
+  A case of a plural or select holds text and interpolations: Angular leaves out an element inside one, such as `<text>`, with its content. A plural picks its case by the rules of `LOCALE_ID`.
+
+  `@ng-native/metro` no longer exports `assertNoBrokenMethodShorthand`.
+
+
+### 🩹 Fixes
+
+- Two components that each define `@keyframes` of the same name each play their own: an element's animation uses the keyframes of its own component's stylesheet where it has some by that name, as Angular scopes them in a browser, where the last stylesheet loaded used to win for both. ([#694](https://github.com/ng-native/ng-native/pull/694))
+- A selector that reads the `class` attribute, `[class*='size-']`, matches the element's classes, so an icon a library styles with `svg:not([class*='size-'])` keeps the size a class gives it. ([#685](https://github.com/ng-native/ng-native/pull/685))
+
+  `*=`, `^=`, `$=`, `~=` and a bare `[class]` looked for a `class` prop, which no element has, so they never matched and their `:not()` always did. They now read the class list in the order it was set, one space between each, as the attribute would spell it.
+
+  A compound under a scope in `:is()`, `.x:is(.p .x)`, is as specific as the whole argument, `.p .x.x`, as in a browser. The scope was left out, so a rule lightningcss writes for one nested under a selector list lost to a less specific rule after it.
+
+  Two `:host-context()` in one compound, `:host-context(.dark):host-context(.compact)`, need both, as Angular's emulated encapsulation does. The second replaced the first.
+
+- An element moved from one box to another, or under a box whose class changed, is styled by what is over it now, where neither box has a rule or a value to hand down. ([#693](https://github.com/ng-native/ng-native/pull/693))
+
+  Boxes with nothing to style share one cache once they are resolved a second time, after the window is resized or the colour scheme changes, in an app with no global stylesheet and no safe-area tokens. An element moved between two of them kept the style it had, though a rule of its component asks about a class only one of them has, `.dark .label`. A class added to one of them was missed in the same way when a rule reads it through `:not()`, where another such box was resolved first in the commit. Both are styled again now.
+
+- A `@keyframes` animation of two frames that sets only sizes and places, a panel sliding open from `height: 0`, is committed once at its last frame and moved there by native's layout animation, where it was a commit on every frame; and of several transitions or animations of a size that start in one commit and take different times, native plays the longest and the rest are eased from JavaScript, where none of them was native's. ([#697](https://github.com/ng-native/ng-native/pull/697))
+- A `@keyframes` value can be a `var()`, an `em` or a viewport unit: it is settled against the element that plays the frame, as in a browser, where it was a build error (or a dropped declaration) before, so `to { height: var(--panel-height) }` opens each panel to the height set on it. ([#696](https://github.com/ng-native/ng-native/pull/696))
+- A font a `styleUrl` sheet in another directory declares is bundled from beside that sheet, and an `@ng-icons` import wrapped over several lines keeps the line numbers of the file below it. ([#695](https://github.com/ng-native/ng-native/pull/695))
+
+  `url('./Inter.ttf')` in `../shared/fonts.css` was required from the component's directory, where there is no such file, so Metro could not resolve it. It is now resolved against the sheet it is written in, as CSS does, in the component's module and in the hot update an edited template or sheet carries. An `@ng-icons` import that Prettier wrapped was inlined as one line, so an error or a source map line after it was off by the lines it lost.
+
+- `tw-animate-css` plays: an `animation` shorthand whose parts are each a token is read by what each falls back to, with its duration and delay following their tokens, and Tailwind's build leaves an animation's times and a keyframe's slots for the device, so `animate-in fade-in-0 zoom-in-95 duration-200` fades and zooms in over 200ms where the animation was dropped with a build warning. ([#700](https://github.com/ng-native/ng-native/pull/700))
+- A `transform` with a token in it takes `translate3d()` and `scale3d()`, across and down since a view has no depth, and an angle token can fall back to a bare `0`: `rotate(var(--r, 0))` is no longer dropped where `--r` is not set. ([#698](https://github.com/ng-native/ng-native/pull/698))
+- A view whose `bornIn` was cleared, which is how a caller says it has been seen as it is, keeps its transitions: the check that drops the transitions of a view nobody has seen yet took a cleared `bornIn` for an unseen one and dropped them on every commit. ([#684](https://github.com/ng-native/ng-native/pull/684))
+- A custom property set on a box, or a class such as `dark` added to one, restyles what is under it without finding each element's rules again. ([#691](https://github.com/ng-native/ng-native/pull/691))
+
+  Finding the rules that match an element is most of what styling it costs, and both changes found them again for every element under the box, as a first render does. An element now keeps the rules it matched, and is styled from them when the change above it cannot have altered them: a custom property, which no selector reads, and a class that rules name only for the element that has it or for particular elements beneath, which alone are matched again. A theme token changed on a screen of 1,800 elements took 24 ms and takes 15; a `dark` class on its root took 41 ms and takes 27 where the classes are composed ones. Nothing an app sees changes but the time.
+
+- A press that is let go is committed as no longer pressed before its handler runs, so what the handler changes is committed by the render pass after it and not a frame early with the press: an overlay a press opens is no longer drawn before it has been placed. ([#692](https://github.com/ng-native/ng-native/pull/692))
+- On iOS the text of a single-line text field with a `line-height` and a percentage height, `height: 100%` in a box drawn around it, is centred, where it sat low in the field: the line height is left out and kept as the least the field is tall, as it already was for a field with no height. ([#699](https://github.com/ng-native/ng-native/pull/699))
+- A view that takes a touch and fades to `opacity: 0` by a transition still hears a press on iOS: native ends the fade at the opacity the view is committed with, where it ended at none and iOS passed the view over. ([#690](https://github.com/ng-native/ng-native/pull/690))
+
+### ❤️ Thank You
+
+- Ashley Hunter
+- Gabriel Silva @GabeSilvaDev
+
 ## 0.8.0 (2026-10-08)
 
 ### 🩹 Fixes
