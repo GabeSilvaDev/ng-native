@@ -971,6 +971,8 @@ function resourceBlock(src, resource, options) {
         options?.platform,
         parts,
         warn,
+        false,
+        resource,
       );
 
       const update = hotUpdate(template, component, owner.file, options);
@@ -1074,22 +1076,43 @@ function componentParts(component, resources, filename, src) {
  */
 function locator(parts, className) {
   return (line) => {
-    let start = 1;
-    for (const part of parts) {
-      const length = part.text.split('\n').length;
-      if (line < start + length) {
-        const offset = line - start;
-        if (part.line === null)
-          return `${part.file} (${className}, line ${offset + 1} of its styles)`;
-        // A literal that escapes its line breaks is one line of the file, however many it holds.
-        if (part.exact === false && offset > 0) {
-          return `${part.file}:${part.line} (${className}, line ${offset + 1} of its styles)`;
-        }
-        return `${part.file}:${part.line + offset} (${className})`;
-      }
-      start += length;
+    const found = partAt(parts, line);
+    if (!found) return `${parts[0]?.file ?? ''} (${className})`;
+    const { part, offset } = found;
+    if (part.line === null) return `${part.file} (${className}, line ${offset + 1} of its styles)`;
+    // A literal that escapes its line breaks is one line of the file, however many it holds.
+    if (part.exact === false && offset > 0) {
+      return `${part.file}:${part.line} (${className}, line ${offset + 1} of its styles)`;
     }
-    return `${parts[0]?.file ?? ''} (${className})`;
+    return `${part.file}:${part.line + offset} (${className})`;
+  };
+}
+
+/** The sheet a line of a component's joined CSS was written in, and the line's offset in it. */
+function partAt(parts, line) {
+  let start = 1;
+  for (const part of parts) {
+    const length = part.text.split('\n').length;
+    if (line < start + length) return { part, offset: line - start };
+    start += length;
+  }
+  return null;
+}
+
+/**
+ * A font's url as `module` requires it. CSS resolves a url() against the sheet it is written in,
+ * and the require is in the module that carries the compiled sheet, which for a styleUrl sheet in
+ * another directory is somewhere else.
+ */
+function assetFrom(parts, module) {
+  return (url, line) => {
+    const sheet = partAt(parts, line)?.part.file;
+    if (!sheet || !/^\.\.?\//.test(url)) return url;
+    const from = path.dirname(path.resolve(module));
+    const file = path.resolve(path.dirname(sheet), url);
+    if (path.dirname(path.resolve(sheet)) === from) return url;
+    const relative = path.relative(from, file).split(path.sep).join('/');
+    return /^\.\.?\//.test(relative) ? relative : `./${relative}`;
   };
 }
 
@@ -1113,15 +1136,25 @@ function buildWarnings() {
  * still applies. `platform` is the one Metro is bundling for, so a declaration only one platform
  * draws is dropped with a warning in the build for the other; with none, as under a test, the
  * sheet has to suit both. CSS that does not parse fails the build, unless `recover` is set, as
- * it is for a library's: then the rule is dropped and reported like the rest.
+ * it is for a library's: then the rule is dropped and reported like the rest. `module` is the one
+ * the sheet is emitted in, which a font's `require` is resolved from.
  */
-function componentSheet(css, filename, className, platform, parts, warn, recover = false) {
+function componentSheet(
+  css,
+  filename,
+  className,
+  platform,
+  parts,
+  warn,
+  recover = false,
+  module = filename,
+) {
   if (!css.trim()) return null;
 
   const context = `${filename} (${className})`;
   const options = {
     platform,
-    ...(parts ? { locate: locator(parts, className) } : {}),
+    ...(parts ? { locate: locator(parts, className), asset: assetFrom(parts, module) } : {}),
     onUnsupported: warn,
     recover,
   };

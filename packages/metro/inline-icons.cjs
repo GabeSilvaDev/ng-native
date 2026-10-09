@@ -8,8 +8,9 @@
  *
  * Only a plain named import is rewritten, and only when every name is in the set. Anything else -
  * a namespace import, a type import, a name the set does not have - is left for the ordinary
- * import to handle, so its error is the real one. The replacement is one line, so every line
- * after it keeps its number and the source map stays right.
+ * import to handle, so its error is the real one. The replacement takes as many lines as the
+ * import did, wrapped over several or not, so every line after it keeps its number and the source
+ * map stays right.
  *
  * ponytail: a set is parsed with a regex over its published `fesm2022` file, which is one
  * `const name = \`<svg ...>\`;` per icon; a set published in another shape is left alone.
@@ -80,9 +81,14 @@ function inlineIcons(src, filename) {
       if (!value) return statement;
       bindings.push(`${local} = ${value}`);
     }
-    return bindings.length ? `const ${bindings.join(', ')};` : statement;
+    if (!bindings.length) return statement;
+    const replacement = `const ${bindings.join(', ')};`;
+    return replacement + '\n'.repeat(Math.max(0, lines(statement) - lines(replacement)));
   });
 }
+
+/** How many line breaks a piece of source holds. */
+const lines = (text) => text.split('\n').length - 1;
 
 /** The names in `dir`, or none where it does not exist. */
 function namesIn(dir) {

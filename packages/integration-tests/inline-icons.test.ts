@@ -30,6 +30,37 @@ describe('inlining icons from a set', () => {
     assert.equal(out.split('\n').length, src.split('\n').length, 'line numbers are kept');
   });
 
+  it('keeps the lines of an import written over several, as Prettier wraps a long one', () => {
+    const src =
+      "import {\n  lucideCompass,\n  lucideTarget,\n} from '@ng-icons/lucide';\nexport const a = 1;\n";
+    const out = inlineIcons(src, here);
+    assert.doesNotMatch(out, /from '@ng-icons\/lucide'/);
+    assert.equal(out.split('\n').length, src.split('\n').length, 'line numbers are kept');
+    assert.equal(out.split('\n')[4], 'export const a = 1;');
+  });
+
+  it('reports a template error after a wrapped import at the line it is on', () => {
+    const transformer = require('@ng-native/metro/transformer.cjs');
+    const src = [
+      "import { Component } from '@angular/core';",
+      'import {',
+      '  lucideCompass,',
+      '  lucideTarget,',
+      "} from '@ng-icons/lucide';",
+      '',
+      '@Component({',
+      "  selector: 'x-a',",
+      "  template: '<view>@if (on() {<text>x</text>}</view>',",
+      '})',
+      'export class A { on = () => true; icons = [lucideCompass, lucideTarget]; }',
+      '',
+    ].join('\n');
+    assert.throws(
+      () => transformer.transform({ filename: here, src, options: { dev: false }, plugins: [] }),
+      (error: { loc?: { line: number } }) => error.loc?.line === 9,
+    );
+  });
+
   it('keeps an as rename, and reads a set from a subpath', () => {
     const src = "import { heroBolt as bolt } from '@ng-icons/heroicons/outline';\n";
     assert.match(inlineIcons(src, here), /^const bolt = `<svg/);
