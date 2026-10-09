@@ -110,6 +110,26 @@ it('replaces the top screen with a page that navigates elsewhere as it is create
   assert.deepEqual(pages(app), ['A', 'Bounce', 'Login']);
 });
 
+it('leaves only the page a reset page replaces itself with as it is created', async () => {
+  const { app, nav, router } = await twoDeep();
+  await nav.reset('/swap');
+  await turns();
+  assert.equal(router.url, '/login');
+  assert.deepEqual(pages(app), ['Login']);
+
+  nav.back();
+  await turns();
+  assert.equal(router.url, '/login', 'back has nowhere to go');
+});
+
+it('leaves the page a replacing page replaces itself with over the screens below', async () => {
+  const { app, nav, router } = await twoDeep();
+  await nav.replace('/swap');
+  await turns();
+  assert.equal(router.url, '/login');
+  assert.deepEqual(pages(app), ['A', 'Login']);
+});
+
 it('presents the page a guard redirects a presentation to, the way it was asked for', async () => {
   const { app, nav, router } = await twoDeep();
   await nav.present('/home', { as: 'formSheet' });

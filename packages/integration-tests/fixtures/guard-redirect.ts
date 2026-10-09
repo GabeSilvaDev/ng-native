@@ -1,6 +1,7 @@
 import { Component, inject, type OnInit } from '@angular/core';
 import { Router, type Routes } from '@angular/router';
 import { Text } from '../../components/src/text.ts';
+import { NativeNavigation } from '../../router/src/native-navigation.ts';
 import { NativeStackOutlet } from '../../router/src/native-stack-outlet.ts';
 
 export const session = { signedIn: false };
@@ -24,6 +25,16 @@ export class GuardedBounce implements OnInit {
 
   ngOnInit(): void {
     if (!session.signedIn) void this.router.navigateByUrl('/login');
+  }
+}
+
+/** A page that swaps itself for the sign-in page as it is created, leaving no way back to it. */
+@Component({ selector: 'x-guarded-swap', imports: [Text], template: `<text>Swap</text>` })
+export class GuardedSwap implements OnInit {
+  private readonly nav = inject(NativeNavigation);
+
+  ngOnInit(): void {
+    if (!session.signedIn) void this.nav.replace('/login');
   }
 }
 
@@ -51,4 +62,5 @@ export const guardedRoutes: Routes = [
   },
   { path: 'sign-in', redirectTo: 'login' },
   { path: 'bounce', component: GuardedBounce },
+  { path: 'swap', component: GuardedSwap },
 ];
