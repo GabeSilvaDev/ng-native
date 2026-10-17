@@ -49,4 +49,6 @@ a form sheet that react-native-screens raises with the keyboard is not lifted tw
 `<modal>` is in a window of its own, and follows that window's keyboard.
 
 React Native's own keyboard events still arrive, and are what a modal's keyboard is reported by in
-`Keyboard.metrics`. One that says no more than the native module already did is dropped.
+`Keyboard.metrics`. Each one waits 100 ms for the native module, and is dropped when the module has
+already said the same, so a modal's keyboard reaches `Keyboard.metrics` 100 ms after React Native
+reports it.

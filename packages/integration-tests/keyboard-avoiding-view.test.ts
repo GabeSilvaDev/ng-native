@@ -249,6 +249,38 @@ describe('keyboard-avoiding-view following the motion', () => {
 
     app.applicationRef.destroy();
   });
+
+  it('configures no layout animation for a frame that commits with the motion starting', async () => {
+    const order: string[] = [];
+    let emit: (metrics: KeyboardMetrics) => void = () => {};
+    let move: (frame: KeyboardMetrics | null) => void = () => {};
+    const fabric = createFakeFabric();
+    const app = mount(1, Component, fabric, {
+      providers: [
+        {
+          provide: Keyboard.SOURCE,
+          useValue: {
+            subscribe: (fn: typeof emit) => ((emit = fn), () => {}),
+            subscribeMotion: (fn: typeof move) => ((move = fn), () => {}),
+            dismiss: () => {},
+          },
+        },
+        {
+          provide: LayoutAnimation.SOURCE,
+          useValue: { configureNext: () => order.push('configure') },
+        },
+      ],
+    });
+    await settle();
+
+    emit({ height: 300, duration: 250, easing: 'easeOut' });
+    move({ height: 120 });
+    await settle();
+    assert.equal(fabric.committed[0]!.children[0]!.props['paddingBottom'], 100);
+    assert.deepEqual(order, [], 'the frame is where the keyboard is, not a step to animate');
+
+    app.applicationRef.destroy();
+  });
 });
 
 /**

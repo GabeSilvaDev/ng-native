@@ -70,6 +70,20 @@ describe('the native keyboard source', () => {
     assert.deepEqual(
       heard.map((metrics) => metrics.duration),
       [285],
+      'only the motion, which overtakes it',
+    );
+  });
+
+  it("drops React Native's own event that says what the motion did, sent just after it", async () => {
+    const { source, change, didShow } = fakes();
+    const heard: KeyboardMetrics[] = [];
+    source.subscribe((metrics) => heard.push(metrics));
+    change({ height: 288.3809523, screenY: 577.9047619, duration: 285, easing: 'easeOut' });
+    didShow({ height: 288.38095092, screenY: 577.904785, duration: 0, easing: 'keyboard' });
+    await wait(150);
+    assert.deepEqual(
+      heard.map((metrics) => metrics.duration),
+      [285],
       'only the motion, though the two round the height differently',
     );
   });

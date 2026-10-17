@@ -37,9 +37,15 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
   var inset = keyboardInset(ViewCompat.getRootWindowInsets(root))
     private set
 
-  /** Set from the moment Android prepares a motion, which comes before the insets it ends at. */
+  /**
+   * Set from the moment Android prepares a motion, which comes before the insets it ends at, until
+   * its end is reported.
+   */
   var moving = false
     private set
+
+  /** How many motions Android has prepared, which tells an end whether another has begun. */
+  private var motions = 0
 
   /** The window's bottom edge on the screen, which the keyboard's top is measured up from. */
   val bottomOnScreen: Int
@@ -56,7 +62,9 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
       probe,
       object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
         override fun onPrepare(animation: WindowInsetsAnimationCompat) {
-          if (animation.isKeyboard) moving = true
+          if (!animation.isKeyboard) return
+          moving = true
+          motions++
         }
 
         override fun onStart(
@@ -84,9 +92,17 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
 
         override fun onEnd(animation: WindowInsetsAnimationCompat) {
           if (!animation.isKeyboard) return
-          moving = false
-          inset = keyboardInset(ViewCompat.getRootWindowInsets(probe))
-          listeners.toList().forEach { it.onKeyboardEnd(inset) }
+          // A keyboard that turns back part way ends its motion before the one that replaces it
+          // is prepared, in the same call, and by then the window's insets are the cancelled
+          // motion's destination. So the end waits a turn, and is dropped when a motion has begun
+          // since: reported, it would land what follows the keyboard there for a frame.
+          val ending = motions
+          probe.post {
+            if (motions != ending) return@post
+            moving = false
+            inset = keyboardInset(ViewCompat.getRootWindowInsets(probe))
+            listeners.toList().forEach { it.onKeyboardEnd(inset) }
+          }
         }
       },
     )

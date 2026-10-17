@@ -1,6 +1,8 @@
 package dev.ngnative.expo
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.core.view.ViewCompat
@@ -24,6 +26,9 @@ import expo.modules.kotlin.views.ExpoView
  */
 class KeyboardModule : Module() {
   private var watcher: KeyboardWatcher? = null
+  /** Whether JavaScript is listening: set on its thread, read on the main one. */
+  @Volatile private var observing = false
+  private val main = Handler(Looper.getMainLooper())
 
   private val listener = object : KeyboardWatcher.Listener {
     override fun onKeyboardStart(target: Int, duration: Long) {
@@ -50,23 +55,43 @@ class KeyboardModule : Module() {
     Events("onKeyboardChange", "onKeyboardMove")
 
     OnStartObserving {
-      appContext.currentActivity?.let { activity ->
-        activity.runOnUiThread {
-          if (watcher == null) watcher = KeyboardWatcher.watch(activity.window.decorView, listener)
-        }
-      }
+      observing = true
+      watchActivity()
     }
 
     OnStopObserving {
-      appContext.currentActivity?.runOnUiThread {
-        KeyboardWatcher.unwatch(watcher, listener)
-        watcher = null
-      }
+      observing = false
+      main.post { unwatch() }
+    }
+
+    // An activity Android recreates, after the font size changes for one, is a new window while
+    // the app's listeners stay: the watcher moves to it rather than keep the old one alive.
+    OnActivityEntersForeground {
+      if (observing) watchActivity()
+    }
+
+    OnActivityDestroys {
+      unwatch()
     }
 
     View(KeyboardMotionView::class) {
       Events("onKeyboardMoveStart", "onKeyboardMove", "onKeyboardMoveEnd")
     }
+  }
+
+  /** Watch the keyboard of the activity in front, once. On the main thread. */
+  private fun watchActivity() {
+    val activity = appContext.currentActivity ?: return
+    activity.runOnUiThread {
+      if (watcher == null && observing) {
+        watcher = KeyboardWatcher.watch(activity.window.decorView, listener)
+      }
+    }
+  }
+
+  private fun unwatch() {
+    KeyboardWatcher.unwatch(watcher, listener)
+    watcher = null
   }
 
   /** Where the motion is going and how long it takes. */

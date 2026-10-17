@@ -87,13 +87,12 @@ was and ending where `metrics` said it would; elsewhere it is `metrics`.
 
 Android animates no layout alongside the keyboard unless an app turns React Native's layout
 animations on, so there a layout that should move with the keyboard reads `position` instead of
-animating to `metrics`. `<keyboard-avoiding-view>` does this when `followsMotion` is true:
+animating to `metrics`. `<keyboard-avoiding-view>` reads it, and configures no layout animation
+where `followsMotion` is true:
 
 ```ts
 const keyboard = inject(Keyboard);
-const clearance = computed(() =>
-  keyboard.followsMotion ? keyboard.position().height : keyboard.metrics().height,
-);
+const clearance = computed(() => keyboard.position().height);
 ```
 
 A frame moves the layout from JavaScript, a commit at a time, so it lands a frame or two after the
