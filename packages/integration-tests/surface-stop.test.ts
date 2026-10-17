@@ -145,4 +145,27 @@ describe('an app on a surface Fabric stops', () => {
     assert.equal(beside.applicationRef.destroyed, true, 'the other app on the surface goes too');
     assert.deepEqual(react.stopped, [1]);
   });
+
+  it('destroys the other apps on the surface when an ErrorHandler throws', () => {
+    const react = reactStopSurface();
+    scope.RN$stopSurface = react.stop;
+    const failure = new Error('handler');
+    const throwing = {
+      provide: ErrorHandler,
+      useValue: {
+        handleError: () => {
+          throw failure;
+        },
+      },
+    };
+    const failing = mount(1, Counter, createFakeFabric(), { providers: [throwing] });
+    failing.applicationRef.onDestroy(() => {
+      throw new Error('boom');
+    });
+    const beside = mount(1, Counter, createFakeFabric());
+
+    assert.throws(() => scope.RN$stopSurface!(1), failure);
+    assert.equal(beside.applicationRef.destroyed, true, 'the other app on the surface goes too');
+    assert.deepEqual(react.stopped, [1]);
+  });
 });

@@ -37,10 +37,20 @@ function installSurfaceStop(): void {
     const callbacks = stops.get(surfaceId);
     // A stopped surface is not started again: its id is not reused.
     stops.delete(surfaceId);
+    // Every app on the surface goes, and the wrapped function runs, whatever one of them throws;
+    // the first thing thrown is thrown after, as it would have been from the function alone.
+    const failures: unknown[] = [];
+    for (const stop of callbacks ?? []) {
+      try {
+        stop();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
     try {
-      for (const stop of callbacks ?? []) stop();
-    } finally {
       next?.(surfaceId);
+    } finally {
+      if (failures.length > 0) throw failures[0];
     }
   };
   scope.RN$stopSurface = installed;
