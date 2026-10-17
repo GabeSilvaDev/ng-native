@@ -47,6 +47,9 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
   /** How many motions Android has prepared, which tells an end whether another has begun. */
   private var motions = 0
 
+  /** Whether the motion prepared last has started. */
+  private var started = false
+
   /** The window's bottom edge on the screen, which the keyboard's top is measured up from. */
   val bottomOnScreen: Int
     get() {
@@ -64,7 +67,13 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
         override fun onPrepare(animation: WindowInsetsAnimationCompat) {
           if (!animation.isKeyboard) return
           moving = true
-          motions++
+          started = false
+          val prepared = ++motions
+          // Android 11 sends no end for a motion cancelled before it starts, which would leave
+          // `moving` set and every later change ignored until another motion ends. One that has
+          // not started by now never will; the keyboard is then wherever the window says.
+          // ponytail: a fixed wait, so a first frame slower than it reads as a cancel.
+          probe.postDelayed({ if (motions == prepared && !started) settle() }, CANCELLED_MS)
         }
 
         override fun onStart(
@@ -72,6 +81,8 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
           bounds: WindowInsetsAnimationCompat.BoundsCompat,
         ): WindowInsetsAnimationCompat.BoundsCompat {
           if (animation.isKeyboard) {
+            moving = true
+            started = true
             // The window's insets are the ones the motion ends at by now.
             val target = keyboardInset(ViewCompat.getRootWindowInsets(probe))
             listeners.toList().forEach { it.onKeyboardStart(target, animation.durationMillis) }
@@ -111,16 +122,25 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
     // owns the view's insets listener to do it.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
       ViewCompat.setOnApplyWindowInsetsListener(probe) { _, insets ->
-        val now = keyboardInset(insets)
-        if (!moving && now != inset) {
-          inset = now
-          listeners.toList().forEach {
-            it.onKeyboardStart(now, 0)
-            it.onKeyboardEnd(now)
-          }
-        }
+        if (!moving) jump(keyboardInset(insets))
         insets
       }
+    }
+  }
+
+  /** A motion that will not start is over: report a keyboard it left elsewhere as one jump. */
+  private fun settle() {
+    moving = false
+    jump(keyboardInset(ViewCompat.getRootWindowInsets(probe)))
+  }
+
+  /** The keyboard at `now` with no motion, reported as one that starts and ends at once. */
+  private fun jump(now: Int) {
+    if (now == inset) return
+    inset = now
+    listeners.toList().forEach {
+      it.onKeyboardStart(now, 0)
+      it.onKeyboardEnd(now)
     }
   }
 
@@ -138,6 +158,9 @@ internal class KeyboardWatcher private constructor(private val root: ViewGroup) 
   }
 
   companion object {
+    /** How long a prepared motion has to start before it counts as cancelled, in ms. */
+    private const val CANCELLED_MS = 500L
+
     private val watchers = WeakHashMap<ViewGroup, KeyboardWatcher>()
 
     /** The window content `view` is in, which its watcher's view joins. */
