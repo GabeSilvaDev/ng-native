@@ -33,6 +33,14 @@ export interface SvgImagesNative {
   readonly scale: number;
 }
 
+/** One turn of the frame loop, or the macrotask queue where there is no loop to wait on. */
+function nextFrame(callback: () => void): void {
+  const raf = (globalThis as { requestAnimationFrame?: (callback: () => void) => void })
+    .requestAnimationFrame;
+  if (raf) raf(callback);
+  else setTimeout(callback, 0);
+}
+
 /** The markup, drawn where it is seen by nobody: a hundredth opaque, above the rest. */
 @Component({
   selector: 'ng-icon-drawing',
@@ -116,7 +124,14 @@ export class SvgImages {
         () => {
           const tag = this.engine?.tagOf(drawing.instance.icon().nativeElement as EngineNode);
           if (tag == null) return finish();
-          native.toDataURL(tag, { width: asked, height: asked }, finish);
+          // Fabric mounts the commit on the main thread once this task is over, and iOS asked for
+          // a view before then finds none: it logs an error, a red box in development, and never
+          // calls back. react-native-svg retries only a view it found, so this asks a frame later.
+          nextFrame(() => {
+            if (!drawing.hostView.destroyed) {
+              native.toDataURL(tag, { width: asked, height: asked }, finish);
+            }
+          });
         },
         { injector: drawing.injector },
       );
