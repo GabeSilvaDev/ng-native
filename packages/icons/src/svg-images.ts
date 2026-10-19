@@ -18,7 +18,7 @@ import {
   viewChild,
   type ViewContainerRef,
 } from '@angular/core';
-import { Engine, type EngineNode, nativePlatform } from '@ng-native/fabric';
+import { Engine, type EngineNode, nativePlatform, nextFrame } from '@ng-native/fabric';
 import { NgIcon } from './ng-icon.ts';
 
 /** What of react-native-svg's native module this needs, and the screen's scale. */
@@ -31,14 +31,6 @@ export interface SvgImagesNative {
   ): void;
   /** Pixels to a point. */
   readonly scale: number;
-}
-
-/** One turn of the frame loop, or the macrotask queue where there is no loop to wait on. */
-function nextFrame(callback: () => void): void {
-  const raf = (globalThis as { requestAnimationFrame?: (callback: () => void) => void })
-    .requestAnimationFrame;
-  if (raf) raf(callback);
-  else setTimeout(callback, 0);
 }
 
 /** The markup, drawn where it is seen by nobody: a hundredth opaque, above the rest. */
@@ -127,7 +119,7 @@ export class SvgImages {
           // Fabric mounts the commit on the main thread once this task is over, and iOS asked for
           // a view before then finds none: it logs an error, a red box in development, and never
           // calls back. react-native-svg retries only a view it found, so this asks a frame later.
-          nextFrame(() => {
+          void nextFrame().then(() => {
             if (!drawing.hostView.destroyed) {
               native.toDataURL(tag, { width: asked, height: asked }, finish);
             }

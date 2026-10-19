@@ -155,6 +155,30 @@ describe('drawing SVG markup as an image', () => {
     }
   });
 
+  it('asks native nothing for a drawing taken away before the frame it waits for', async () => {
+    const scope = globalThis as { requestAnimationFrame?: unknown };
+    const real = scope.requestAnimationFrame;
+    const frames: (() => void)[] = [];
+    scope.requestAnimationFrame = (callback: () => void) => frames.push(callback);
+    const Images = mod['SvgImages'] as { answerWithinMs: number };
+    const within = Images.answerWithinMs;
+    Images.answerWithinMs = 20;
+    try {
+      const { host, asked } = await start(true);
+      const image = host.images.render(HOUSE, 25, host.at);
+      for (let turn = 0; turn < 5; turn++) await settle();
+      assert.ok(frames.length > 0, 'it waits for a frame before asking');
+      host.at.clear();
+      for (const frame of frames.splice(0)) frame();
+      await settle();
+      assert.deepEqual(asked, [], 'native is not asked for a view that is gone');
+      assert.equal(await image, null);
+    } finally {
+      scope.requestAnimationFrame = real;
+      Images.answerWithinMs = within;
+    }
+  });
+
   it('answers null when native draws nothing', async () => {
     const { host, asked, svgs } = await start(true);
     const image = host.images.render(HOUSE, 25, host.at);
