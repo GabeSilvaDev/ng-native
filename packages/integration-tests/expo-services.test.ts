@@ -11,6 +11,7 @@ import { runInInjectionContext, signal, type Type } from '@angular/core';
 import { mount } from '@ng-native/platform';
 import { createFakeFabric } from '@ng-native/testing';
 import { assetResource, assets } from '@ng-native/expo/assets';
+import { Brightness } from '@ng-native/expo/brightness';
 import { Database, type Migration, type NativeDatabase } from '@ng-native/expo/database';
 import { KeepAwake } from '@ng-native/expo/keep-awake';
 import { Updates } from '@ng-native/expo/updates';
@@ -536,6 +537,15 @@ describe('keeping the screen on', () => {
     await settle();
     assert.deepEqual([...held], ['angular-native']);
     assert.equal(current.service.active(), true);
+  });
+
+  it('keeps the screen on where expo-keep-awake is not there, beside another missing module', () => {
+    // Without the modules, as on the web, each service keeps its own: brightness's is not handed
+    // to keep-awake.
+    serviceWith(Brightness.SOURCE, null, () => new Brightness());
+    const keepAwake = serviceWith(KeepAwake.SOURCE, null, () => new KeepAwake());
+    keepAwake.hold('video');
+    assert.equal(keepAwake.active(), true);
   });
 
   it('releases what an app still holds when it goes', async () => {

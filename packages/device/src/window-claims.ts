@@ -90,16 +90,16 @@ export class WindowClaims<T, O extends object = object> {
 
 /** The one stack, or whatever a module keeps for its window, for each native module. */
 const shared = new WeakMap<object, unknown>();
-const ABSENT = {};
 
 /**
  * What every app on `source` shares, made the first time one asks. `source` is the native module
- * the app writes through, or null for one that is not there.
+ * the app writes through, or null for one that is not there: with no window to share, each app
+ * gets its own, so one service's value is never handed to another and no claim outlives its app.
  */
 export function sharedBySource<W>(source: object | null, create: () => W): W {
-  const key = source ?? ABSENT;
-  if (!shared.has(key)) shared.set(key, create());
-  return shared.get(key) as W;
+  if (!source) return create();
+  if (!shared.has(source)) shared.set(source, create());
+  return shared.get(source) as W;
 }
 
 /**
