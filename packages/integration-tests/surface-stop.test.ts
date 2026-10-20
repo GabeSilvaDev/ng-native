@@ -9,6 +9,10 @@
 import assert from 'node:assert/strict';
 import { afterEach, before, describe, it } from 'node:test';
 import { ErrorHandler, type Type } from '@angular/core';
+import { StatusBar } from '@ng-native/device';
+import { Brightness } from '@ng-native/expo/brightness';
+import { KeepAwake } from '@ng-native/expo/keep-awake';
+import { DeviceOrientation } from '@ng-native/expo/orientation';
 import { mount } from '@ng-native/platform';
 import { createFakeFabric } from '@ng-native/testing';
 import { compileFixture } from './compile.ts';
@@ -167,5 +171,73 @@ describe('an app on a surface Fabric stops', () => {
     assert.throws(() => scope.RN$stopSurface!(1), failure);
     assert.equal(beside.applicationRef.destroyed, true, 'the other app on the surface goes too');
     assert.deepEqual(react.stopped, [1]);
+  });
+
+  it('leaves the window as the app mounted after it claimed it', async () => {
+    scope.RN$stopSurface = reactStopSurface().stop;
+    const calls: string[] = [];
+    const providers = [
+      {
+        provide: KeepAwake.SOURCE,
+        useValue: {
+          activate: async () => void calls.push('awake'),
+          deactivate: async () => void calls.push('asleep'),
+        },
+      },
+      {
+        provide: DeviceOrientation.SOURCE,
+        useValue: {
+          reported: null,
+          lock: async () => void calls.push('locked'),
+          unlock: async () => void calls.push('unlocked'),
+        },
+      },
+      {
+        provide: StatusBar.SOURCE,
+        useValue: {
+          setStyle: (style: string) => calls.push(`style ${style}`),
+          setHidden: (hidden: boolean) => calls.push(`hidden ${hidden}`),
+          setBackgroundColor: () => {},
+          setTranslucent: () => {},
+          height: undefined,
+        },
+      },
+      {
+        provide: Brightness.SOURCE,
+        useValue: {
+          get: async () => 0.5,
+          set: async () => void calls.push('bright'),
+          restore: async () => void calls.push('restored'),
+        },
+      },
+    ];
+    /** What a probe in the app asks of the window, given back when the app is destroyed. */
+    const claim = (app: ReturnType<typeof mount>) => {
+      const injector = app.applicationRef.injector;
+      app.applicationRef.onDestroy(injector.get(KeepAwake).hold());
+      app.applicationRef.onDestroy(injector.get(DeviceOrientation).lock('portrait'));
+      app.applicationRef.onDestroy(injector.get(StatusBar).push({ style: 'light', hidden: true }));
+      app.applicationRef.onDestroy(injector.get(Brightness).set(1));
+    };
+    // Android mounts the recreated activity's app before it stops the old surface.
+    const old = mount(1, Counter, createFakeFabric(), { providers });
+    claim(old);
+    const current = mount(11, Counter, createFakeFabric(), { providers });
+    claim(current);
+    await new Promise((resolve) => setImmediate(resolve));
+    calls.length = 0;
+
+    scope.RN$stopSurface!(1);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.equal(old.applicationRef.destroyed, true);
+    assert.deepEqual(
+      calls.filter((call) =>
+        ['asleep', 'unlocked', 'restored', 'style default', 'hidden false'].includes(call),
+      ),
+      [],
+      'nothing the new app claimed is given back',
+    );
+    current.applicationRef.destroy();
   });
 });
