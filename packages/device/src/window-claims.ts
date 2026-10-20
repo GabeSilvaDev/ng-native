@@ -88,18 +88,22 @@ export class WindowClaims<T, O extends object = object> {
   }
 }
 
-/** The one stack, or whatever a module keeps for its window, for each native module. */
-const shared = new WeakMap<object, unknown>();
+/** For each purpose, the one stack, or whatever a module keeps for its window, per native module. */
+const shared = new WeakMap<object, WeakMap<object, unknown>>();
 
 /**
- * What every app on `source` shares, made the first time one asks. `source` is the native module
- * the app writes through, or null for one that is not there: with no window to share, each app
- * gets its own, so one service's value is never handed to another and no claim outlives its app.
+ * What every app on `source` shares for `purpose`, made the first time one asks. `source` is the
+ * native module the app writes through, or null for one that is not there: with no window to
+ * share, each app gets its own, so no claim outlives its app. `purpose` is what the value is for,
+ * such as the class `create` makes, so two services never share one, not even when one object
+ * stands in for two modules.
  */
-export function sharedBySource<W>(source: object | null, create: () => W): W {
+export function sharedBySource<W>(purpose: object, source: object | null, create: () => W): W {
   if (!source) return create();
-  if (!shared.has(source)) shared.set(source, create());
-  return shared.get(source) as W;
+  let bySource = shared.get(purpose);
+  if (!bySource) shared.set(purpose, (bySource = new WeakMap()));
+  if (!bySource.has(source)) bySource.set(source, create());
+  return bySource.get(source) as W;
 }
 
 /**
