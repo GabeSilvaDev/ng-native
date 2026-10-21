@@ -39,6 +39,8 @@ import { Locale } from '@ng-native/expo/locale';
 import { SecureStorage } from '@ng-native/expo/secure-store';
 import { Storage } from '@ng-native/expo/async-storage';
 import { Updates } from '@ng-native/expo/updates';
+import { Brightness, type NativeBrightness } from '@ng-native/expo/brightness';
+import { nativePlatform, registerPlatformComponents } from '@ng-native/fabric';
 import type { InjectionToken } from '@angular/core';
 import { inAppWith } from './injected.ts';
 
@@ -904,5 +906,124 @@ describe('the language model source', () => {
       withModules({}, () => defaultSource(LanguageModel.SOURCE)),
       null,
     );
+  });
+});
+
+describe('the brightness source', () => {
+  /*
+   * expo-brightness sets the app's own level on Android, which `restoreSystemBrightnessAsync`
+   * releases. On iOS there is no such level: `setBrightnessAsync` sets the screen's, which stays
+   * after the app until the device locks, and `restoreSystemBrightnessAsync` returns without doing
+   * anything. The fake answers as the real module does on the platform each test runs as.
+   */
+  let level = 0.4;
+  let released = 0;
+  // A turn of the event loop before each call lands, as a call across to native takes.
+  const later = () => new Promise((resolve) => setTimeout(resolve));
+  /** Long enough for a few queued calls across to native to land. */
+  const settle = async () => {
+    for (let turn = 0; turn < 10; turn += 1) await later();
+  };
+  const expoBrightness = () => ({
+    getBrightnessAsync: async () => (await later(), level),
+    // Slower than a read, so a read asked for after a set can answer before the set lands.
+    setBrightnessAsync: async (next: number) => {
+      await later();
+      await later();
+      level = next;
+    },
+    restoreSystemBrightnessAsync: () => {
+      if (nativePlatform() === 'android') {
+        released += 1;
+        level = 0.4;
+      }
+      return Promise.resolve();
+    },
+  });
+
+  afterEach(() => {
+    level = 0.4;
+    released = 0;
+    registerPlatformComponents('ios');
+  });
+
+  const build = () =>
+    withModules({ 'expo-brightness': expoBrightness() }, () =>
+      defaultSource(Brightness.SOURCE),
+    ) as NativeBrightness;
+
+  it('puts back the level the screen had before the first set, on iOS', async () => {
+    const source = build();
+    await source.set(1);
+    await source.set(0.8);
+    assert.equal(level, 0.8);
+
+    await source.restore();
+    assert.equal(level, 0.4, 'the level before the app set one, not the first one it set');
+  });
+
+  it('reads the level again for a set after a restore, on iOS', async () => {
+    const source = build();
+    await source.set(1);
+    await source.restore();
+    level = 0.6; // changed in Control Center while no screen held a level
+
+    await source.set(1);
+    await source.restore();
+    assert.equal(level, 0.6);
+  });
+
+  it('keeps the level to put back for a set that comes while a restore is running, on iOS', async () => {
+    // One screen holding a level gives way to the next: the restore and the set are asked for
+    // together, and the level before the first set is still the one to go back to.
+    const source = build();
+    await source.set(1);
+    void source.restore();
+    await source.set(0.9);
+    assert.equal(level, 0.9);
+
+    await source.restore();
+    assert.equal(level, 0.4);
+  });
+
+  it('leaves the level alone on a restore with nothing set, on iOS', async () => {
+    // `Brightness.restore()` restores the screen whenever no level is held, already put back or not.
+    const source = build();
+    await source.set(1);
+    await source.restore();
+    level = 0.7; // changed in Control Center after the level was put back
+
+    await source.restore();
+    assert.equal(level, 0.7);
+  });
+
+  it('shows the level set after a restore it was asked for together with, on iOS', async () => {
+    const brightness = inAppWith(Brightness.SOURCE, build(), () => new Brightness()).service;
+    const restoreFirst = brightness.set(1);
+    await settle();
+    restoreFirst();
+    const restoreNext = brightness.set(0.9);
+    await settle();
+    assert.equal(level, 0.9);
+    assert.equal(brightness.level(), 0.9, 'not the level the restore read back');
+
+    restoreNext();
+    await settle();
+    assert.equal(level, 0.4);
+    assert.equal(brightness.level(), 0.4);
+  });
+
+  it("releases the app's level on Android, without setting one", async () => {
+    registerPlatformComponents('android');
+    try {
+      const source = build();
+      await source.set(1);
+
+      await source.restore();
+      assert.equal(released, 1);
+      assert.equal(level, 0.4);
+    } finally {
+      registerPlatformComponents('ios');
+    }
   });
 });
