@@ -11,7 +11,6 @@ import { runInInjectionContext, signal, type Type } from '@angular/core';
 import { mount } from '@ng-native/platform';
 import { createFakeFabric } from '@ng-native/testing';
 import { assetResource, assets } from '@ng-native/expo/assets';
-import { Brightness } from '@ng-native/expo/brightness';
 import { Database, type Migration, type NativeDatabase } from '@ng-native/expo/database';
 import { KeepAwake } from '@ng-native/expo/keep-awake';
 import { Updates } from '@ng-native/expo/updates';
@@ -539,13 +538,19 @@ describe('keeping the screen on', () => {
     assert.equal(current.service.active(), true);
   });
 
-  it('keeps the screen on where expo-keep-awake is not there, beside another missing module', () => {
-    // Without the modules, as on the web, each service keeps its own: brightness's is not handed
-    // to keep-awake.
-    serviceWith(Brightness.SOURCE, null, () => new Brightness());
-    const keepAwake = serviceWith(KeepAwake.SOURCE, null, () => new KeepAwake());
-    keepAwake.hold('video');
-    assert.equal(keepAwake.active(), true);
+  it('keeps each app to its own holds where expo-keep-awake is not there', () => {
+    // Without the module, as on the web or in a test, there is no screen to share: an app that
+    // never goes would otherwise leave its holds under every app after it.
+    const first = inAppWith(KeepAwake.SOURCE, null, () => new KeepAwake());
+    first.service.hold('video');
+    const second = inAppWith(KeepAwake.SOURCE, null, () => new KeepAwake());
+    try {
+      assert.equal(first.service.active(), true);
+      assert.equal(second.service.active(), false);
+    } finally {
+      first.destroy();
+      second.destroy();
+    }
   });
 
   it('releases what an app still holds when it goes', async () => {

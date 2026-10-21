@@ -2,4 +2,4 @@
 __default__: patch
 ---
 
-Where a native module is not there, as on the web or in a test, each app keeps its own window claims. An app injecting two of `Brightness`, `KeepAwake` and `ScreenCapture` without their modules no longer gets one service's state in another and throws, and `StatusBar`, `NavigationBar` and `DeviceOrientation` claims no longer carry over from one app to the next without React Native.
+Where a native module is not there, as on the web host or in Node tests, each app keeps its own window claims, so the claims of an app that is never destroyed no longer show in every app mounted after it. This covers `Brightness`, `KeepAwake` and `ScreenCapture` without their Expo modules, `DeviceOrientation` without `expo-screen-orientation`, `StatusBar` without React Native, and `NavigationBar` off Android or without `expo-navigation-bar`.
