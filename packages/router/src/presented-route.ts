@@ -17,6 +17,7 @@ import {
   type Routes,
   type UrlTree,
 } from '@angular/router';
+import { primarySegments, segmentCommands } from './url-commands.ts';
 
 /** The root outlet a page of another tab is presented in. */
 export const PRESENTED = 'presented';
@@ -138,7 +139,9 @@ const copies = new WeakMap<Router, Set<string>>();
  * route a copy there, or null when the config is not one this follows.
  */
 export async function presentedCommands(router: Router, path: string): Promise<unknown[] | null> {
-  const segments = path.split('/').filter(Boolean);
+  // Parsed, so the routes are matched against decoded segments and the escapes are written once.
+  const parsed = primarySegments(router, path);
+  const segments = parsed.map((segment) => segment.path);
   const chain = await chainTo(router.config, segments);
   if (!chain || chain === STOP) return null;
   const copy = presentedCopy(chain);
@@ -148,7 +151,7 @@ export async function presentedCommands(router: Router, path: string): Promise<u
     known.add(copy.path!);
     router.config.push(copy);
   }
-  return [{ outlets: { [PRESENTED]: segments } }];
+  return [{ outlets: { [PRESENTED]: parsed.flatMap(segmentCommands) } }];
 }
 
 /** `url` without the page presented over it: where the app is, under the page. */

@@ -28,6 +28,7 @@ import {
 import { NativeBack } from './native-back.ts';
 import type { ScreenPresentation, StackPresentation } from './screen-presentation.ts';
 import { leavingPresented, presentedCommands } from './presented-route.ts';
+import { urlCommands } from './url-commands.ts';
 
 /** What `Router` takes: a url string, or the array form with segments and params. */
 export type NavigationCommands = string | readonly unknown[];
@@ -295,7 +296,8 @@ export class NativeNavigation {
       : intent;
 
     const navigate = () => {
-      const list = typeof commands === 'string' ? [pathOf(commands)] : [...commands];
+      const list =
+        typeof commands === 'string' ? urlCommands(this.router, pathOf(commands)) : [...commands];
       const all = {
         ...extras,
         ...(typeof commands === 'string' ? this.queryOf(commands, extras) : {}),
@@ -356,8 +358,9 @@ export class NativeNavigation {
   /** The path the commands lead to, without its query and fragment. */
   private pathFor(commands: NavigationCommands, extras: NavigationExtras): string {
     if (typeof commands === 'string' && commands.startsWith('/')) return pathOf(commands);
-    // Resolved as `go` navigates them: a relative string against `relativeTo`, as a command.
-    const list = typeof commands === 'string' ? [pathOf(commands)] : [...commands];
+    // Resolved as `go` navigates them: a relative string against `relativeTo`.
+    const list =
+      typeof commands === 'string' ? urlCommands(this.router, pathOf(commands)) : [...commands];
     return pathOf(this.router.serializeUrl(this.router.createUrlTree(list, extras)));
   }
 

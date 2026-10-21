@@ -14,7 +14,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, before, beforeEach, describe, it } from 'node:test';
 import type { Type } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, DefaultUrlSerializer, Router, type UrlTree } from '@angular/router';
 import { NATIVE_INTENT, NativeNavigation, intentOf } from '../router/src/native-navigation.ts';
 import { HardwareBack } from '@ng-native/device';
 import { optionalBoolean } from '../router/src/transforms.ts';
@@ -36,6 +36,7 @@ function flatten(nodes: FakeFabricNode[]): FakeFabricNode[] {
 }
 
 describe('asking for a screen', () => {
+  const serializer = new DefaultUrlSerializer();
   let navigated: { commands: unknown[]; extras: Record<string, unknown> }[] = [];
   let backs = 0;
   let navigation: NativeNavigation;
@@ -52,9 +53,12 @@ describe('asking for a screen', () => {
               navigated.push({ commands, extras });
               return Promise.resolve(true);
             },
+            // A url string is parsed into commands, as the real router parses it.
+            parseUrl: (url: string) => serializer.parse(url),
             // A push asks which tab its url is in, and there is no tab bar here.
             createUrlTree: (commands: unknown[]) => commands,
-            serializeUrl: (commands: unknown[]) => commands.join('/'),
+            serializeUrl: (tree: unknown[] | UrlTree) =>
+              Array.isArray(tree) ? tree.join('/') : serializer.serialize(tree),
           },
         ],
         [
@@ -86,11 +90,26 @@ describe('asking for a screen', () => {
     });
   });
 
-  it('wraps a string path into the array the router wants', async () => {
+  it('turns a string path into the array the router wants', async () => {
     // `push('/detail')` is the shape every call site uses, and `navigate` takes an array. Passing
     // the string straight through navigates to each character.
     await navigation.push('/detail');
-    assert.deepEqual(navigated[0]!.commands, ['/detail']);
+    assert.deepEqual(navigated[0]!.commands, ['/', 'detail']);
+  });
+
+  it('decodes a string path into segments and matrix parameters', async () => {
+    // `navigate` reads a string command as segment text and would escape it again: `%20` would
+    // arrive as `%2520` and `;tab=posts` as part of the segment.
+    await navigation.push('/user/a%20b;tab=posts');
+    assert.deepEqual(navigated[0]!.commands, ['/', 'user', 'a b', { tab: 'posts' }]);
+  });
+
+  it('keeps the named outlets of a string path', async () => {
+    await navigation.push('/a(aux:b;x=1)');
+    assert.deepEqual(navigated[0]!.commands, [
+      '/',
+      { outlets: { primary: ['a'], aux: ['b', { x: '1' }] } },
+    ]);
   });
 
   it('passes an array of commands through as its own array', async () => {

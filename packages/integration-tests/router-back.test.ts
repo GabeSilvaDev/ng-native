@@ -87,6 +87,41 @@ describe('going back in an app with tabs', () => {
     assert.equal(router.url, '/library', 'and a back pops to it, not to the tab it came from');
   });
 
+  describe('a url string', () => {
+    /** The route of the page showing, for a link relative to it. */
+    const showing = () => {
+      let route = router.routerState.root;
+      while (route.firstChild) route = route.firstChild;
+      return route;
+    };
+
+    it('goes up more than one level when it starts with them', async () => {
+      await go('/library/7');
+      assert.equal(await navigation.push('../../search/cats', { relativeTo: showing() }), true);
+      await settle();
+      assert.equal(router.url, '/search/cats');
+
+      await go('/library/7');
+      assert.equal(await navigation.push('./../8', { relativeTo: showing() }), true);
+      await settle();
+      assert.equal(router.url, '/library/8');
+    });
+
+    it('with only a query goes to the root, as navigateByUrl reads it', async () => {
+      await go('/library/7');
+      assert.equal(await navigation.push('?q=1'), true);
+      await settle();
+      assert.equal(router.url, '/home?q=1');
+    });
+
+    it('presents a page of another tab with its escapes read once', async () => {
+      assert.equal(await navigation.present('/library/a%20b', { as: 'modal' }), true);
+      await settle();
+      assert.equal(router.url, '/home(presented:library/a%20b)');
+      assert.ok(screen.getByText('album'));
+    });
+  });
+
   it('pushes the same way from an array of commands, and with a query', async () => {
     assert.equal(await navigation.push(['/search', 'cats'], { queryParams: { page: 2 } }), true);
     await settle();
