@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import type { Route, Router, Routes } from '@angular/router';
+import { DefaultUrlSerializer, type Route, type Router, type Routes } from '@angular/router';
 import { PRESENTED, presentedCommands } from '../router/src/presented-route.ts';
 
 class Bar {}
@@ -17,7 +17,9 @@ const signedIn = () => true;
 const mayRead = () => true;
 const owner = () => true;
 
-const routerWith = (config: Routes) => ({ config }) as unknown as Router;
+const serializer = new DefaultUrlSerializer();
+const routerWith = (config: Routes) =>
+  ({ config, parseUrl: (url: string) => serializer.parse(url) }) as unknown as Router;
 
 const tabs = (): Routes => [
   {

@@ -184,6 +184,58 @@ describe('a native stack driven by the router', () => {
       assert.deepEqual(stack(fabric), ['home', 'user 1']);
     });
 
+    it('decodes an escaped character in the url string, as navigateByUrl does', async () => {
+      assert.equal(await nav.push('/user/a%20b'), true);
+      await idle();
+      assert.equal(router.url, '/user/a%20b');
+      assert.deepEqual(stack(fabric), ['home', 'user a b']);
+    });
+
+    it('reads matrix parameters written into the url string', async () => {
+      assert.equal(await nav.push('/user/1;tab=posts'), true);
+      await idle();
+      assert.equal(router.url, '/user/1;tab=posts');
+      assert.deepEqual(stack(fabric), ['home', 'user 1']);
+    });
+
+    it('keeps matrix parameters named as navigate commands are', async () => {
+      // `navigate` reads an object with `outlets` or `segmentPath` as a command, not as parameters.
+      assert.equal(await nav.push('/user/1;outlets=grid;segmentPath=x'), true);
+      await idle();
+      assert.equal(router.url, '/user/1;outlets=grid;segmentPath=x');
+      assert.deepEqual(stack(fabric), ['home', 'user 1']);
+    });
+
+    it('pops back to a screen pushed with an escaped url string', async () => {
+      await nav.push('/user/a%20b');
+      await nav.push('/user/2');
+      await settle();
+      assert.equal(await nav.popTo('/user/a%20b'), true);
+      await idle();
+      assert.equal(router.url, '/user/a%20b');
+      assert.deepEqual(stack(fabric), ['home', 'user a b']);
+    });
+
+    it('presents and resets with an escaped url string', async () => {
+      assert.equal(await nav.present('/user/a%20b', { as: 'formSheet' }), true);
+      await idle();
+      assert.equal(router.url, '/user/a%20b');
+      assert.deepEqual(stack(fabric).slice(-1), ['user a b']);
+
+      assert.equal(await nav.reset('/user/c%20d'), true);
+      await idle();
+      assert.equal(router.url, '/user/c%20d');
+      assert.deepEqual(stack(fabric), ['user c d']);
+    });
+
+    it('replaces with an escaped url string', async () => {
+      await nav.push('/user/1');
+      assert.equal(await nav.replace('/user/a%20b'), true);
+      await idle();
+      assert.equal(router.url, '/user/a%20b');
+      assert.deepEqual(stack(fabric), ['home', 'user a b']);
+    });
+
     it('updates one screen in place on a route marked with reuseScreen', async () => {
       await nav.push('/photo/1');
       await nav.push('/photo/2');
@@ -792,6 +844,14 @@ describe('a deep link opened beneath its parent screen', () => {
     await idle();
     assert.equal(router.url, '/user/7');
     assert.deepEqual(stack(fabric), ['home', 'user 7']);
+  });
+
+  it('pushes a link with an escaped character as it launches on one, without withLinkParent', async () => {
+    await launch(null, false);
+    arrive('/user/a%20b');
+    await idle();
+    assert.equal(router.url, '/user/a%20b');
+    assert.deepEqual(stack(fabric), ['home', 'user a b']);
   });
 
   it('follows a link that arrives while the app is running', async () => {
