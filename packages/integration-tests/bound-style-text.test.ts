@@ -11,7 +11,7 @@ import { compileCss, createFakeFabric } from '@ng-native/testing';
 
 /**
  * What a child commits with `custom` set on its parent and `bound` bound on the child to `style`,
- * before a width bound to `--w`, which must commit either way.
+ * before a height bound to `--w`, which must commit either way.
  */
 function committed(style: string, bound: string, custom: Record<string, string> = {}) {
   const fabric = createFakeFabric();
@@ -26,10 +26,10 @@ function committed(style: string, bound: string, custom: Record<string, string> 
   engine.setCustomProperty(parent, '--w', '10px');
   for (const [name, value] of Object.entries(custom)) engine.setCustomProperty(parent, name, value);
   engine.setBoundStyle(child, style, bound);
-  engine.setBoundStyle(child, 'width', 'var(--w)');
+  engine.setBoundStyle(child, 'height', 'var(--w)');
   engine.commit();
   const props = fabric.committed[0]!.children[0]!.props;
-  assert.equal(props['width'], 10, 'the binding after it');
+  assert.equal(props['height'], 10, 'the binding after it');
   return props;
 }
 
@@ -83,7 +83,7 @@ describe('a bound style read from text the app did not write', () => {
     ];
     for (const [style, bound, custom] of cases) {
       const shown = `${style}: ${bound.slice(0, 30)}`;
-      assert.doesNotThrow(() => committed(style, bound, custom), shown);
+      assert.equal(committed(style, bound, custom)[style], undefined, shown);
     }
   });
 

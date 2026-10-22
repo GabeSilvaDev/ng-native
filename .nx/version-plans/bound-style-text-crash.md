@@ -2,7 +2,7 @@
 __default__: patch
 ---
 
-A style or a custom property bound to text the app did not write no longer throws in the middle of change detection. Two shapes did, and while the text stayed bound the rest of that view's bindings were skipped on every tick:
+A style or a custom property bound to text from outside the app's own code, such as a theme fetched from a server, no longer throws in the middle of change detection. Two shapes did, and while the text stayed bound the rest of that view's bindings were skipped on every tick:
 
 - a function named after a property every object has, `[style.color]="'constructor(from red r g b)'"` (`TypeError: keywords is not iterable`);
 - brackets nested a few thousand deep, in a `calc()`, a `color-mix()`, a relative colour or a `var()` fallback, which overflowed the stack.
