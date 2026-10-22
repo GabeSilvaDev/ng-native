@@ -120,6 +120,19 @@ describe('going back in an app with tabs', () => {
       assert.equal(router.url, '/search/saved;outlets=grid/cats');
     });
 
+    it('keeps the parameters of the segments a relative string goes up past', async () => {
+      await go('/search;sort=new/cats');
+      assert.equal(await navigation.push('../saved;outlets=grid', { relativeTo: showing() }), true);
+      await settle();
+      assert.equal(router.url, '/search;sort=new/saved;outlets=grid');
+    });
+
+    it('presents a page of another tab with its matrix parameters', async () => {
+      assert.equal(await navigation.present('/library/7;tab=posts', { as: 'modal' }), true);
+      await settle();
+      assert.equal(router.url, '/home(presented:library/7;tab=posts)');
+    });
+
     it('presents a page of another tab with a matrix parameter named outlets', async () => {
       assert.equal(await navigation.present('/library/7;outlets=grid', { as: 'modal' }), true);
       await settle();
