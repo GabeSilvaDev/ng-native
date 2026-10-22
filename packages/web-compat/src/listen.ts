@@ -62,20 +62,32 @@ const ICON_MARKUP = /^\s*<svg[\s>]/i;
 /** Elements whose own component already turns a touch into a press. */
 const PRESSABLES = new Set(['pressable', 'touchable-opacity']);
 
-/** The native event a listener's own element is being told, while it is told it. */
+/** The native event a listener's own element is being told, while it is told it, and its name. */
 let current: unknown;
+let currentName: string | undefined;
 
 /** The native event an element's listener is being told now: see `listenAnywhere`. */
 export const delivering = (): unknown => current;
 
-/** Tell an element's listener of a native event, which is the one being delivered until it is told. */
-function deliverAs<T>(event: unknown, tell: () => T): T {
-  const outer = current;
-  current = event;
+/**
+ * Whether a listener is being told of something the user did: a touch, a key, an edit, each told
+ * by a way of its own with no name, or what native says by a name that is one of `ACTIONS`. A
+ * scroll and a picture loading are no answer to anyone.
+ */
+export const deliveringAnAction = (): boolean =>
+  current !== undefined && (currentName === undefined || ACTIONS.has(currentName));
+
+/**
+ * Tell an element's listener of a native event, which is the one being delivered until it is
+ * told, under the name a listener hears it by where that is known.
+ */
+function deliverAs<T>(event: unknown, tell: () => T, name?: string): T {
+  const [outer, outerName] = [current, currentName];
+  [current, currentName] = [event, name];
   try {
     return tell();
   } finally {
-    current = outer;
+    [current, currentName] = [outer, outerName];
   }
 }
 
@@ -492,7 +504,9 @@ function listenToNative(
   callback: Heard,
 ): () => void {
   const tell = (event: unknown) =>
-    wasRefused(event) ? undefined : deliverAs(event, () => callback(dom(eventName, target, event)));
+    wasRefused(event)
+      ? undefined
+      : deliverAs(event, () => callback(dom(eventName, target, event)), eventName);
   if (MOUSE_OF_TOUCH.has(eventName)) {
     // The mouse a touch is, told as a browser tells it: see `mouse-after-touch.ts`.
     return engine.setEventListener(target, native, (event) => {
@@ -565,6 +579,11 @@ const NATIVE_NAMES: Readonly<Record<string, string>> = {
   focus: 'topFocus',
   blur: 'topBlur',
 };
+
+/** What native says by name that is the user's own doing: all of it but a scroll. */
+const ACTIONS: ReadonlySet<string> = new Set(
+  Object.keys(NATIVE_NAMES).filter((name) => name !== 'scroll'),
+);
 
 /** What native says of an image's picture: see `image.ts`. */
 const IMAGE_EVENTS: Readonly<Record<string, string>> = { load: 'topLoad', error: 'topError' };
