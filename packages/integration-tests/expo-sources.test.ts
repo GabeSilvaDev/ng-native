@@ -947,8 +947,8 @@ describe('the brightness source', () => {
     registerPlatformComponents('ios');
   });
 
-  const build = () =>
-    withModules({ 'expo-brightness': expoBrightness() }, () =>
+  const build = (changes: Partial<ReturnType<typeof expoBrightness>> = {}) =>
+    withModules({ 'expo-brightness': { ...expoBrightness(), ...changes } }, () =>
       defaultSource(Brightness.SOURCE),
     ) as NativeBrightness;
 
@@ -1011,6 +1011,52 @@ describe('the brightness source', () => {
     await settle();
     assert.equal(level, 0.4);
     assert.equal(brightness.level(), 0.4);
+  });
+
+  it('sets the level, and puts nothing back, when the level cannot be read, on iOS', async () => {
+    const source = build({ getBrightnessAsync: () => Promise.reject(new Error('no screen')) });
+    await source.set(1);
+    assert.equal(level, 1);
+
+    await source.restore();
+    assert.equal(level, 1);
+  });
+
+  it('sets the next level after a set fails, on iOS', async () => {
+    const working = expoBrightness();
+    let failures = 1;
+    const source = build({
+      setBrightnessAsync: (next: number) =>
+        failures-- > 0 ? Promise.reject(new Error('busy')) : working.setBrightnessAsync(next),
+    });
+    await assert.rejects(source.set(1));
+
+    await source.set(0.8);
+    assert.equal(level, 0.8);
+    await source.restore();
+    assert.equal(level, 0.4);
+  });
+
+  it('leaves no unhandled rejection when putting the level back fails, on iOS', async () => {
+    const working = expoBrightness();
+    const source = build({
+      setBrightnessAsync: (next: number) =>
+        next === 0.4 ? Promise.reject(new Error('busy')) : working.setBrightnessAsync(next),
+    });
+    const brightness = inAppWith(Brightness.SOURCE, source, () => new Brightness()).service;
+    const unhandled: unknown[] = [];
+    const record = (reason: unknown) => unhandled.push(reason);
+    process.on('unhandledRejection', record);
+    try {
+      const release = brightness.set(1);
+      await settle();
+      release();
+      await settle();
+    } finally {
+      process.off('unhandledRejection', record);
+    }
+    assert.deepEqual(unhandled, []);
+    assert.equal(brightness.level(), 1, 'the level that is still showing');
   });
 
   it("releases the app's level on Android, without setting one", async () => {

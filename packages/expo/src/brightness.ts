@@ -169,15 +169,14 @@ class BrightnessWindow {
   }
 
   restore(): void {
-    void this.native
+    const native = this.native;
+    void native
       ?.restore()
-      .then(() => this.native?.get())
+      .then(() => native.get())
       .then(
         (level) => {
           // A level set while the restore ran is the one showing, not the one read back.
-          if (level !== undefined && untracked(this.levels.claims.all).length === 0) {
-            this.current.set(level);
-          }
+          if (untracked(this.levels.claims.all).length === 0) this.current.set(level);
         },
         () => {},
       );
