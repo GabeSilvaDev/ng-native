@@ -177,6 +177,20 @@ describe('a select', () => {
     assert.deepEqual([select.selectedIndex, select.value], [1, ''], 'not the other of its value');
   });
 
+  it('chooses again once the option chosen is taken out of a group put in whole', async () => {
+    const { select } = await plans();
+    const document = select.ownerDocument;
+    const group = document.createElement('optgroup');
+    for (const text of ['Team, monthly', 'Team, yearly']) {
+      group.appendChild(Object.assign(document.createElement('option'), { value: 'team', text }));
+    }
+    select.appendChild(group);
+    select.selectedIndex = 5;
+    group.lastChild.remove();
+    assert.deepEqual([select.selectedIndex, select.value], [1, '']);
+    assert.deepEqual(shown(select), ['']);
+  });
+
   it('closes its list on a press outside it, choosing nothing', async () => {
     const { instance, select } = await sizes();
     await userEvent.press(screen.getByTestId('size'));

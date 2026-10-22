@@ -183,19 +183,30 @@ export function createSelect(node: EngineNode, engine: Engine): boolean {
   return true;
 }
 
-/** The select each option or group was last put in, to show again once it is taken out. */
+/**
+ * The select each option or group was last put in, to show again once it is taken out. The
+ * options of a group are its select's too, put in with it whole.
+ */
 const ownedBy = new WeakMap<EngineNode, EngineNode>();
+
+/** `node`, and the options in it where it is a group, owned by `select`, or by none. */
+function own(node: EngineNode, select: EngineNode | undefined): void {
+  for (const each of node.tag === 'optgroup' ? [node, ...optionsOf(node)] : [node]) {
+    if (select) ownedBy.set(each, select);
+    else ownedBy.delete(each);
+  }
+}
 
 /** An option came into a select, or a group of them: what the select shows may be another. */
 export function optionInserted(node: EngineNode, parent: EngineNode, engine: Engine): void {
   if (node.tag !== 'option' && node.tag !== 'optgroup') return;
   const select = parent.tag === 'optgroup' ? parent.parent : parent;
   const before = ownedBy.get(node);
-  ownedBy.delete(node);
+  own(node, undefined);
   // Moved from another select, which shows what it has left.
   if (before && before !== select) optionsChanged(before, true, engine);
   if (select && selects.has(select)) {
-    ownedBy.set(node, select);
+    own(node, select);
     optionsChanged(select, false, engine);
   }
 }
@@ -203,7 +214,7 @@ export function optionInserted(node: EngineNode, parent: EngineNode, engine: Eng
 /** An option or a group taken out of its select: the select shows what is left. */
 export function optionRemoved(node: EngineNode, engine: Engine): void {
   const select = ownedBy.get(node);
-  ownedBy.delete(node);
+  own(node, undefined);
   if (select) optionsChanged(select, true, engine);
 }
 
