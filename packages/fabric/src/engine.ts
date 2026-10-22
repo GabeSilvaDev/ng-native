@@ -5303,6 +5303,10 @@ function laidByNative(node: EngineNode, key: string): boolean {
   return node.playing?.laid === true && node.playing.tracks.has(key);
 }
 
+/** Whether an animation stays at its last frame once it has ended: by its fill, or held there. */
+const fillsForwards = (running: RunningAnimation): boolean =>
+  running.held === true || running.spec.fill === 'forwards' || running.spec.fill === 'both';
+
 /** Whether an animation plays once through, forwards, with no wait before it. */
 const playedOnce = (spec: AnimationSpec): boolean =>
   spec.delay === 0 && spec.duration > 0 && spec.iterations === 1 && !spec.direction;
@@ -6624,7 +6628,8 @@ export class Engine implements HostEngine {
   private readonly styles: StyleResolver;
   /** Whether to run the development checks, which a release build skips. */
   readonly dev: boolean;
-  private readonly now: () => number;
+  /** The clock transitions and animations run on, which a script reads where one has got to. */
+  readonly now: () => number;
   private onDirty: (() => void) | undefined;
   private onError: ((error: unknown, topLevelType: string) => void) | undefined;
   /** Nodes with at least one transition in flight, so a frame walks those and nothing else. */
@@ -7188,6 +7193,18 @@ export class Engine implements HostEngine {
     if ((node.held === true) === held) return;
     if (held) node.held = true;
     else delete node.held;
+    this.markProps(node, false);
+  }
+
+  /**
+   * Stop showing the last frame of a node's finished `@keyframes` animation, where nothing holds
+   * it there any more: script took its hold away after it ended. The node is what the cascade
+   * gives it again with the next commit.
+   */
+  releaseFinished(node: EngineNode): void {
+    const running = node.playing;
+    if (!running?.done || fillsForwards(running)) return;
+    running.values = {};
     this.markProps(node, false);
   }
 
@@ -12234,8 +12251,7 @@ export class Engine implements HostEngine {
     // One native was laying out goes on from JavaScript, by the clock it started on.
     const reframed: RunningAnimation = { ...current, tracks, inherited, laid: undefined };
     const { values, finished } = sample(reframed, current.pausedAt ?? this.now());
-    const holds = current.spec.fill === 'forwards' || current.spec.fill === 'both';
-    reframed.values = finished && !holds ? {} : values;
+    reframed.values = finished && !fillsForwards(current) ? {} : values;
     this.playedFrames.set(reframed, frames);
     node.playing = reframed;
     // One that had nothing to paint was let go of: with frames that say something it plays on.
@@ -12940,13 +12956,13 @@ export class Engine implements HostEngine {
   }
 
   /**
-   * Whether an animation that has finished goes on holding its last frame. With a forwards fill
-   * it does, for good: without one the element falls back to whatever the cascade gives it, and
-   * 'backwards' fills the start only. Heard, it holds until whoever listens has been told: see
-   * `lettingGo`.
+   * Whether an animation that has finished goes on holding its last frame. With a forwards fill,
+   * or held there by script, it does, for good: without one the element falls back to whatever
+   * the cascade gives it, and 'backwards' fills the start only. Heard, it holds until whoever
+   * listens has been told: see `lettingGo`.
    */
   private keeps(node: EngineNode, running: RunningAnimation): boolean {
-    if (running.spec.fill === 'forwards' || running.spec.fill === 'both') return true;
+    if (fillsForwards(running)) return true;
     // One that listened and has stopped takes its set with it: nobody to hear it.
     if (!node.listeners?.has('topAnimationend')) return false;
     this.lettingGo.add(node);
