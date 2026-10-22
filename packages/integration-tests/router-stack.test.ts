@@ -198,6 +198,14 @@ describe('a native stack driven by the router', () => {
       assert.deepEqual(stack(fabric), ['home', 'user 1']);
     });
 
+    it('keeps matrix parameters named as navigate commands are', async () => {
+      // `navigate` reads an object with `outlets` or `segmentPath` as a command, not as parameters.
+      assert.equal(await nav.push('/user/1;outlets=grid;segmentPath=x'), true);
+      await idle();
+      assert.equal(router.url, '/user/1;outlets=grid;segmentPath=x');
+      assert.deepEqual(stack(fabric), ['home', 'user 1']);
+    });
+
     it('pops back to a screen pushed with an escaped url string', async () => {
       await nav.push('/user/a%20b');
       await nav.push('/user/2');

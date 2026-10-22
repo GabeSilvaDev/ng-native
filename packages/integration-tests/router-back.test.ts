@@ -114,6 +114,18 @@ describe('going back in an app with tabs', () => {
       assert.equal(router.url, '/search/cats%2Fdogs');
     });
 
+    it('keeps matrix parameters named as navigate commands are, with segments after them', async () => {
+      assert.equal(await navigation.push('/search/saved;outlets=grid/cats'), true);
+      await settle();
+      assert.equal(router.url, '/search/saved;outlets=grid/cats');
+    });
+
+    it('presents a page of another tab with a matrix parameter named outlets', async () => {
+      assert.equal(await navigation.present('/library/7;outlets=grid', { as: 'modal' }), true);
+      await settle();
+      assert.equal(router.url, '/home(presented:library/7;outlets=grid)');
+    });
+
     it('with only a query goes to the root, as navigateByUrl reads it', async () => {
       await go('/library/7');
       assert.equal(await navigation.push('?q=1'), true);
