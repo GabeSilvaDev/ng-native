@@ -267,7 +267,9 @@ export const webListen: RendererExtension = {
     return inlineStyle(node, name, value);
   },
   // Kept as `addEventListener` keeps a listener, so what a script sends reaches a template's too.
-  listen(target, eventName, callback, engine) {
+  // With the options a script gave `Renderer2.listen`: CDK's drag and drop keeps a drag from the
+  // page with a `touchmove` listener on the document that says it is not passive.
+  listen(target, eventName, callback, engine, options) {
     const document = documentOf(engine);
     if (!document) return undefined;
     const on = listenedOn(target, document);
@@ -278,7 +280,7 @@ export const webListen: RendererExtension = {
       (node
         ? engine.setEventListener(target as EngineNode, topLevel(eventName), heard)
         : undefined);
-    return listen(on, eventName, callback, undefined, attach) ?? (() => {});
+    return listen(on, eventName, callback, options, attach) ?? (() => {});
   },
 };
 
@@ -797,6 +799,8 @@ function onTouch(engine: Engine, node: EngineNode, type: string, listener: Liste
 
 interface Touch {
   identifier?: number;
+  /** The view the finger came down on, by its tag. */
+  target?: unknown;
   pageX?: number;
   pageY?: number;
 }
@@ -817,13 +821,23 @@ const touchList = (touches: readonly Touch[] | undefined, top: number): object[]
 };
 
 /**
+ * Whether a finger is on the view an event is sent to: by what it says it is on, or where it says
+ * nothing and is the only finger down, as a touch this package sends may, that one.
+ */
+const onTarget = (touch: Touch, said: { target?: unknown; touches?: Touch[] }): boolean =>
+  touch.target === undefined && said.touches?.length === 1
+    ? said.target !== undefined
+    : touch.target === said.target;
+
+/**
  * Where a touch is, as a DOM event says it: the finger that changed at the page and the client,
- * and the fingers down as `touches`. Native says where on the screen, and the window starts `top`
- * down it, under a navigation header: see `windowTop`.
+ * the fingers down as `touches`, and as `targetTouches` those of them that came down on the view
+ * the changed one did, which is where the event is sent. CDK's drag and drop reads where a drag
+ * starts from `targetTouches`. Native says where on the screen, and the window starts `top` down
+ * it, under a navigation header: see `windowTop`.
  */
 export function touchFields(native: unknown, top: number): Record<string, unknown> {
-  const said = native as
-    { pageX?: number; pageY?: number; touches?: Touch[]; changedTouches?: Touch[] } | undefined;
+  const said = native as (Touch & { touches?: Touch[]; changedTouches?: Touch[] }) | undefined;
   if (!said) return {};
   const x = said.pageX ?? 0;
   const y = (said.pageY ?? 0) - top;
@@ -833,6 +847,10 @@ export function touchFields(native: unknown, top: number): Record<string, unknow
     pageX: x,
     pageY: y,
     touches: touchList(said.touches, top),
+    targetTouches: touchList(
+      said.touches?.filter((touch) => onTarget(touch, said)),
+      top,
+    ),
     changedTouches: touchList(said.changedTouches, top),
   };
 }

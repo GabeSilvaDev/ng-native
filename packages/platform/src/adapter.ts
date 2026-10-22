@@ -22,6 +22,7 @@ import {
   type ComponentRef,
   type EnvironmentInjector,
   type EnvironmentProviders,
+  type ListenerOptions,
   type Provider,
   type RendererStyleFlags2,
   type Type,
@@ -481,14 +482,24 @@ class NativeRenderer implements Renderer2 {
     target: EngineNode | string,
     eventName: string,
     callback: (event: unknown) => boolean | void,
+    options?: ListenerOptions,
   ): () => void {
     for (const extension of extensions) {
-      const unlisten = extension.listen?.(target, eventName, callback, this.engine);
+      const unlisten = extension.listen?.(target, eventName, callback, this.engine, options);
       if (unlisten) return unlisten;
     }
     // Angular's names for a global target, 'window', 'document' and 'body': there is none here.
     if (typeof target === 'string') return () => {};
-    return this.engine.setEventListener(target, topLevelType(eventName), callback);
+    // `once` taken off before the first call: the engine keeps a listener until it is told.
+    let unlisten = () => {};
+    const listener = options?.once
+      ? (event: unknown) => {
+          unlisten();
+          return callback(event);
+        }
+      : callback;
+    unlisten = this.engine.setEventListener(target, topLevelType(eventName), listener);
+    return unlisten;
   }
 }
 
@@ -507,12 +518,15 @@ export interface RendererExtension {
   /**
    * Take a listener over: answer what removes it, or nothing to leave it to the renderer. The
    * target is a node, or the name Angular gives a global one: `'window'`, `'document'`, `'body'`.
+   * The options are what a script gave `Renderer2.listen`: whether the listener hears the event
+   * as it goes down, once only, and passively.
    */
   listen?(
     target: EngineNode | string,
     eventName: string,
     callback: (event: unknown) => boolean | void,
     engine: Engine,
+    options?: ListenerOptions,
   ): (() => void) | undefined;
   /**
    * Told of each element a template creates, before it has attributes or children: where an
