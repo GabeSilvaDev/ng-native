@@ -6226,8 +6226,11 @@ function adjusted(value: unknown, adjust: NonNullable<DeferredDeclaration['adjus
   if (adjust.percent !== undefined) return withPercent(value, adjust);
   if (em && adjust.floor === undefined) return adjustedEm(em, adjust);
   // A share the token holds, `calc(var(--p) - 10px)` with `--p: 50%`: the same sum as one
-  // written beside a percentage, which a property with no box for it does not commit.
-  if (isShare(value)) return withPercent(value, { ...adjust, percent: 0 });
+  // written beside a percentage, which a property with no box for it does not commit. Not under
+  // a `max()`, whose floor such a sum has no way to keep.
+  if (isShare(value) && adjust.floor === undefined) {
+    return withPercent(value, { ...adjust, percent: 0 });
+  }
   if (typeof value !== 'number') return value;
   const scaled = value * (adjust.scale ?? 1) + (adjust.offset ?? 0);
   return adjust.floor === undefined ? scaled : Math.max(scaled, adjust.floor);

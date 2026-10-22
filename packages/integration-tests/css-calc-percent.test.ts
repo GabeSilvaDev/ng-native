@@ -90,6 +90,11 @@ describe('a calc() of a percentage and a length', () => {
     assert.equal(s.box('c')[2], 130);
   });
 
+  it('keeps the floor of a max() around such arithmetic', () => {
+    const css = `${BASE} .c { --p: 50%; width: max(calc(var(--p) - 10px), 140px) }`;
+    assert.equal(scene(css, ['p', ['c']]).box('c')[2], 140, 'not half of 280 less 10');
+  });
+
   it('commits no sum from a percentage token to a property that has no box for it', () => {
     const css = `${BASE} .c { --p: 50%; width: 20px; border-top-width: calc(var(--p) - 1px) }`;
     const s = scene(css, ['p', ['c']]);
