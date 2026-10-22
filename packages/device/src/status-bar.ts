@@ -22,7 +22,7 @@ import {
 } from '@angular/core';
 import { ColorScheme, type Scheme } from './color-scheme.ts';
 import { mergeClaims } from './merge-claims.ts';
-import { reactNative } from './react-native.ts';
+import { edgeToEdgeFlag, reactNative } from './react-native.ts';
 import { WindowClaims, onWindowFront, sharedBySource } from './window-claims.ts';
 
 /**
@@ -99,15 +99,10 @@ function nativeSource(native: NonNullable<ReturnType<typeof reactNative>>): Stat
   // Android 16 draws an app targeting SDK 35 or later edge-to-edge whatever its theme says. Before
   // it, a theme can opt out, and React Native's own answer is the flag its status bar module
   // checks. That answer is not enough on its own: Expo Go on Android 16 reports false.
-  const info = native.TurboModuleRegistry?.get('DeviceInfo') as
-    { getConstants?(): { isEdgeToEdge?: boolean } } | null | undefined;
   // React Native 0.88 draws every Android app edge-to-edge, and removed both setters with it.
   const settable = typeof StatusBar.setBackgroundColor === 'function';
   const edgeToEdge =
-    android &&
-    (!settable ||
-      Number(native.Platform.Version) >= 36 ||
-      info?.getConstants?.().isEdgeToEdge === true);
+    android && (!settable || Number(native.Platform.Version) >= 36 || edgeToEdgeFlag(native));
   const warned = new Set<string>();
   return {
     setStyle: (style, animated) => StatusBar.setBarStyle(BAR_STYLES[style], animated),
