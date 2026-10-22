@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
 import { Component, DOCUMENT, Renderer2, inject } from '@angular/core';
 import { Keyboard, type KeyboardMetrics } from '@ng-native/device';
-import { Engine, type EngineNode } from '@ng-native/fabric';
+import { Engine, registerPlatformComponents, type EngineNode } from '@ng-native/fabric';
 import { cleanup, render, screen, settle, type FakeFabricNode } from '@ng-native/testing';
 import { provideWebCompat } from './index.ts';
 
@@ -62,8 +62,12 @@ async function page(providers: unknown[] = [provideWebCompat()]) {
   };
   const header = (height: number) =>
     app.fabric.emit(screenView(), 'topHeaderHeightChange', { headerHeight: height });
-  const screenView = (): FakeFabricNode =>
-    screen.getByTestId('screen', { includeHiddenElements: true });
+  // Committed first: a screen a test puts in with the renderer is put on screen by the next
+  // commit, which `settle()` stops waiting for after a few frames on a busy machine.
+  const screenView = (): FakeFabricNode => {
+    engine.commit();
+    return screen.getByTestId('screen', { includeHiddenElements: true });
+  };
   /** How many times a resize listener on the window, and one on the visual viewport, is told. */
   const told = { window: 0, viewport: 0 };
   const onWindow = () => void told.window++;
@@ -274,6 +278,186 @@ describe('the window on Android, drawn edge to edge', () => {
       await s.keyboard({ height: 200, screenY: 220 });
       assert.equal(globals.innerHeight, 220);
       assert.deepEqual(s.bodyStyle(), { top: 0, bottom: 200 });
+    } finally {
+      s.stopListening();
+    }
+  });
+});
+
+describe('a view in a screen under a header on Android', () => {
+  // react-native-screens measures every view in a screen from under its header on Android, and
+  // a touch is placed from the top of the screen, which is where the view is drawn from. A
+  // library compares the two: a drag sorts its list by where the finger is among the items.
+  const scene = async () => {
+    const s = await page();
+    const node = await s.stackScreen();
+    const card = s.document.createElement('div');
+    card.setAttribute('testID', 'in-screen');
+    card.setAttribute('nativeID', 'in-screen');
+    s.app.instance.renderer.appendChild(node, card);
+    const overlay = s.document.createElement('div');
+    overlay.setAttribute('nativeID', 'overlay');
+    s.document.body.appendChild(overlay);
+    await settle();
+    s.header(100);
+    const heard: unknown[] = [];
+    card.addEventListener('pointerdown', (event: Dom) =>
+      heard.push([event.clientY, card.getBoundingClientRect().top]),
+    );
+    /** A finger on the card, ten points down it: where native says it is on the screen. */
+    const finger = async (phase: 'Start' | 'End', pageY: number) => {
+      const view = screen.getByTestId('in-screen', { includeHiddenElements: true });
+      const point = { identifier: 0, target: view.reactTag, pageX: 20, pageY, locationY: 10 };
+      s.app.fabric.emit(view, `topTouch${phase}`, {
+        ...point,
+        touches: phase === 'End' ? [] : [point],
+        changedTouches: [point],
+      });
+      await settle();
+    };
+    return { ...s, node, card, overlay, heard, finger };
+  };
+
+  it('is where it is drawn and touched, and a view in the body is where native measures it', async () => {
+    registerPlatformComponents('android');
+    const s = await scene();
+    try {
+      // Drawn 150 down the screen, 50 down the window under the header, and measured at 50.
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 50, width: 300, height: 40 });
+      s.app.fabric.frames.set('overlay', { x: 0, y: 300, width: 300, height: 40 });
+      assert.equal(s.card.getBoundingClientRect().top, 50, 'before any touch');
+      await s.finger('Start', 160);
+      assert.deepEqual(s.heard, [[60, 50]]);
+      await s.finger('End', 160);
+      assert.equal(s.card.getBoundingClientRect().top, 50);
+      assert.equal(s.overlay.getBoundingClientRect().top, 200);
+    } finally {
+      s.stopListening();
+      registerPlatformComponents('ios');
+    }
+  });
+
+  it('is where native measures it once a touch finds that is where it is drawn', async () => {
+    registerPlatformComponents('android');
+    const s = await scene();
+    try {
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 150, width: 300, height: 40 });
+      await s.finger('Start', 160);
+      assert.deepEqual(s.heard, [[60, 50]]);
+      await s.finger('End', 160);
+      // And measured short again, which the next touch finds.
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 50, width: 300, height: 40 });
+      await s.finger('Start', 160);
+      await s.finger('End', 160);
+      assert.deepEqual(s.heard, [
+        [60, 50],
+        [60, 50],
+      ]);
+    } finally {
+      s.stopListening();
+      registerPlatformComponents('ios');
+    }
+  });
+
+  it('is found out again by the next touch, where a listener stopped the last one ending', async () => {
+    registerPlatformComponents('android');
+    const s = await scene();
+    s.card.addEventListener('touchend', (event: Dom) => event.stopPropagation());
+    try {
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 150, width: 300, height: 40 });
+      await s.finger('Start', 160);
+      await s.finger('End', 160);
+      // Measured short now: the next touch finds it, though nothing above the card heard the end.
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 50, width: 300, height: 40 });
+      await s.finger('Start', 160);
+      assert.deepEqual(s.heard, [
+        [60, 50],
+        [60, 50],
+      ]);
+    } finally {
+      s.stopListening();
+      registerPlatformComponents('ios');
+    }
+  });
+
+  it('is where native measures it once it is fixed to the page outside the screen', async () => {
+    registerPlatformComponents('android');
+    const s = await scene();
+    try {
+      const pinned = s.document.createElement('div');
+      pinned.setAttribute('nativeID', 'pinned');
+      pinned.style.setProperty('position', 'fixed');
+      s.app.instance.renderer.appendChild(s.node, pinned);
+      await settle();
+      s.app.fabric.frames.set('pinned', { x: 0, y: 300, width: 300, height: 40 });
+      // Committed beside the app, where a view is measured where it is, as one in the body is.
+      assert.equal(pinned.getBoundingClientRect().top, 200);
+    } finally {
+      s.stopListening();
+      registerPlatformComponents('ios');
+    }
+  });
+
+  it('is found out by a touch only the document hears', async () => {
+    registerPlatformComponents('android');
+    const s = await scene();
+    const heard: number[] = [];
+    const hear = () => heard.push(s.card.getBoundingClientRect().top);
+    s.document.addEventListener('touchstart', hear);
+    try {
+      // A touch on the card finds it measured where it is drawn.
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 150, width: 300, height: 40 });
+      await s.finger('Start', 160);
+      await s.finger('End', 160);
+      // Then measured short, which a touch on a view no listener of its own hears finds out.
+      const quiet = s.document.createElement('div');
+      quiet.setAttribute('testID', 'quiet');
+      quiet.setAttribute('nativeID', 'quiet');
+      s.app.instance.renderer.appendChild(s.node, quiet);
+      await settle();
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 50, width: 300, height: 40 });
+      s.app.fabric.frames.set('quiet', { x: 0, y: 100, width: 300, height: 40 });
+      s.engine.commit();
+      const view = screen.getByTestId('quiet', { includeHiddenElements: true });
+      const point = { identifier: 0, target: view.reactTag, pageX: 20, pageY: 210, locationY: 10 };
+      s.app.fabric.emit(view, 'topTouchStart', {
+        ...point,
+        touches: [point],
+        changedTouches: [point],
+      });
+      await settle();
+      assert.deepEqual(heard, [50, 50], 'where it is drawn, both times');
+    } finally {
+      s.document.removeEventListener('touchstart', hear);
+      s.stopListening();
+      registerPlatformComponents('ios');
+    }
+  });
+
+  it('follows the header as it changes, and is where native measures it once the header goes', async () => {
+    registerPlatformComponents('android');
+    const s = await scene();
+    try {
+      s.header(80);
+      // Drawn 160 down the screen, under a header 80 tall.
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 80, width: 300, height: 40 });
+      assert.equal(s.card.getBoundingClientRect().top, 80);
+      s.header(0);
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 160, width: 300, height: 40 });
+      assert.equal(s.card.getBoundingClientRect().top, 160);
+    } finally {
+      s.stopListening();
+      registerPlatformComponents('ios');
+    }
+  });
+
+  it('is measured as native says on iOS, which measures it where it is drawn', async () => {
+    const s = await scene();
+    try {
+      s.app.fabric.frames.set('in-screen', { x: 0, y: 50, width: 300, height: 40 });
+      await s.finger('Start', 160);
+      await s.finger('End', 160);
+      assert.deepEqual(s.heard, [[60, -50]]);
     } finally {
       s.stopListening();
     }
