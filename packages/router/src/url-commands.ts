@@ -36,12 +36,19 @@ export function urlCommands(router: Router, path: string): unknown[] {
     return ['/', ...groupCommands(router.parseUrl(path).root)];
   }
   const list = groupCommands(router.parseUrl(path).root);
-  // `navigate` reads `.` and `..` only at the start of its first command, so a relative path's
-  // leading ones go there together: `['../..', 'x']`, where `['..', '..', 'x']` would look for a
-  // segment named `..`.
-  let up = 0;
-  while (list[up] === '.' || list[up] === '..') up++;
-  return up > 1 ? [list.slice(0, up).join('/'), ...list.slice(up)] : list;
+  // `navigate` splits its first command on `/` and reads `.` and `..` there, and only there. So the
+  // dots written as dots go into it together, `['../..', 'x']`, where `['..', '..', 'x']` would look
+  // for a segment named `..`. Counted in the string as written: a decoded `%2E%2E` is a segment.
+  const parts = path.split('/');
+  const written = parts.findIndex((part) => part !== '.' && part !== '..');
+  const up = written < 0 ? parts.length : written;
+  if (up > 0) return [list.slice(0, up).join('/'), ...list.slice(up)];
+  // A first segment the url escaped, `a%2Fb` or `%2E%2E`, stays one segment, as `segmentPath`.
+  const [first] = list;
+  if (typeof first === 'string' && (first.includes('/') || first === '.' || first === '..')) {
+    list[0] = { segmentPath: first };
+  }
+  return list;
 }
 
 function groupCommands(group: UrlSegmentGroup): unknown[] {

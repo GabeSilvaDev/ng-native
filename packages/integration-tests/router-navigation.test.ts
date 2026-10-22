@@ -104,6 +104,20 @@ describe('asking for a screen', () => {
     assert.deepEqual(navigated[0]!.commands, ['/', 'user', 'a b', { tab: 'posts' }]);
   });
 
+  it("keeps a relative string path's decoded segments literal", async () => {
+    // `navigate` splits its first command on `/` and reads `.` and `..` there, so a decoded `a%2Fb`
+    // would be two segments and a decoded `%2E%2E` would go up. Only the dots written as dots do.
+    const relativeTo = {} as ActivatedRoute;
+    await navigation.push('a%2Fb/c', { relativeTo });
+    await navigation.push('%2E%2E/c', { relativeTo });
+    await navigation.push('../a%2Fb', { relativeTo });
+    await navigation.push('../..', { relativeTo });
+    assert.deepEqual(
+      navigated.map((call) => call.commands),
+      [[{ segmentPath: 'a/b' }, 'c'], [{ segmentPath: '..' }, 'c'], ['..', 'a/b'], ['../..']],
+    );
+  });
+
   it('keeps the named outlets of a string path', async () => {
     await navigation.push('/a(aux:b;x=1)');
     assert.deepEqual(navigated[0]!.commands, [

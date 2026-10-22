@@ -107,6 +107,13 @@ describe('going back in an app with tabs', () => {
       assert.equal(router.url, '/library/8');
     });
 
+    it('keeps an escaped slash in the first segment of a relative string', async () => {
+      await go('/search');
+      assert.equal(await navigation.push('cats%2Fdogs', { relativeTo: showing() }), true);
+      await settle();
+      assert.equal(router.url, '/search/cats%2Fdogs');
+    });
+
     it('with only a query goes to the root, as navigateByUrl reads it', async () => {
       await go('/library/7');
       assert.equal(await navigation.push('?q=1'), true);
