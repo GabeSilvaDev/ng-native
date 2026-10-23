@@ -6378,7 +6378,11 @@ function adjusted(value: unknown, adjust: NonNullable<DeferredDeclaration['adjus
   if (isShare(value) && adjust.floor === undefined) {
     return withPercent(value, { ...adjust, percent: 0 });
   }
-  if (typeof value !== 'number') return value;
+  return typeof value === 'number' ? scaledNumber(value, adjust) : value;
+}
+
+/** A number moved by the arithmetic around its `var()`, kept at or above a `max()`'s floor. */
+function scaledNumber(value: number, adjust: NonNullable<DeferredDeclaration['adjust']>): number {
   const scaled = value * (adjust.scale ?? 1) + (adjust.offset ?? 0);
   return adjust.floor === undefined ? scaled : Math.max(scaled, adjust.floor);
 }
