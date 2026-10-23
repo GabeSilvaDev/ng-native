@@ -15,7 +15,7 @@ import tailwind from '../.angular-native/app.tailwind.js';
 
 registerPlatformComponents(Platform.OS);
 
-AppRegistry.registerRunnable('main', async ({ rootTag }: { rootTag: number | string }) => {
+AppRegistry.registerRunnable('main', async ({ rootTag }) => {
   // Material's icon font, declared in the theme: `mat-icon` draws an icon's name in it, so it is
   // registered before the first render, which would otherwise show the names as words. Where
   // `expo-font` is missing the app mounts in the fallback face.
