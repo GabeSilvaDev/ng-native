@@ -443,6 +443,17 @@ is no border, as on the web. `currentColor` as a side of such a mix, written or 
 the text color where the mix is used. A `border-width` with no color anywhere is drawn black,
 native's default, and the web host draws it black too.
 
+A custom property can hold a platform colour, `--accent: platform-color(link, "?attr/colorAccent")`,
+or a system colour such as `LinkText`, in any sheet, in a `@media` rule such as
+`prefers-color-scheme: dark`, or bound with `[style.--accent]`. `var(--accent)` in a colour
+property (`color`, `background-color`, a border color, `outline-color`, `text-decoration-color`,
+`tint-color`, `shadow-color` or a `text-shadow`'s color) commits what the colour written there
+commits, and so does a `var()` that falls back to one. The platform resolves such a colour by name,
+so it has no channels: a `color-mix()`, a relative colour, a gradient or a `box-shadow` worked out
+of the token, or a fade of it such as Tailwind's `bg-accent/50`, is dropped. The build says so where
+the sheet that sets the token also does that, and in development the engine says so on the device,
+naming the token, wherever it is set.
+
 A custom property can hold a font stack (read as its first family, as `font-family` is), a unitless
 line-height, a ratio for `aspect-ratio`, a whole `box-shadow` list, or bare color channels for
 `rgba(var(--channels), <alpha>)`, which is how Bootstrap writes its color utilities. A shorthand may
@@ -536,7 +547,13 @@ Transitions, `animate.enter`/`animate.leave`, `@keyframes` and `animation` are t
 [Animation](/packages/fabric/animation).
 
 `tint-color` is native's own, with no counterpart on the web: the color an image is drawn in, and
-the color of an SF Symbol. It takes a token as any color does.
+the color of an SF Symbol. It takes the values `color` takes: a token, `platform-color()`, a
+relative color or a `color-mix()`, `light-dark()`, and `currentColor`, which is the element's text
+color. `shadow-color` takes the same.
+
+`padding-horizontal`, `padding-vertical`, `margin-horizontal` and `margin-vertical` are React
+Native's own too, with no counterpart on the web. Each takes one length for both sides of its axis:
+`padding-horizontal: 12px` is `padding-left: 12px; padding-right: 12px`.
 
 ## A sheet read as a browser reads it
 
