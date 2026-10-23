@@ -5377,16 +5377,19 @@ function tokenForm(token: TokenValue, kind: TokenKind): unknown {
   return value === undefined && kind === 'color' && isCurrentColour(token) ? CURRENT_COLOUR : value;
 }
 
-/** A corner's place among four as CSS writes them, before a side's: `borderTopLeftRadius`. */
+/**
+ * A corner's place among four as CSS writes them, before a side's: `borderTopLeftRadius`. A side
+ * may have no box name before it, as an inset's `top` and `left` do.
+ */
 const PLACES: readonly (readonly [RegExp, number])[] = [
   [/TopLeft|TopStart|StartStart/, 0],
   [/TopRight|TopEnd|StartEnd/, 1],
   [/BottomRight|BottomEnd|EndEnd/, 2],
   [/BottomLeft|BottomStart|EndStart/, 3],
-  [/Top/, 0],
-  [/Right|End/, 1],
-  [/Bottom/, 2],
-  [/Left|Start/, 3],
+  [/Top|^top$/, 0],
+  [/Right|End|^right$/, 1],
+  [/Bottom|^bottom$/, 2],
+  [/Left|Start|^left$/, 3],
 ];
 
 /** Where a side or a corner comes in a shorthand of four, whatever order its props are kept in. */
@@ -6333,6 +6336,10 @@ function colourMarker(value: unknown): ColourExpression | undefined {
   return (value as { __colour?: ColourExpression } | null)?.__colour;
 }
 
+/** A percentage, as a token that holds one gives it: `'50%'`. */
+const isShare = (value: unknown): value is string =>
+  typeof value === 'string' && value.endsWith('%');
+
 /**
  * A token added to a percentage, `calc(100% - var(--handle))`: a length in points or a share of
  * the same box adds up to one value. A length of the box's own font does not, here, so the box is
@@ -6340,7 +6347,7 @@ function colourMarker(value: unknown): ColourExpression | undefined {
  */
 function withPercent(value: unknown, adjust: NonNullable<DeferredDeclaration['adjust']>): unknown {
   const percent = adjust.percent!;
-  if (typeof value === 'string' && value.endsWith('%')) {
+  if (isShare(value)) {
     const share = percent + Number.parseFloat(value) * (adjust.scale ?? 1);
     const offset = adjust.offset ?? 0;
     return offset === 0 ? `${share}%` : `calc(${share}% + ${offset}px)`;
@@ -6365,7 +6372,17 @@ function adjusted(value: unknown, adjust: NonNullable<DeferredDeclaration['adjus
   const em = (value as { __defer?: DeferredEm } | null)?.__defer;
   if (adjust.percent !== undefined) return withPercent(value, adjust);
   if (em && adjust.floor === undefined) return adjustedEm(em, adjust);
-  if (typeof value !== 'number') return value;
+  // A share the token holds, `calc(var(--p) - 10px)` with `--p: 50%`: the same sum as one
+  // written beside a percentage, which a property with no box for it does not commit. Not under
+  // a `max()`, whose floor such a sum has no way to keep.
+  if (isShare(value) && adjust.floor === undefined) {
+    return withPercent(value, { ...adjust, percent: 0 });
+  }
+  return typeof value === 'number' ? scaledNumber(value, adjust) : value;
+}
+
+/** A number moved by the arithmetic around its `var()`, kept at or above a `max()`'s floor. */
+function scaledNumber(value: number, adjust: NonNullable<DeferredDeclaration['adjust']>): number {
   const scaled = value * (adjust.scale ?? 1) + (adjust.offset ?? 0);
   return adjust.floor === undefined ? scaled : Math.max(scaled, adjust.floor);
 }
