@@ -18,6 +18,7 @@ import {
   type Route,
 } from '@angular/router';
 import { navigationIntent } from './native-navigation.ts';
+import { NativePlatformLocation } from './native-platform-location.ts';
 import { poppingTo } from './popping-to.ts';
 import { PRESENTED } from './presented-route.ts';
 import { isScreenRoute, isTabRoute } from './tab-routes.ts';
@@ -111,35 +112,50 @@ export class NativeStackReuseStrategy extends BaseRouteReuseStrategy {
     if (handle) {
       // The same screen stored again takes its place at the end, not a second one.
       this.handles.set(key, [...kept.filter((one) => one !== handle), handle]);
-      this.entryOf.set(handle, this.shownIn.get(route));
+      this.entryOf.set(handle, this.inHistory(this.shownIn.get(route)));
       this.forgetOnDestroy((handle as StoredHandle).componentRef);
       return;
     }
     // The router has re-attached the one `retrieve` answered with.
     const attached = this.answered.get(route) ?? kept.at(-1);
+    // Its other entries are still in history, behind or ahead of the one it is back at.
+    if (attached) {
+      const before = this.entryOf.get(attached) ?? [];
+      this.shownIn.set(route, [...before, ...(this.shownIn.get(route) ?? [])]);
+    }
     const left = kept.filter((one) => one !== attached);
     if (left.length) this.handles.set(key, left);
     else this.handles.delete(key);
   }
 
   /**
-   * The navigation that last put each route's screen on screen, by the snapshot it built, and so
-   * the one whose id is in that screen's history entry: Angular writes the id of the navigation
-   * into the entry it pushes or replaces, a back included.
+   * The navigations that put each route's screen on screen, by the snapshot the last one built,
+   * and so the ids in that screen's history entries: Angular writes the id of the navigation into
+   * the entry it pushes or replaces, a back included. More than one where the screen changed in
+   * place, a query set on it, which gives it an entry of its own.
    */
-  private readonly shownIn = new WeakMap<ActivatedRouteSnapshot, number | undefined>();
-  /** Each kept screen's history entry, by that navigation's id. */
-  private readonly entryOf = new WeakMap<DetachedRouteHandle, number | undefined>();
+  private readonly shownIn = new WeakMap<ActivatedRouteSnapshot, readonly (number | undefined)[]>();
+  /** Each kept screen's history entries, by those navigations' ids. */
+  private readonly entryOf = new WeakMap<DetachedRouteHandle, readonly (number | undefined)[]>();
   /** The screen `retrieve` answered with for a route, for `store` to take out once attached. */
   private readonly answered = new WeakMap<ActivatedRouteSnapshot, DetachedRouteHandle>();
 
   private showing(route: ActivatedRouteSnapshot, from?: ActivatedRouteSnapshot): void {
     const navigation = this.injector?.get(Router).currentNavigation();
-    // A navigation that skips the location change writes no entry, so the screen is still at the
-    // one it was shown in.
-    const id =
-      from && navigation?.extras.skipLocationChange ? this.shownIn.get(from) : navigation?.id;
-    this.shownIn.set(route, id);
+    // Added to the ones it was shown in before, for a screen kept as it is. A navigation that skips
+    // the location change writes no entry, so its id is in none and goes at the next.
+    this.shownIn.set(route, [...this.inHistory(from && this.shownIn.get(from)), navigation?.id]);
+  }
+
+  /**
+   * The ids an entry in history still holds: one a navigation replaced, skipped, or left ahead of
+   * a push is in none, and matches nothing again. All of them where the history is not ours.
+   */
+  private inHistory(ids: readonly (number | undefined)[] | undefined): (number | undefined)[] {
+    const history = this.injector?.get(PlatformLocation, null);
+    if (!(history instanceof NativePlatformLocation)) return [...(ids ?? [])];
+    const held = history.ɵnavigationIds();
+    return (ids ?? []).filter((id) => id !== undefined && held.has(id));
   }
 
   private readonly watched = new WeakSet<ComponentRef<unknown>>();
@@ -254,7 +270,7 @@ export class NativeStackReuseStrategy extends BaseRouteReuseStrategy {
     const router = this.injector?.get(Router);
     const target = router && poppingTo.get(router);
     return (
-      (entry !== undefined && kept.find((one) => this.entryOf.get(one) === entry)) ||
+      (entry !== undefined && kept.find((one) => this.entryOf.get(one)?.includes(entry))) ||
       (target && kept.filter((one) => (one as StoredHandle).componentRef === target).at(-1)) ||
       kept.at(-1) ||
       null
