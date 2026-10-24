@@ -19,7 +19,12 @@ const { markdownModule, markdownVersions } = require('./markdown-module.cjs');
  * release. Only when `expo` cannot be found from the working directory is that copy used.
  */
 function expoTransformer() {
-  const id = '@expo/metro-config/build/babel-transformer';
+  return expoMetroConfig('babel-transformer');
+}
+
+/** A module of `@expo/metro-config`'s build, found as `expoTransformer` describes. */
+function expoMetroConfig(name) {
+  const id = `@expo/metro-config/build/${name}`;
   let expo;
   try {
     expo = path.dirname(require.resolve('expo/package.json', { paths: [process.cwd()] }));
@@ -162,6 +167,52 @@ const SCRIPT = /\.[cm]?[jt]sx?$/;
  * stylesheet, and the Angular error stands. A stylesheet or a template file is not JavaScript, so
  * Babel always fails on it with a place, and only the Angular error says what is wrong.
  */
+/**
+ * The params with `nativescript-babel.cjs` as the Babel config, for an app that has
+ * `@nativescript/react-native` installed and no Babel config of its own. One that has its own is
+ * told once what to add to it, because the error it would get otherwise names a native class.
+ */
+function nativeScriptBabel(params) {
+  const projectRoot = params.options?.projectRoot;
+  if (!projectRoot || params.options.extendsBabelConfigPath) return params;
+  if (!(projectRoot in NATIVESCRIPT)) {
+    NATIVESCRIPT[projectRoot] = installed('@nativescript/react-native', projectRoot);
+    // The file Expo would load, by Expo's own list, so none of the app's is passed over.
+    const own =
+      NATIVESCRIPT[projectRoot] &&
+      expoMetroConfig('loadBabelConfig').resolveBabelrcName(projectRoot);
+    if (own && !STRICT_GLOBAL.test(readFileSync(path.join(projectRoot, own), 'utf8'))) {
+      console.warn(
+        `[angular-native] ${own} is used as it is. NativeScript's classes need the worklets ` +
+          "plugin's strictGlobal: add ['react-native-worklets/plugin', { strictGlobal: true }] " +
+          "to its plugins and { worklets: false } to babel-preset-expo's options, or delete it.",
+      );
+    }
+    if (own) NATIVESCRIPT[projectRoot] = false;
+  }
+  if (!NATIVESCRIPT[projectRoot]) return params;
+  const extendsBabelConfigPath = path.join(__dirname, 'nativescript-babel.cjs');
+  return { ...params, options: { ...params.options, extendsBabelConfigPath } };
+}
+
+/**
+ * Per project root, whether to use `nativescript-babel.cjs`, decided once per worker. Expo's own
+ * `loadBabelConfig` keeps the first config it finds for the life of the worker too, so adding,
+ * removing or editing a Babel config needs Metro restarted either way, which starts this afresh.
+ */
+const NATIVESCRIPT = /** @type {Record<string, boolean>} */ ({});
+/** The option set to true, not only named: `strictGlobal: false` still needs the warning. */
+const STRICT_GLOBAL = /["']?strictGlobal["']?\s*:\s*true\b/;
+
+function installed(name, root) {
+  try {
+    require.resolve(`${name}/package.json`, { paths: [root] });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function angularOrSyntaxError(params) {
   try {
     return transformAngular(params.src, params.filename, {
@@ -188,6 +239,7 @@ module.exports = {
     return `${upstream.getCacheKey?.(...args) ?? ''}${ownVersion}`;
   },
   transform(params) {
+    params = nativeScriptBabel(params);
     // A `.md` file is data: see `markdown-module.cjs`.
     if (params.filename.endsWith('.md')) {
       return upstream.transform({ ...params, src: markdownModule(params.src, params.filename) });
