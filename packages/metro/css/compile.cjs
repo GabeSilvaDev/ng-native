@@ -4354,7 +4354,7 @@ function arithmetic(text) {
 
 function flatten(source, context, recover) {
   const unchanged = { code: source, lineOf: (line) => line, warnings: [] };
-  if (!source.includes('&') && !NESTED_BLOCK.test(source)) return unchanged;
+  if (!nests(source)) return unchanged;
   try {
     // Nesting is the only feature asked to be lowered. A browser target lowered everything that
     // browser lacked as well: the media range syntax became 'not' queries, which are refused, and
@@ -4436,12 +4436,70 @@ function vlq(segment) {
 }
 
 /**
- * A block opening inside a block: the implicit nesting that needs no `&`.
+ * Whether a sheet nests a rule in a rule, which `flatten` lowers: an `&`, or a block opening inside
+ * a style rule's block. A style rule inside an at-rule, `@media (width > 1px) { .a { ... } }` or a
+ * `@keyframes` step, is not nesting, and nor is `@media` inside `@layer` or `@media`. A
+ * `@keyframes` inside another at-rule is sent to `flatten` all the same, as it is lightningcss
+ * that puts the keyframes of one name written in several layers in the layers' order.
  *
- * Deliberately loose. A false positive costs one extra parse of a sheet that did not need it; a
- * false negative is a rule that silently never matches.
+ * A sheet sent to `flatten` that did not need it is not only parsed once more: lightningcss's
+ * printer folds an equal `padding-inline-start` and `padding-inline-end` into `padding-inline`,
+ * which is left and right, so a pair written logical came out physical for the sheet having a
+ * `@media` rule in it. A nested sheet kept from it is a rule that silently never matches, so a
+ * comment, a string, an unquoted url and an escaped character are stepped over, as a brace in one
+ * opens or closes no block.
  */
-const NESTED_BLOCK = /\{[^{}]*\{/;
+function nests(source) {
+  // For each open block, whether it is an at-rule's.
+  const open = [];
+  let prelude = 0;
+  for (let i = 0; i < source.length; i = skipOver(source, i) + 1) {
+    const character = source[i];
+    if (character === '&') return true;
+    if (character === ';' || character === '}') prelude = i + 1;
+    if (character === '}') open.pop();
+    if (character !== '{') continue;
+    const head = source
+      .slice(prelude, i)
+      .replace(/\/\*[\s\S]*?(\*\/|$)/g, '')
+      .trimStart();
+    if (open.includes(false)) return true;
+    if (open.length > 0 && /^@(-[a-z]+-)?keyframes\b/i.test(head)) return true;
+    open.push(head.startsWith('@'));
+    prelude = i + 1;
+  }
+  return false;
+}
+
+/**
+ * The last index of the comment, string, unquoted `url()` or escaped character that starts at `i`,
+ * or `i`.
+ */
+function skipOver(source, i) {
+  const character = source[i];
+  if (character === '\\') return i + 1;
+  if (character === 'u' || character === 'U') return urlEnd(source, i);
+  if (character === '/' && source[i + 1] === '*') {
+    const end = source.indexOf('*/', i + 2);
+    return end === -1 ? source.length : end + 1;
+  }
+  if (character !== '"' && character !== "'") return i;
+  let at = i + 1;
+  while (at < source.length && source[at] !== character) at += source[at] === '\\' ? 2 : 1;
+  return at;
+}
+
+/**
+ * The `)` of the unquoted `url()` that starts at `i`, or `i`. An unquoted url runs to its `)`, so
+ * an `&` or a `/*` in it is the url's. A quoted one is a string, which `skipOver` steps over.
+ */
+function urlEnd(source, i) {
+  const url = /^url\(\s*(?=[^\s"'])/i.exec(source.slice(i, i + 64));
+  if (!url) return i;
+  let at = i + url[0].length;
+  while (at < source.length && source[at] !== ')') at += source[at] === '\\' ? 2 : 1;
+  return at;
+}
 
 /** A `translate`, `rotate` or `scale` declaration's name, and what comes before and after it. */
 const INDIVIDUAL_TRANSFORM = /([{;\s])(translate|rotate|scale)(\s*:)/g;
