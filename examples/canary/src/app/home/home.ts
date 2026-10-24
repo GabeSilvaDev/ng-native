@@ -262,6 +262,11 @@ export class Home {
       blurb: 'a pan on the UI thread, and a tap on this one',
     },
     { path: '/expo', title: 'Expo modules', blurb: 'haptics, clipboard, files, and an Expo view' },
+    {
+      path: '/device-calendar',
+      title: 'Device calendar',
+      blurb: 'month and day views, over the device calendars',
+    },
     { path: '/maps', title: 'Maps', blurb: 'expo-maps, with markers and a camera move' },
     {
       path: '/language-model',

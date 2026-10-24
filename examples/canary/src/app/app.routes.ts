@@ -328,6 +328,11 @@ export const routes: Routes = [
     ],
   },
   { path: 'expo', loadComponent: () => import('./expo/expo.ts').then((m) => m.ExpoPage) },
+  {
+    path: 'device-calendar',
+    loadComponent: () =>
+      import('./device-calendar/device-calendar.ts').then((m) => m.DeviceCalendarPage),
+  },
   { path: 'maps', loadComponent: () => import('./expo/maps.ts').then((m) => m.MapsPage) },
   {
     path: 'language-model',

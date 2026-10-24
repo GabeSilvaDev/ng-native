@@ -81,6 +81,7 @@
     "expo-auth-session": "^58.0.13",
     "expo-background-task": "~58.0.11",
     "expo-battery": "~58.0.3",
+    "expo-calendar": "~58.0.6",
     "expo-camera": "^58.0.11",
     "expo-crypto": "~58.0.7",
     "expo-image-manipulator": "~58.0.15",
