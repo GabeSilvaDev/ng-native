@@ -14,6 +14,34 @@ one version. `.github/workflows/release.yml` does it, run by hand from the Actio
    through OIDC and no npm token is stored anywhere. The first release must be above `0.0.1`:
    `0.1.0`, or a `minor` bump.
 
+## Adding a package
+
+A new package in `release.projects` needs the same two steps before the first release that
+includes it, by someone who owns the `@ng-native` scope on npm. The release publishes through
+OIDC, and npm can only trust the workflow with a package that already exists, so CI cannot create
+one: 0.18.2 stopped part way through publishing on `@ng-native/nativescript`, its first release.
+
+1. **Publish an empty placeholder**, logged in with `npm login`, from a scratch directory holding
+   only a `package.json`, not from the package's own: a version below every release, and nothing
+   that could be installed by mistake. npm points `latest` at it until the release moves `latest`
+   on.
+
+   ```sh
+   mkdir placeholder && cd placeholder
+   echo '{ "name": "@ng-native/<name>", "version": "0.0.0" }' > package.json
+   npm publish --access public
+   ```
+
+2. **Configure its trusted publisher**, on the package's settings page on npmjs.com as above, or
+   with `npm trust` (npm 11.19 has it), which needs `--allow-publish` and asks to confirm:
+
+   ```sh
+   npm trust github @ng-native/<name> --repo ng-native/ng-native --file release.yml --allow-publish
+   ```
+
+Release's `validate` job refuses to start until both are done (see below). A dry run checks the
+same thing from any branch.
+
 ## Describing changes
 
 A change someone using the packages would notice comes with a **version plan**: a markdown file
@@ -56,12 +84,36 @@ migration goes into the table on that page.
 
 ## Each release
 
-Run **Release** from the Actions tab, on `main`, once CI is green there. Its input is either an exact
-version (`0.1.0` for the first) or a bump. Releases are plain `0.x` versions on npm's `latest` tag,
-which is what `create-expo-app --template @ng-native/template` resolves: `minor` for a release with
-a breaking change, since under `0.x` a minor is the breaking bump, and `patch` otherwise.
+Run **Release** from the Actions tab, on `main`, once CI is green there. Its inputs are a bump,
+picked from `minor` and `patch`, and an optional exact version, which takes precedence over the bump
+when given. Releases are plain `0.x` versions on npm's `latest` tag, which is what
+`create-expo-app --template @ng-native/template` resolves: `minor` for a release with a breaking
+change, since under `0.x` a minor is the breaking bump, and `patch` otherwise.
 
-The workflow first builds the canary natively for iOS and Android (`native.yml`). Each release build
+Its first job, `validate`, checks the inputs before anything slow starts
+(`scripts/release-version.mjs`). An exact version must be a plain semver version (`0.19.0`, or a
+prerelease such as `0.19.0-rc.0`, with no `v`), on the major already released, so `1.0.0` fails
+while releases are `0.x`, and above the highest version any package has on npm. The one exception is
+the highest version itself while `main` is still on an older one, which is a release that failed part
+way through (see below). It also refuses a release with a package npm won't let it publish: one that
+has never been published, or whose trusted publisher doesn't name `release.yml` (see
+[Adding a package](#adding-a-package)). It asks npm for each package's publish token, as
+`npm publish` does, and throws the token away. Without that check, `npm publish` carries on with no
+credentials and fails with a 404 after the packages before it are out. Every other job waits for it.
+
+### A dry run
+
+Tick **dry_run** to rehearse a release. It runs every job above, from any branch, versions, builds
+and packs every package, and runs `npm publish --dry-run` on each tarball. It pushes nothing, creates
+no GitHub release and deploys no docs. The run's summary lists the tarballs and the changelog entry
+the release would have. Dry runs queue only behind other dry runs, never behind a release. From the
+command line:
+
+```sh
+gh workflow run release.yml --ref <branch> -f dry_run=true
+```
+
+The workflow then builds the canary natively for iOS and Android (`native.yml`). Each release build
 is then launched, iOS on a simulator and Android on an emulator, and driven through a short Maestro
 flow (`examples/canary/.maestro/release`), so an app that builds but crashes at launch fails there,
 as it does on every pull request. Beside it, the
@@ -94,7 +146,8 @@ pass, it runs the same gate CI does, then:
 
 If it fails before publishing, nothing has left the runner: fix it and run it again. If it fails part
 way through publishing, run it again with the same exact version (not a bump): packages already on
-npm at that version are skipped, and the rest are published.
+npm at that version are skipped, and the rest are published. `validate` lets that version through
+again because the `Release <version>` commit, pushed only after publishing, is not on `main` yet.
 
 ## Checking distribution locally
 
