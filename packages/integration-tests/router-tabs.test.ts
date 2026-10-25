@@ -20,6 +20,7 @@ import {
   ChildrenOutletContexts,
   NavigationEnd,
   Router,
+  UrlSegment,
   type Route,
   type ActivatedRouteSnapshot,
 } from '@angular/router';
@@ -92,7 +93,7 @@ describe('native tabs outlet', () => {
   function shellRoute(children: Route[]): ActivatedRoute {
     return {
       routeConfig: { path: 'tabs', children },
-      snapshot: { pathFromRoot: [{ url: [{ path: 'tabs' }] }] },
+      snapshot: { pathFromRoot: [{ url: [new UrlSegment('tabs', {})] }] },
     } as unknown as ActivatedRoute;
   }
 
@@ -667,7 +668,7 @@ describe('tabs and a header written the less usual ways', () => {
   async function show(name: string) {
     const outletRoute = {
       routeConfig: { path: 'tabs', children: [] },
-      snapshot: { pathFromRoot: [{ url: [{ path: 'tabs' }] }] },
+      snapshot: { pathFromRoot: [{ url: [new UrlSegment('tabs', {})] }] },
     } as unknown as ActivatedRoute;
     const app = await render(mod[name] as Type<unknown>, {
       processColor: (value) => `processed:${String(value)}`,

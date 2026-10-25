@@ -673,10 +673,14 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
     return entry.url && this.tabOf(entry.url) === entry ? entry.url : this.pathOf(entry);
   }
 
-  /** A tab's own url, from the outlet's route down. */
+  /**
+   * A tab's own url, from the outlet's route down. Each segment as the router writes it in a url,
+   * escaped and with its matrix parameters, `s%C3%A3o-paulo;lang=pt`, which is what it is
+   * compared with.
+   */
   private pathOf(entry: TabEntry): string {
     const parent = this.route.snapshot.pathFromRoot
-      .flatMap((snapshot) => snapshot.url.map((segment) => segment.path))
+      .flatMap((snapshot) => snapshot.url.map((segment) => segment.toString()))
       .join('/');
     return `/${[parent, entry.key].filter(Boolean).join('/')}`;
   }
