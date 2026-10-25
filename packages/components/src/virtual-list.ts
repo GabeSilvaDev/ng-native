@@ -1031,9 +1031,23 @@ export class VirtualList<T> extends ScrollViewProps {
     const held = this.recycled.get(key);
     if (held) return held.slot;
     const type = this.itemType()?.(item, index);
-    const slot = this.parked.get(type)?.pop()?.slot ?? this.nextSlot++;
+    const slot = this.unpark(key, type) ?? this.parked.get(type)?.pop()?.slot ?? this.nextSlot++;
     this.recycled.set(key, { slot, type, row: null });
     return slot;
+  }
+
+  /**
+   * Take an item's own parked row out as it comes back: its slot if it is of the type the item now
+   * is, and gone either way, or the window would hold its key twice.
+   */
+  private unpark(key: unknown, type: unknown): number | undefined {
+    for (const [kind, pool] of this.parked) {
+      const at = pool.findIndex((row) => row.key === key);
+      if (at < 0) continue;
+      const [row] = pool.splice(at, 1);
+      return kind === type ? row!.slot : undefined;
+    }
+    return undefined;
   }
 
   /**
