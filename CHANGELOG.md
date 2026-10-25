@@ -1,3 +1,46 @@
+## 0.18.2 (2026-10-25)
+
+### 🩹 Fixes
+
+- `Keyboard.windowTop` on Android now includes how far down the screen the app's window starts, in the lower half of a split screen or in a freeform window, when `provideNativeKeyboard()` from `@ng-native/expo` is provided. ([#1246](https://github.com/ng-native/ng-native/pull/1246), [#1189](https://github.com/ng-native/ng-native/issues/1189))
+
+  `<keyboard-avoiding-view>`, a focused `<text-input>` and web-compat's `innerHeight` compared the keyboard's top on the screen with views measured in a window that starts lower down, so they treated the keyboard as lower than it was. A `KeyboardSource` can now report the window's top on the screen as `screenTop`, and the `NgNativeKeyboard` module reads it. Expo Go, and apps without `provideNativeKeyboard()`, still leave it out: React Native has no way to read it.
+
+- `@ng-native/expo/calendar` reads and writes the device's own calendars, their events and, on iOS, their reminders. ([#1244](https://github.com/ng-native/ng-native/pull/1244))
+
+  `inject(Calendar)` lists the calendars and the events in a range, finds a calendar, event or reminder by id, creates a calendar, and holds full, write-only (iOS 17 and later) and reminders permissions as signals. It wraps `expo-calendar`'s object API, which needs a development build. What only iOS has, the default calendar, the picker, the sources and the reminders, answers empty on Android instead of throwing. `EntityTypes`, `Frequency` and `Availability` come with it, usable without loading the module.
+
+- `<text-input>` on iOS 26 and later no longer loses characters typed quickly into an empty field, because iOS is sent the latest `eventCount` as the `mostRecentEventCount` prop only with a change to a multiline field's text style. ([#1257](https://github.com/ng-native/ng-native/pull/1257), [#1251](https://github.com/ng-native/ng-native/issues/1251))
+
+  UIKit gives an empty field's first typed text a paragraph style whose line break strategy differs from the one React Native compares an echoed `text` prop with, so an echo carrying the latest count replaced that text with the same string and dropped the keystrokes queued behind the replace. On iOS the prop now stays at 0, the count a field starts at, so an initial value and a value set before anything is typed still arrive as the prop; text set from code after typing, a refused or rewritten keystroke and a bound selection arrive with the count through `setTextAndSelection`, as before. The commit that changes a multiline field's color, font or another text style carries the latest count, so the text already typed is restyled. Android is unchanged. In `@ng-native/testing`, `fireEvent.changeText` and `userEvent.type` count each field's changes themselves, so an iOS field's committed `mostRecentEventCount` reads 0 after typing, but after a multiline field is restyled.
+
+- A `<text-input>` focused while the keyboard is up now scrolls clear of the keyboard in a sheet attached to the bottom of the screen on iOS, and no longer asks a scroll view resting under a navigation bar to scroll to zero. ([#1258](https://github.com/ng-native/ng-native/pull/1258), [#1247](https://github.com/ng-native/ng-native/issues/1247))
+
+  On iOS, React Native measures a view in a presented sheet from the sheet's top, while the keyboard's top counts from the top of the screen, so `engine.reveal()` stopped short by the sheet's distance from the top of the screen and could leave the field behind the keyboard. It now takes that distance off the keyboard's top for a screen presented as `modal`, `formSheet` or `pageSheet`, and for a `<modal>` with `presentationStyle` `pageSheet` or `formSheet`, when the sheet is as wide as the window and taller than the room above the keyboard: such a sheet is attached to the bottom of the screen. A narrower sheet (an iPad's, or one floating at a partial detent) and a shorter one, which may have risen over the keyboard, are measured as before. Android is unchanged.
+
+  `reveal()` also clamped its target at zero, so a scroll view resting above zero under a navigation bar (`contentInsetAdjustmentBehavior="automatic"`) was sent to zero, under the bar, for a move of a few points. It now sends it no further up than zero or where it already is, whichever is further up. React Native's own `scrollTo` on iOS still stops at zero when the scroll view has no `contentInset` of its own.
+
+- `nx g @ng-native/nx:nativescript <app>` sets up `@ng-native/nativescript` in an app: the packages, the config plugin, the iOS and Android types, and `provideNativeScript()`. ([#931](https://github.com/ng-native/ng-native/pull/931))
+- `@ng-native/nativescript` calls iOS and Android APIs from TypeScript through `@nativescript/react-native`, and shows native views built in TypeScript. ([#931](https://github.com/ng-native/ng-native/pull/931))
+
+  `provideNativeScript()` installs the runtime, `NativeScript.call()` runs a function for the platform on the JavaScript thread, `runOnUI()` runs a function on the platform's main thread, `<ns-view>` shows a UIView or an Android View a worklet builds, and `androidContext()` is the Activity to build an Android view with. The app's config plugins list `"@ng-native/nativescript"`. See https://ng-native.com/packages/nativescript.
+
+  On Android the config plugin sets `android.enableMinifyInReleaseBuilds=false` and `nsSkipStaticBindings=true` in `gradle.properties`, since `@nativescript/react-native` 9.1.2 cannot build or run a release on Expo SDK 58 with R8 on, and its release bindings task needs React Native's CLI, which an Expo app does not have. A release APK is larger without R8.
+
+- An app with `@nativescript/react-native` installed and no Babel config of its own gets the worklets plugin with `strictGlobal`, so a worklet naming a native class, such as `UILabel.new()`, no longer fails as the app starts with `Property 'UILabel' doesn't exist`. ([#931](https://github.com/ng-native/ng-native/pull/931))
+
+  An app with its own Babel config gets a warning saying what to add to it.
+
+- An equal `padding-inline-start` and `padding-inline-end` compile to `paddingStart` and `paddingEnd` in a stylesheet with an `@media` rule in it, as they do in one without, and so do `margin-inline-*`, `inset-inline-*` and `border-inline-*`. They were compiled to left and right. A sheet whose only blocks inside blocks are top-level at-rules such as `@media` is no longer printed again by lightningcss before it is compiled, so it compiles as it would without them. ([#868](https://github.com/ng-native/ng-native/pull/868))
+
+  An `overflow-x` and an `overflow-y` set to the same value in one rule, which compiled to `overflow` beside an `@media` rule, are now refused there with the warning to write `overflow`, as they already were in a sheet without one.
+
+### ❤️ Thank You
+
+- Ashley Hunter
+- erKam
+- Shahar Kazaz
+
 ## 0.18.1 (2026-10-24)
 
 ### 🩹 Fixes
