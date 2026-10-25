@@ -6,7 +6,15 @@ import assert from 'node:assert/strict';
 import { afterEach, before, describe, it } from 'node:test';
 import type { Type } from '@angular/core';
 import { Router, type Routes } from '@angular/router';
-import { cleanup, fireEvent, render, settle, type FakeFabricNode } from '@ng-native/testing';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  settle,
+  type FakeFabricNode,
+} from '@ng-native/testing';
+import { NativeNavigation } from '../router/src/native-navigation.ts';
 import { provideNativeRouter } from '../router/src/provide-native-router.ts';
 import { compileFixture } from './compile.ts';
 
@@ -41,7 +49,8 @@ describe('a bar under a parameter', () => {
       await fireEvent(host(), 'tabSelected', { selectedScreenKey: key, provenance: ++provenance });
       await idle();
     };
-    return { router, tap };
+    const navigation = app.componentRef.injector.get(NativeNavigation);
+    return { router, navigation, tap };
   }
 
   for (const name of ['rio', 'são-paulo', 'new york']) {
@@ -54,6 +63,17 @@ describe('a bar under a parameter', () => {
       assert.equal(router.url, at, 'back on the album, not on the tab root');
     });
   }
+
+  it("puts a tab's first screen under a page pushed into it, in a city with an accent", async () => {
+    const { router, navigation } = await cityAt('/city/s%C3%A3o-paulo/home');
+    assert.equal(await navigation.push('/city/s%C3%A3o-paulo/library/7'), true);
+    await idle();
+    assert.ok(screen.getByText('album'));
+    assert.ok(screen.getByText('library'), 'the list is mounted under it');
+    navigation.back();
+    await idle();
+    assert.equal(router.url, '/city/s%C3%A3o-paulo/library');
+  });
 
   it('keeps the matrix parameters of the parameter it is under', async () => {
     const { router, tap } = await cityAt('/city/rio;lang=pt/home');
