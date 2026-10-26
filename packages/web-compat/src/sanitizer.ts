@@ -153,7 +153,9 @@ function fateOf(
 ): 'keep' | 'remove' | 'unwrap' {
   const name = element.localName ?? element.tag;
   const namespace = element.namespaceURI;
-  if (safe && named(UNSAFE, name, namespace)) return 'remove';
+  // An iframe is a web view by the engine's name for it alone, in a drawing or a formula too:
+  // see `frame.ts`.
+  if (safe && (named(UNSAFE, name, namespace) || element.tag === 'iframe')) return 'remove';
   if (named(configuration.removeElements, name, namespace)) return 'remove';
   if (named(configuration.replaceWithChildrenElements, name, namespace)) return 'unwrap';
   const listed = named(configuration.elements, name, namespace);

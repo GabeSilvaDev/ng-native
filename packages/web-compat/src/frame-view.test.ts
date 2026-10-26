@@ -560,6 +560,21 @@ describe('iframe as a web view', () => {
     assert.equal(view(fabric).props['loading'], undefined);
   });
 
+  it('is made by no safe setHTML, with the iframe in a drawing or a formula', async () => {
+    installWebView();
+    const { document, fabric } = await page();
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    div.setHTML('<svg><iframe srcdoc="<script>steal()</script>"></iframe></svg>');
+    div.appendHTML('<math><iframe src="https://evil.example/"></iframe></math>');
+    await settle();
+    assert.equal(div.innerHTML, '<svg></svg><math></math>');
+    assert.equal(fabric.find('RNCWebView'), undefined);
+    div.setHTMLUnsafe('<iframe srcdoc="<p>Hi</p>"></iframe>');
+    await settle();
+    assert.ok(fabric.find('RNCWebView'), 'an iframe of HTML is still a web view');
+  });
+
   it('says a src page in a sandbox without allow-same-origin keeps its own origin', async () => {
     installWebView();
     const { document } = await page();
