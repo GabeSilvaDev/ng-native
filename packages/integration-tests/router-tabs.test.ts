@@ -18,8 +18,10 @@ import {
 import {
   ActivatedRoute,
   ChildrenOutletContexts,
+  DefaultUrlSerializer,
   NavigationEnd,
   Router,
+  UrlSegment,
   type Route,
   type ActivatedRouteSnapshot,
 } from '@angular/router';
@@ -92,7 +94,7 @@ describe('native tabs outlet', () => {
   function shellRoute(children: Route[]): ActivatedRoute {
     return {
       routeConfig: { path: 'tabs', children },
-      snapshot: { pathFromRoot: [{ url: [{ path: 'tabs' }] }] },
+      snapshot: { pathFromRoot: [{ url: [new UrlSegment('tabs', {})] }] },
     } as unknown as ActivatedRoute;
   }
 
@@ -162,6 +164,7 @@ describe('native tabs outlet', () => {
             },
             events: routerEvents,
             getCurrentNavigation: () => null,
+            parseUrl: (url: string) => new DefaultUrlSerializer().parse(url),
             navigateByUrl: (url: string) => (
               navigated.push(url),
               navigationError === undefined
@@ -667,7 +670,7 @@ describe('tabs and a header written the less usual ways', () => {
   async function show(name: string) {
     const outletRoute = {
       routeConfig: { path: 'tabs', children: [] },
-      snapshot: { pathFromRoot: [{ url: [{ path: 'tabs' }] }] },
+      snapshot: { pathFromRoot: [{ url: [new UrlSegment('tabs', {})] }] },
     } as unknown as ActivatedRoute;
     const app = await render(mod[name] as Type<unknown>, {
       processColor: (value) => `processed:${String(value)}`,
@@ -685,6 +688,7 @@ describe('tabs and a header written the less usual ways', () => {
             componentInputBindingEnabled: false,
             events: { subscribe: () => ({ unsubscribe: () => {} }) },
             getCurrentNavigation: () => null,
+            parseUrl: (url: string) => new DefaultUrlSerializer().parse(url),
             navigateByUrl: () => Promise.resolve(true),
           },
         },

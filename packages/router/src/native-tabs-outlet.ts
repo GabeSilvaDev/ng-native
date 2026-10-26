@@ -69,11 +69,11 @@ import { NativeTab, screenKeyOf } from './native-tab.ts';
 import { ownHost } from './own-host.ts';
 import { markTabRoute } from './tab-routes.ts';
 import { IN_TAB, type InTab } from './in-tab.ts';
-import { taken, withoutPresented } from './presented-route.ts';
+import { PRESENTED, taken, withoutPresented } from './presented-route.ts';
 import { SVG_ICON_HOST } from './svg-icons.ts';
+import { primarySegments } from './url-commands.ts';
 
-/** A url without its query or fragment. */
-const pathOnly = (url: string): string => url.split(/[?#]/, 1)[0]!;
+const segmentsOf = (path: string): string[] => path.split('/').filter(Boolean);
 
 /**
  * Whether one of `routes` matches `segments`, whole or up to lazy children not loaded yet, which a
@@ -552,8 +552,7 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
   private unopenedTabOf(url: string): string | null {
     const entry = this.tabOf(url);
     if (!entry || entry.ref) return null;
-    const root = this.pathOf(entry);
-    return pathOnly(url) === root ? null : root;
+    return this.under(entry, url)?.length === 0 ? null : this.pathOf(entry);
   }
 
   /** Where the tab `url` is in was left, while a screen over the bar covers it. */
@@ -576,26 +575,47 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
    * followed, as `taken` follows neither: a page only one of them shows is in no tab.
    */
   private tabOf(url: string): TabEntry | null {
-    const path = pathOnly(url);
     let found: TabEntry | null = null;
+    let depth = -1;
     for (const entry of this.entries) {
-      const root = this.pathOf(entry);
-      const inside = path === root || path.startsWith(root.endsWith('/') ? root : `${root}/`);
-      if (!inside || (found && this.pathOf(found).length >= root.length)) continue;
-      if (!entry.key && !this.leadsInto(entry, path.slice(root.length))) continue;
+      const rest = this.under(entry, url);
+      const own = segmentsOf(entry.key).length;
+      if (!rest || own <= depth) continue;
+      if (!entry.key && !this.leadsInto(entry, rest)) continue;
       found = entry;
+      depth = own;
     }
     return found;
   }
 
-  /** Whether the routes of the tab at `''` lead to `rest`, the path under the bar's own url. */
-  private leadsInto(entry: TabEntry, rest: string): boolean {
-    const segments = rest.split('/').filter(Boolean);
+  /**
+   * The segments of `url` under the tab, or null when `url` is not inside it. The bar's own
+   * segments are compared as the router writes them, matrix parameters included; the tab's own by
+   * path alone, as a url can give them matrix parameters of their own, `library;sort=a`. Parsed,
+   * and only the primary outlet's segments read, so a named outlet open beside the tab,
+   * `library(popup:compose)`, is not taken for part of its path. A url with a page presented over
+   * the app is that page's, which is in no tab.
+   */
+  private under(entry: TabEntry, url: string): string[] | null {
+    if (!this.router || this.router.parseUrl(url).root.children[PRESENTED]) return null;
+    const segments = primarySegments(this.router, url);
+    const parent = this.parentSegments();
+    const own = segmentsOf(entry.key);
+    if (segments.length < parent.length + own.length) return null;
+    if (parent.some((segment, index) => segments[index]!.toString() !== segment)) return null;
+    if (own.some((segment, index) => segments[parent.length + index]!.path !== segment)) {
+      return null;
+    }
+    return segments.slice(parent.length + own.length).map((segment) => segment.path);
+  }
+
+  /** Whether the routes of the tab at `''` lead to `rest`, the segments under the bar's own url. */
+  private leadsInto(entry: TabEntry, rest: string[]): boolean {
     const own = entry.route?.snapshot.routeConfig;
     const routes = own
       ? [own]
       : (this.route.routeConfig?.children ?? []).filter((config) => config.path === '');
-    return segments.length === 0 || reaches(routes, segments);
+    return rest.length === 0 || reaches(routes, rest);
   }
 
   private request(entry: TabEntry): void {
@@ -673,12 +693,20 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
     return entry.url && this.tabOf(entry.url) === entry ? entry.url : this.pathOf(entry);
   }
 
-  /** A tab's own url, from the outlet's route down. */
+  /**
+   * A tab's own url, from the outlet's route down. Each segment as the router writes it in a url,
+   * escaped and with its matrix parameters, `s%C3%A3o-paulo;lang=pt`, which is what it is
+   * compared with.
+   */
   private pathOf(entry: TabEntry): string {
-    const parent = this.route.snapshot.pathFromRoot
-      .flatMap((snapshot) => snapshot.url.map((segment) => segment.path))
-      .join('/');
-    return `/${[parent, entry.key].filter(Boolean).join('/')}`;
+    return `/${[...this.parentSegments(), entry.key].filter(Boolean).join('/')}`;
+  }
+
+  /** The outlet's route's segments, from the root down, as `pathOf` writes them. */
+  private parentSegments(): string[] {
+    return this.route.snapshot.pathFromRoot.flatMap((snapshot) =>
+      snapshot.url.map((segment) => segment.toString()),
+    );
   }
 
   /**
