@@ -9,7 +9,7 @@
  */
 import assert from 'node:assert/strict';
 import { before, beforeEach, describe, it } from 'node:test';
-import { runInNewContext } from 'node:vm';
+import { createContext, runInContext } from 'node:vm';
 import { ErrorHandler, type Type } from '@angular/core';
 import { mount } from '@ng-native/platform';
 import { createFakeFabric, type FakeFabric, type FakeFabricNode } from '@ng-native/testing';
@@ -22,15 +22,34 @@ interface Fixture {
   outputs: { set(value: Record<string, (value: never) => void>): void };
 }
 
-/** What a page at `url` that defines `__ngNative` is handed, as each script runs there. */
-function received(scripts: readonly string[], url: string): unknown[] {
+/**
+ * What a page at `url` that defines `__ngNative` is handed, as each script runs there. A hostile
+ * page first makes every string and pattern method it could be asked through say yes.
+ */
+function received(scripts: readonly string[], url: string, hostile = false): unknown[] {
   const messages: unknown[] = [];
   // Back through JSON, as made in the script's own realm, with that realm's `Object`.
   const receive = (message: unknown) => messages.push(JSON.parse(JSON.stringify(message)));
-  const window = { __ngNative: { receive } };
-  for (const script of scripts) runInNewContext(script, { window, location: { href: url } });
+  const { href, origin, protocol, pathname } = new URL(url);
+  const context = createContext({
+    window: { __ngNative: { receive } },
+    location: { href, origin, protocol, pathname },
+  });
+  if (hostile) runInContext(HOSTILE, context);
+  for (const script of scripts) runInContext(script, context);
   return messages;
 }
+
+const HOSTILE = `
+  String.prototype.indexOf = () => 0;
+  String.prototype.startsWith = () => true;
+  String.prototype.endsWith = () => true;
+  String.prototype.includes = () => true;
+  String.prototype.toLowerCase = function () { return 'http://192.168.1.5:8081/'; };
+  String.prototype.split = () => ({ pop: () => 'note.ts', 0: { split: () => ['note.ts'] } });
+  RegExp.prototype.test = () => true;
+  Array.prototype.pop = () => 'note.ts';
+`;
 
 describe('a DOM component in the app', () => {
   let Fixture: Type<unknown>;
@@ -180,7 +199,9 @@ describe('a DOM component in the app', () => {
       fixture.label.set('Private');
       await settle();
       assert.deepEqual(receivedAt('https://evil.example/note.ts'), []);
-      assert.deepEqual(receivedAt('http://192.168.1.5:80811/note.ts'), []);
+      assert.deepEqual(receivedAt('http://192.168.1.50:8081/note.ts'), []);
+      const hostile = injected.map(({ script }) => script);
+      assert.deepEqual(received(hostile, 'https://evil.example/note.ts', true), [], 'built-ins');
       assert.deepEqual(receivedAt(`${page}#section`).at(-1), {
         type: 'inputs',
         inputs: { label: 'Private' },
@@ -258,6 +279,7 @@ describe('a DOM component in a release build', () => {
     assert.deepEqual(received(scripts, ios), [{ type: 'inputs', inputs: { label: 'Draft' } }]);
     assert.deepEqual(received(scripts, 'file:///App.app/www.bundle/other.html'), []);
     assert.deepEqual(received(scripts, 'https://evil.example/www.bundle/note.ts'), []);
+    assert.deepEqual(received(scripts, 'file:///sdcard/Download/x.html', true), [], 'built-ins');
   });
 
   it('ignores any other page', async () => {

@@ -221,7 +221,7 @@ export class DomComponent {
 function isOwnPage(url: string | undefined, source: string): boolean {
   if (!url) return false;
   const served = servedFrom(source);
-  if (served) return url.toLowerCase().startsWith(served);
+  if (served) return url.toLowerCase().startsWith(`${served}/`);
   return /^file:/i.test(url) && fileName(url) === fileName(source);
 }
 
@@ -229,21 +229,25 @@ function isOwnPage(url: string | undefined, source: string): boolean {
  * A script that runs `call` only where the web view shows the component's own page, by
  * `isOwnPage`'s rule, as the page itself reads its address. The web view runs what it is given
  * in whatever page it is showing, and one a link took it to may define `__ngNative` to be handed
- * the app's inputs.
+ * the app's inputs, and may replace any method of a string or a pattern to pass a check made with
+ * one. So the check reads only what such a page cannot change: `location`'s own properties, a
+ * string's length and characters, and `===`.
  */
 function inOwnPage(source: string, call: string): string {
   const served = servedFrom(source);
   const own = served
-    ? `location.href.toLowerCase().indexOf(${JSON.stringify(served)}) === 0`
-    : `/^file:/i.test(location.href) && ` +
-      `location.href.split(/[?#]/)[0].split('/').pop() === ${JSON.stringify(fileName(source))}`;
+    ? `location.origin === ${JSON.stringify(served)}`
+    : `location.protocol === 'file:' && (function (path, end) {
+        var from = path.length - end.length;
+        for (var at = 0; at < end.length; at++) if (path[from + at] !== end[at]) return false;
+        return true;
+      })(location.pathname, ${JSON.stringify(`/${fileName(source)}`)})`;
   return `if (${own}) { ${call} } true;`;
 }
 
-/** The dev server's origin and the slash after it, lowercased, for a page it serves. */
+/** The origin of the dev server that serves the page, lowercased, as `location.origin` has it. */
 function servedFrom(source: string): string | undefined {
-  const served = /^https?:\/\/[^/?#]+/i.exec(source)?.[0];
-  return served && `${served.toLowerCase()}/`;
+  return /^https?:\/\/[^/?#]+/i.exec(source)?.[0]?.toLowerCase();
 }
 
 function fileName(url: string): string {
