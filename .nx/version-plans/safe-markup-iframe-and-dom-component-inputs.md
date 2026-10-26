@@ -1,0 +1,7 @@
+---
+__default__: patch
+---
+
+`setHTML` and `appendHTML` in `@ng-native/web-compat` now remove an `<iframe>` inside `<svg>` or `<math>`. Before, such an iframe passed the safe sanitizer and became a react-native-webview with scripts on, so untrusted markup could run a script at the page's origin and post messages to the app as that origin.
+
+`<dom-component>` in `@ng-native/expo` now sends a changed input only to its own page. Before, once a link in the content took the web view to another site, that site could define `window.__ngNative` and receive every input the app changed afterwards.

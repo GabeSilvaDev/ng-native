@@ -31,9 +31,9 @@
  *   has no output for is an error naming the ones it does have, as `<ng-native-island>`'s is.
  * - **Errors** the page throws reach the app's `ErrorHandler`.
  * - **Only its own page is heard.** A message from any other page the web view shows, after a link
- *   in the content, say, is ignored, as is one that is not JSON. The inputs given before the page
- *   loads are the web view's to hand out, though, and it hands them to whatever page it is showing,
- *   so they are no place for a secret.
+ *   in the content, say, is ignored, as is one that is not JSON, and a changed input is sent to
+ *   its own page alone. The inputs given before the page loads are the web view's to hand out,
+ *   though, and it hands them to whatever page it is showing, so they are no place for a secret.
  */
 import {
   Component,
@@ -194,11 +194,12 @@ export class DomComponent {
 
   private send(inputs: Readonly<Record<string, unknown>>): void {
     const nativeTag = this.engine.tagOf(this.node);
-    if (!this.native.functions || nativeTag === null) return;
+    const source = this.source();
+    if (!this.native.functions || nativeTag === null || !source) return;
     const message = JSON.stringify({ type: 'inputs', inputs });
     void this.native.functions.injectJavaScript.call(
       { nativeTag },
-      `window.__ngNative && window.__ngNative.receive(${message}); true;`,
+      inOwnPage(source.uri, `window.__ngNative && window.__ngNative.receive(${message});`),
     );
   }
 }
@@ -219,9 +220,30 @@ export class DomComponent {
  */
 function isOwnPage(url: string | undefined, source: string): boolean {
   if (!url) return false;
-  const served = /^https?:\/\/[^/?#]+/i.exec(source)?.[0];
-  if (served) return url.toLowerCase().startsWith(`${served.toLowerCase()}/`);
+  const served = servedFrom(source);
+  if (served) return url.toLowerCase().startsWith(served);
   return /^file:/i.test(url) && fileName(url) === fileName(source);
+}
+
+/**
+ * A script that runs `call` only where the web view shows the component's own page, by
+ * `isOwnPage`'s rule, as the page itself reads its address. The web view runs what it is given
+ * in whatever page it is showing, and one a link took it to may define `__ngNative` to be handed
+ * the app's inputs.
+ */
+function inOwnPage(source: string, call: string): string {
+  const served = servedFrom(source);
+  const own = served
+    ? `location.href.toLowerCase().indexOf(${JSON.stringify(served)}) === 0`
+    : `/^file:/i.test(location.href) && ` +
+      `location.href.split(/[?#]/)[0].split('/').pop() === ${JSON.stringify(fileName(source))}`;
+  return `if (${own}) { ${call} } true;`;
+}
+
+/** The dev server's origin and the slash after it, lowercased, for a page it serves. */
+function servedFrom(source: string): string | undefined {
+  const served = /^https?:\/\/[^/?#]+/i.exec(source)?.[0];
+  return served && `${served.toLowerCase()}/`;
 }
 
 function fileName(url: string): string {
