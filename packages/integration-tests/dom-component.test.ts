@@ -278,6 +278,11 @@ describe('a DOM component in a release build', () => {
     app.applicationRef.tick();
     assert.deepEqual(received(scripts, ios), [{ type: 'inputs', inputs: { label: 'Draft' } }]);
     assert.deepEqual(received(scripts, 'file:///App.app/www.bundle/other.html'), []);
+    assert.deepEqual(
+      received(scripts, 'file:///App.app/www.bundle/xnote.ts'),
+      [],
+      'name ends alike',
+    );
     assert.deepEqual(received(scripts, 'https://evil.example/www.bundle/note.ts'), []);
     assert.deepEqual(received(scripts, 'file:///sdcard/Download/x.html', true), [], 'built-ins');
   });
