@@ -18,6 +18,7 @@ import {
 import {
   ActivatedRoute,
   ChildrenOutletContexts,
+  DefaultUrlSerializer,
   NavigationEnd,
   Router,
   UrlSegment,
@@ -163,6 +164,7 @@ describe('native tabs outlet', () => {
             },
             events: routerEvents,
             getCurrentNavigation: () => null,
+            parseUrl: (url: string) => new DefaultUrlSerializer().parse(url),
             navigateByUrl: (url: string) => (
               navigated.push(url),
               navigationError === undefined
@@ -686,6 +688,7 @@ describe('tabs and a header written the less usual ways', () => {
             componentInputBindingEnabled: false,
             events: { subscribe: () => ({ unsubscribe: () => {} }) },
             getCurrentNavigation: () => null,
+            parseUrl: (url: string) => new DefaultUrlSerializer().parse(url),
             navigateByUrl: () => Promise.resolve(true),
           },
         },

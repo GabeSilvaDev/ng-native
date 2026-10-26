@@ -69,11 +69,10 @@ import { NativeTab, screenKeyOf } from './native-tab.ts';
 import { ownHost } from './own-host.ts';
 import { markTabRoute } from './tab-routes.ts';
 import { IN_TAB, type InTab } from './in-tab.ts';
-import { taken, withoutPresented } from './presented-route.ts';
+import { PRESENTED, taken, withoutPresented } from './presented-route.ts';
 import { SVG_ICON_HOST } from './svg-icons.ts';
+import { primarySegments } from './url-commands.ts';
 
-/** A url without its query or fragment. */
-const pathOnly = (url: string): string => url.split(/[?#]/, 1)[0]!;
 const segmentsOf = (path: string): string[] => path.split('/').filter(Boolean);
 
 /**
@@ -592,17 +591,22 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
   /**
    * The segments of `url` under the tab, or null when `url` is not inside it. The bar's own
    * segments are compared as the router writes them, matrix parameters included; the tab's own by
-   * path alone, as a url can give them matrix parameters of their own, `library;sort=a`.
+   * path alone, as a url can give them matrix parameters of their own, `library;sort=a`. Parsed,
+   * and only the primary outlet's segments read, so a named outlet open beside the tab,
+   * `library(popup:compose)`, is not taken for part of its path. A url with a page presented over
+   * the app is that page's, which is in no tab.
    */
   private under(entry: TabEntry, url: string): string[] | null {
-    const segments = segmentsOf(pathOnly(url));
+    if (!this.router || url.includes(`${PRESENTED}:`)) return null;
+    const segments = primarySegments(this.router, url);
     const parent = this.parentSegments();
     const own = segmentsOf(entry.key);
     if (segments.length < parent.length + own.length) return null;
-    if (parent.some((segment, index) => segments[index] !== segment)) return null;
-    const ownAt = (index: number) => segments[parent.length + index]!.split(';', 1)[0];
-    if (own.some((segment, index) => ownAt(index) !== segment)) return null;
-    return segments.slice(parent.length + own.length);
+    if (parent.some((segment, index) => segments[index]!.toString() !== segment)) return null;
+    if (own.some((segment, index) => segments[parent.length + index]!.path !== segment)) {
+      return null;
+    }
+    return segments.slice(parent.length + own.length).map((segment) => segment.path);
   }
 
   /** Whether the routes of the tab at `''` lead to `rest`, the segments under the bar's own url. */

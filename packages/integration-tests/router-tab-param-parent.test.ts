@@ -102,4 +102,14 @@ describe('a bar under a parameter', () => {
     assert.equal(router.url, '/city/rio/library;sort=a');
     assert.equal(screen.queryAllByText('library').length, 1, 'one list, not one under another');
   });
+
+  it('returns a tab to the page it was on, with a named outlet open beside it', async () => {
+    const { router, tap } = await cityAt('/city/rio/library/7');
+    await router.navigateByUrl('/city/rio/library(popup:compose)');
+    await idle();
+    await tap('home');
+    assert.equal(router.url, '/city/rio/home');
+    await tap('library');
+    assert.equal(router.url, '/city/rio/library(popup:compose)', 'where the tab was left');
+  });
 });

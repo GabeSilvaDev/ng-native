@@ -42,7 +42,11 @@ export class Library {}
 @Component({ selector: 'x-album', imports: [Text], template: `<text>album</text>` })
 export class Album {}
 
+@Component({ selector: 'x-compose', imports: [Text], template: `<text>compose</text>` })
+export class Compose {}
+
 export const routes: Routes = [
+  { path: 'compose', outlet: 'popup', component: Compose },
   {
     path: 'city/:name',
     component: CityBar,
