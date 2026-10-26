@@ -305,6 +305,66 @@ describe('windowed list, recycled by slot', () => {
     );
   });
 
+  it('gives a row that comes back the slot it left, so its key is in the window once', async () => {
+    const mod = await compileFixture('fixtures/virtual.ts');
+    const said: string[] = [];
+    const { error } = console;
+    console.error = (...all: unknown[]) => void said.push(all.map(String).join(' '));
+    try {
+      const { instance, ...keyed } = await render(mod['VirtualKeyed'] as Type<unknown>);
+      const scroll = flatten(keyed.fabric.committed).find((n) => n.viewName === 'ScrollView')!;
+      await fireEvent(scroll, 'layout', { layout: { height: VIEWPORT } });
+      await fireEvent.scroll(scroll, { contentOffset: { y: 900 * ITEM_HEIGHT } });
+      const all = (instance as { rows: typeof rows }).rows;
+      const items = all();
+      // Rows leave with nothing arriving, so their slots are parked with their keys; then one
+      // of them comes back, as a filter taken off does.
+      all.set(items.slice(0, 910));
+      await settle();
+      all.set(items.slice(0, 911));
+      await settle();
+      const window = (instance as { list(): { window(): readonly { key: unknown }[] } })
+        .list()
+        .window();
+      const keys = window.map((row) => row.key);
+      assert.deepEqual(
+        keys.filter((key, at) => keys.indexOf(key) !== at),
+        [],
+      );
+      assert.equal(labels(keyed.fabric).filter((label) => label === 'row 910').length, 1);
+      assert.deepEqual(
+        said.filter((each) => each.includes('NG0955')),
+        [],
+      );
+    } finally {
+      console.error = error;
+    }
+  });
+
+  it('gives a row that comes back as another type a slot of that type, and drops its own', async () => {
+    const mod = await compileFixture('fixtures/virtual.ts');
+    const { instance, ...keyed } = await render(mod['VirtualKeyed'] as Type<unknown>);
+    const scroll = flatten(keyed.fabric.committed).find((n) => n.viewName === 'ScrollView')!;
+    await fireEvent(scroll, 'layout', { layout: { height: VIEWPORT } });
+    await fireEvent.scroll(scroll, { contentOffset: { y: 900 * ITEM_HEIGHT } });
+    type Row = { id: number; label: string; kind?: string };
+    const all = (instance as { rows: { (): Row[]; set(rows: Row[]): void } }).rows;
+    const list = (
+      instance as {
+        list(): { window(): readonly { key: unknown; slot: number; parked?: boolean }[] };
+      }
+    ).list();
+    const items = all();
+    all.set(items.slice(0, 910));
+    await settle();
+    const left = list.window().find((row) => row.key === 910 && row.parked)!.slot;
+    all.set([...items.slice(0, 910), { ...items[910]!, kind: 'photo' }]);
+    await settle();
+    const rows = list.window().filter((row) => row.key === 910);
+    assert.equal(rows.length, 1, 'its parked text row is gone');
+    assert.notEqual(rows[0]!.slot, left, 'a text slot is not a photo row');
+  });
+
   it('shows the rows scrolled to, and creates no view for them', async () => {
     const created = fabric.calls.createNode;
     await scrollTo(100 * ITEM_HEIGHT);

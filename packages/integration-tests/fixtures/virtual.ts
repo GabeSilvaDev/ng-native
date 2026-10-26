@@ -122,6 +122,36 @@ export class VirtualRecycled {
   fill = { flex: 1 };
 }
 
+/** The first list with a key for each row, kept by key: a row that holds state of its own. */
+@Component({
+  selector: 'x-virtual-keyed',
+  imports: [VirtualList, Text, View],
+  template: `
+    <virtual-list
+      #list
+      [items]="rows()"
+      [itemHeight]="40"
+      [overscan]="2"
+      [keyExtractor]="idOf"
+      [itemType]="kindOf"
+      [style]="fill"
+    >
+      @for (row of list.window(); track row.key) {
+        <view [style]="row.style"
+          ><text>{{ row.item.label }}</text></view
+        >
+      }
+    </virtual-list>
+  `,
+})
+export class VirtualKeyed {
+  readonly list = viewChild.required(VirtualList);
+  rows = signal(Array.from({ length: 1000 }, (_, i) => ({ id: i, label: `row ${i}` })));
+  fill = { flex: 1 };
+  readonly idOf = (row: { id: number }) => row.id;
+  readonly kindOf = (row: { kind?: string }) => row.kind ?? 'text';
+}
+
 /** A paged carousel: the scroll view's own props, set on the list. */
 @Component({
   selector: 'x-virtual-carousel',
