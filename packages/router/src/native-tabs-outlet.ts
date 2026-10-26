@@ -597,7 +597,7 @@ export class NativeTabsOutlet implements RouterOutletContract, AfterContentInit 
    * the app is that page's, which is in no tab.
    */
   private under(entry: TabEntry, url: string): string[] | null {
-    if (!this.router || url.includes(`${PRESENTED}:`)) return null;
+    if (!this.router || this.router.parseUrl(url).root.children[PRESENTED]) return null;
     const segments = primarySegments(this.router, url);
     const parent = this.parentSegments();
     const own = segmentsOf(entry.key);

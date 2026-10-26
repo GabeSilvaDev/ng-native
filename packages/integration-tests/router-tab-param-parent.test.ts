@@ -112,4 +112,12 @@ describe('a bar under a parameter', () => {
     await tap('library');
     assert.equal(router.url, '/city/rio/library(popup:compose)', 'where the tab was left');
   });
+
+  it("returns a tab to the page it was on, with the presented outlet's name in its query", async () => {
+    const { router, tap } = await cityAt('/city/rio/library/7?q=presented:x');
+    const at = router.url;
+    await tap('home');
+    await tap('library');
+    assert.equal(router.url, at, 'back on the album, not on the tab root');
+  });
 });
