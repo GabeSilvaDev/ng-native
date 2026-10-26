@@ -82,4 +82,24 @@ describe('a bar under a parameter', () => {
     await tap('home');
     assert.equal(router.url, '/city/rio;lang=pt/home');
   });
+
+  it("returns a tab to the page it was on, with matrix parameters on the tab's own segment", async () => {
+    const { router, tap } = await cityAt('/city/rio/library;sort=a/7');
+    await tap('home');
+    assert.equal(router.url, '/city/rio/home');
+    await tap('library');
+    assert.equal(
+      router.url,
+      '/city/rio/library;sort=a/7',
+      'back on the album, not on the tab root',
+    );
+  });
+
+  it("puts nothing under a tab's first screen pushed with matrix parameters", async () => {
+    const { router, navigation } = await cityAt('/city/rio/home');
+    assert.equal(await navigation.push('/city/rio/library;sort=a'), true);
+    await idle();
+    assert.equal(router.url, '/city/rio/library;sort=a');
+    assert.equal(screen.queryAllByText('library').length, 1, 'one list, not one under another');
+  });
 });
