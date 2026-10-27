@@ -194,6 +194,32 @@ describe('a DOM component in the app', () => {
       assert.deepEqual(fixture.sent, []);
     });
 
+    it("is sent no input at a host whose name only starts with the tunnel's", async () => {
+      const scripts: string[] = [];
+      const fabric = createFakeFabric();
+      const functions = { injectJavaScript: async (script: string) => void scripts.push(script) };
+      const tunnel = 'https://abc.exp.direct/_expo/@dom';
+      const app = mount(1, Fixture, fabric, {
+        providers: [{ provide: DomComponent.SOURCE, useValue: { baseUrl: tunnel, functions } }],
+      });
+      app.applicationRef.tick();
+      const evil = 'https://abc.exp.direct.evil.com/_expo/@dom/note.ts';
+      const data = JSON.stringify({ type: 'ready', outputs: ['sent'] });
+      fabric.emit(fabric.committed[0]!.children[0]!, 'topMessage', { data, url: evil });
+      app.applicationRef.tick();
+      assert.equal(scripts.length, 0, 'the message is not heard');
+      fabric.emit(fabric.committed[0]!.children[0]!, 'topMessage', { data, url: `${tunnel}/x` });
+      (app.componentRef.instance as Fixture).label.set('Private');
+      app.applicationRef.tick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.ok(scripts.length > 0);
+      assert.deepEqual(received(scripts, evil), [], 'nor is the input sent there');
+      assert.deepEqual(received(scripts, `${tunnel}/note.ts`).at(-1), {
+        type: 'inputs',
+        inputs: { label: 'Private' },
+      });
+    });
+
     it('is sent no input, once a link took the web view to it', async () => {
       await post({ type: 'ready', outputs: ['sent'] });
       fixture.label.set('Private');
