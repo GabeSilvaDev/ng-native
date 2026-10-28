@@ -267,6 +267,10 @@ export class NativeNavigation {
       if (!ended && !(event instanceof NavigationCancel) && !(event instanceof NavigationError)) {
         return;
       }
+      // A guard's redirect ends the navigation only for the one it starts: the back waits for that.
+      if (event instanceof NavigationCancel && event.code === NavigationCancellationCode.Redirect) {
+        return;
+      }
       this.backWaiting?.unsubscribe();
       this.backWaiting = null;
       if (ended) this.outlets.back();
