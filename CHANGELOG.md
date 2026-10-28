@@ -1,3 +1,64 @@
+## 0.19.0 (2026-10-28)
+
+### 🩹 Fixes
+
+- On iOS, `@ng-native/expo` registers its `@expo/ui` modifiers once per app launch instead of on every reload, which could crash a development build in `ViewModifierRegistry.register` during a hot reload. ([#1261](https://github.com/ng-native/ng-native/pull/1261))
+
+  `@expo/ui`'s modifier registry is shared by the whole process and has no lock, and Expo recreates modules on the JavaScript thread on each reload while the main thread can still be reading the registry for SwiftUI views on screen. The modifiers are the same on every reload, so they are now registered the first time the module is created.
+
+- On iOS, a `ui-bottom-sheet` whose content is in a navigation stack puts its `modifiers` on the content inside that stack, so `ignoreSafeArea` lets the content run under the home indicator. ([#1269](https://github.com/ng-native/ng-native/pull/1269))
+
+  The content is in a navigation stack where the build has SwiftUI's toolbar (`@expo/ui` 57.0.20 and later) and the sheet is not sized to its content. The stack sets up the safe area again for what is inside it, so the modifiers were outside its reach on the `ui-group`; they are now on the `ui-zstack` inside the stack, and the sheet's own presentation modifiers stay on the group. Presentation modifiers given this way, such as `presentationCornerRadius`, still apply. A content modifier such as `background` or `padding` there applies below the sheet's bar, where it has one. A sheet sized to its content, and a build without the toolbar, are unchanged.
+
+- A `<virtual-list>` row whose item comes back to the window after leaving it, with nothing arriving to take its place (a filter put on below the scroll position and taken off again), takes back the slot it left. It took another parked slot, so the window held its key twice: with `track row.key` Angular threw `NG0955` (duplicated keys) and the row was drawn twice, and with `track row.slot` a hidden copy of it was kept. An item that comes back as another `itemType` gets a slot of that type, and its old one is let go. ([#1265](https://github.com/ng-native/ng-native/pull/1265))
+- A `<native-tabs-outlet>` under a route parameter, such as `city/:name`, now finds a url inside a tab when the parameter is written with characters a url escapes (an accent or a space, `são-paulo`, `new york`) or with matrix parameters (`rio;lang=pt`). It compared the router's url with the tab's url built from the unescaped segment, so no url was inside a tab: tapping back to a tab opened its first screen instead of the page it was on, and a tap dropped the matrix parameters. A page pushed into such a tab before it was opened now has the tab's first screen under it, as it has elsewhere. ([#1266](https://github.com/ng-native/ng-native/pull/1266))
+
+  A url that gives a tab's own segment matrix parameters, such as `library;sort=a/7`, is now inside that tab too, under a parameter or not. It was in no tab, so tapping away and back opened the tab's first screen without them.
+
+- Fixes from a security review. ([#1279](https://github.com/ng-native/ng-native/pull/1279))
+
+  - `@ng-native/web-compat`: `XMLSerializer` escapes the namespace it writes in an `xmlns` attribute, so a namespace holding a quote or markup can no longer add attributes or elements to the output.
+  - `@ng-native/web-compat`: only an `<iframe>` in the HTML namespace becomes a web view or an emulated frame. One in SVG or MathML, such as one inside an SVG image's markup, or one made with `createElementNS` in another namespace, is a plain element, and its `srcdoc` is not loaded.
+  - `@ng-native/web-compat`: on Android, a message from a frame inside a web view's page that reports its origin as `null` arrives with the origin `null` instead of the web view's own origin. A `srcdoc` page loaded with no base, which Android also reports as `null`, is still heard from the app's origin.
+  - `@ng-native/web-compat`: a message posted to an iframe for an origin (not `*`) waits until the page its new `src` or `srcdoc` names has loaded. On Android, one posted as `srcdoc` replaced a `data:` page reached that page.
+  - `@ng-native/web-compat`: on iOS, an iframe whose `src` has no host, such as a `data:` URL, is shown as an empty page with a warning. react-native-webview there threw on it and closed the app.
+  - `@ng-native/web-compat`: an SVG `<img>` in a template's content, a `DOMParser` document or markup `setHTML` is sanitizing is not fetched until it is put in a document that loads it.
+  - `@ng-native/web-compat`: an emulated frame more than ten frames deep stays blank, so a page that frames itself no longer loads without end.
+  - `@ng-native/web-compat`: `DOMParser` parses XML that declares a namespace prefix on every level of deep nesting in time that grows with the declarations instead of with their square.
+  - `@ng-native/router`: native tabs leave a tap on a tab that was visited and sits behind a `canActivate`, `canActivateChild` or `canMatch` guard to the router: the tab is selected once the guard agrees, instead of showing its kept page while the guard runs. This needs react-native-screens 4.30 or later; earlier versions select at once as before.
+  - `@ng-native/router`: a page `present()` shows over another tab runs each guard of the routes above it with the providers down to that route, not with the page's own.
+  - `@ng-native/router`: `fileRoutes` runs a page's `canMatch` guards with the providers in its `routeMeta`, eager or lazy, as Angular runs a route's guards with its own providers.
+  - `@ng-native/components`: the Markdown component compares each changed block once when a new `source` arrives, where deeply nested blocks such as quotes inside quotes cost three times more for every level.
+  - `@ng-native/tailwind`: a `var()` name holding a character that has a meaning in a regular expression, such as `--a**`, no longer stops the build with a `SyntaxError`. A line break in the Tailwind entry's file name no longer ends the generated module's header comment.
+  - `@ng-native/web`: an image whose `referrerPolicy` is set is painted with an `<img>` that sends that policy, since a CSS background is fetched with the page's.
+  - `@ng-native/metro`: the dev server keeps a parked route history exactly as the app sent it, so a deeply nested body can no longer crash the server.
+
+- The safe HTML methods in `@ng-native/web-compat` (`setHTML`, `appendHTML`, `prependHTML`, `beforeHTML`, `afterHTML` and `replaceWithHTML`) now remove an `<iframe>` inside `<svg>` or `<math>`, and any element registered as a web view, such as `<web-view>` or `<dom-component>`. Before, such an element passed the safe sanitizer and became a react-native-webview with scripts on, so untrusted markup could run a script at the page's origin and post messages to the app as that origin. ([#1271](https://github.com/ng-native/ng-native/pull/1271))
+
+  `<dom-component>` in `@ng-native/expo` now sends a changed input only to its own page. Before, once a link in the content took the web view to another site, that site could define `window.__ngNative` and receive every input the app changed afterwards.
+
+- On iOS 26 and later, a stack page's `:host` layout (`flex-direction`, `justify-content`, `align-items`, `gap`) lays out the elements at the root of its template again, and a `:host > ...` selector matches them again. ([#1260](https://github.com/ng-native/ng-native/pull/1260), [#1212](https://github.com/ng-native/ng-native/issues/1212))
+
+  The safe area view the stack outlet puts a page's content in on iOS 26 and later, which starts it below an opaque `<native-header>`, is now made by the engine as a view of the screen's own (`Engine.wrapChildren`) rather than as an element of the page's tree. The page's template stays in its host, the screen, so its `:host` rules and selectors reach it as written, and the layout `:host` gives its children is committed on the safe area view, which holds them. For a page whose `:host` gives no such layout, the native views and their props are the ones committed before, and the header is still a child of the screen either way. Before iOS 26 and on Android nothing changes.
+
+- On iOS, a navigation that would put a screen on a stack hidden behind a `fullScreenModal` another stack presents now resolves false and leaves the url and the screens as they were, where before it resolved true and showed nothing. ([#1270](https://github.com/ng-native/ng-native/pull/1270), [#1253](https://github.com/ng-native/ng-native/issues/1253))
+
+  A screen a tab's own stack presents as `fullScreenModal` takes the app's stack out of the window, and react-native-screens' iOS stack makes no change while it is out of the window. So `present()` or `push()` of a top-level route, `present()` of a page of another tab, or a plain router navigation to such a route, from that modal, changed the url without showing the screen, and the next `back()` took off the screen nobody saw. These are now aborted before the url changes. A navigation inside the stack presenting the modal, to another tab, back to a screen still on the app's stack, or a `replace()` or `reset()`, goes ahead as before. Android is unchanged.
+
+- A running Metro dev server compiles a component again once its `templateUrl` or `styleUrl` file changes or is deleted, so a reload, a relaunch or a hot update gets the component as the file is now rather than as it was compiled before. ([#1259](https://github.com/ng-native/ng-native/pull/1259), [#1166](https://github.com/ng-native/ng-native/issues/1166))
+
+  Metro transforms again only the file that changed, and kept the component's own module, with the old template or sheet compiled into it, until the component's `.ts` file changed or Metro restarted; a touch that left the `.ts` file's text as it was did not help. `withAngularNative` now wraps `server.enhanceMiddleware` to reach the dev server, which checks the templates and stylesheets each module was compiled from before it answers a bundle request or sends a hot update. A hot update after such an edit carries the component's module as well as the template's or stylesheet's, and swaps it in place.
+
+- New package `@ng-native/firebase-messaging`: a `FirebaseMessaging` service that registers the app's Firebase Installation ID with FCM and answers it, for a backend that sends through FCM's HTTP v1 API with the `fid` target. ([#1281](https://github.com/ng-native/ng-native/pull/1281), [#1278](https://github.com/ng-native/ng-native/issues/1278))
+
+  `register()` asks for the notification permission, registers with FCM (on iOS with the APNs token from `Notifications`) and sets `installationId`; after that, it registers again when the push token rolls while the app runs, and reads the FID again each time the app comes back to the front. Its config plugin turns on registration by installation ID on iOS and Android, turns off Firebase's app delegate proxy on iOS and gives the `GoogleUtilities` pod modules in the Podfile. Firebase's config files are Expo's `ios.googleServicesFile` and `android.googleServicesFile`. It needs a development build: in Expo Go, on the web host and in tests every call answers null.
+
+### ❤️ Thank You
+
+- Ashley Hunter
+- erKam
+- Gabriel Silva @GabeSilvaDev
+
 ## 0.18.2 (2026-10-25)
 
 ### 🩹 Fixes
