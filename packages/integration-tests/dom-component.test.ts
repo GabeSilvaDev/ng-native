@@ -9,6 +9,7 @@
  */
 import assert from 'node:assert/strict';
 import { before, beforeEach, describe, it } from 'node:test';
+import { createContext, runInContext } from 'node:vm';
 import { ErrorHandler, type Type } from '@angular/core';
 import { mount } from '@ng-native/platform';
 import { createFakeFabric, type FakeFabric, type FakeFabricNode } from '@ng-native/testing';
@@ -20,6 +21,35 @@ interface Fixture {
   sent: unknown[];
   outputs: { set(value: Record<string, (value: never) => void>): void };
 }
+
+/**
+ * What a page at `url` that defines `__ngNative` is handed, as each script runs there. A hostile
+ * page first makes every string and pattern method it could be asked through say yes.
+ */
+function received(scripts: readonly string[], url: string, hostile = false): unknown[] {
+  const messages: unknown[] = [];
+  // Back through JSON, as made in the script's own realm, with that realm's `Object`.
+  const receive = (message: unknown) => messages.push(JSON.parse(JSON.stringify(message)));
+  const { href, origin, protocol, pathname } = new URL(url);
+  const context = createContext({
+    window: { __ngNative: { receive } },
+    location: { href, origin, protocol, pathname },
+  });
+  if (hostile) runInContext(HOSTILE, context);
+  for (const script of scripts) runInContext(script, context);
+  return messages;
+}
+
+const HOSTILE = `
+  String.prototype.indexOf = () => 0;
+  String.prototype.startsWith = () => true;
+  String.prototype.endsWith = () => true;
+  String.prototype.includes = () => true;
+  String.prototype.toLowerCase = function () { return 'http://192.168.1.5:8081/'; };
+  String.prototype.split = () => ({ pop: () => 'note.ts', 0: { split: () => ['note.ts'] } });
+  RegExp.prototype.test = () => true;
+  Array.prototype.pop = () => 'note.ts';
+`;
 
 describe('a DOM component in the app', () => {
   let Fixture: Type<unknown>;
@@ -71,10 +101,12 @@ describe('a DOM component in the app', () => {
     await settle();
   });
 
-  const sentInputs = () =>
-    injected
-      .map(({ script }) => /receive\((.*)\)/.exec(script)?.[1])
-      .map((json) => JSON.parse(json!));
+  const receivedAt = (url: string) =>
+    received(
+      injected.map(({ script }) => script),
+      url,
+    );
+  const sentInputs = () => receivedAt(page);
 
   it("commits as Expo's DOM web view", () => {
     assert.equal(view().viewName, 'ViewManagerAdapter_ExpoDomWebViewModule');
@@ -162,6 +194,46 @@ describe('a DOM component in the app', () => {
       assert.deepEqual(fixture.sent, []);
     });
 
+    it("is sent no input at a host whose name only starts with the tunnel's", async () => {
+      const scripts: string[] = [];
+      const fabric = createFakeFabric();
+      const functions = { injectJavaScript: async (script: string) => void scripts.push(script) };
+      const tunnel = 'https://abc.exp.direct/_expo/@dom';
+      const app = mount(1, Fixture, fabric, {
+        providers: [{ provide: DomComponent.SOURCE, useValue: { baseUrl: tunnel, functions } }],
+      });
+      app.applicationRef.tick();
+      const evil = 'https://abc.exp.direct.evil.com/_expo/@dom/note.ts';
+      const data = JSON.stringify({ type: 'ready', outputs: ['sent'] });
+      fabric.emit(fabric.committed[0]!.children[0]!, 'topMessage', { data, url: evil });
+      app.applicationRef.tick();
+      assert.equal(scripts.length, 0, 'the message is not heard');
+      fabric.emit(fabric.committed[0]!.children[0]!, 'topMessage', { data, url: `${tunnel}/x` });
+      (app.componentRef.instance as Fixture).label.set('Private');
+      app.applicationRef.tick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.ok(scripts.length > 0);
+      assert.deepEqual(received(scripts, evil), [], 'nor is the input sent there');
+      assert.deepEqual(received(scripts, `${tunnel}/note.ts`).at(-1), {
+        type: 'inputs',
+        inputs: { label: 'Private' },
+      });
+    });
+
+    it('is sent no input, once a link took the web view to it', async () => {
+      await post({ type: 'ready', outputs: ['sent'] });
+      fixture.label.set('Private');
+      await settle();
+      assert.deepEqual(receivedAt('https://evil.example/note.ts'), []);
+      assert.deepEqual(receivedAt('http://192.168.1.50:8081/note.ts'), []);
+      const hostile = injected.map(({ script }) => script);
+      assert.deepEqual(received(hostile, 'https://evil.example/note.ts', true), [], 'built-ins');
+      assert.deepEqual(receivedAt(`${page}#section`).at(-1), {
+        type: 'inputs',
+        inputs: { label: 'Private' },
+      });
+    });
+
     it('is heard from anywhere on the dev server that serves its page', async () => {
       await post({ type: 'ready', outputs: ['sent'] }, `${page}#section`);
       await post({ type: 'output', name: 'sent', value: 'Hi' }, 'http://192.168.1.5:8081/x');
@@ -216,6 +288,29 @@ describe('a DOM component in a release build', () => {
       ['Hi'],
       'Android',
     );
+  });
+
+  it('sends its inputs to its page from the file, and to no other', async () => {
+    const scripts: string[] = [];
+    const fabric = createFakeFabric();
+    const functions = { injectJavaScript: async (script: string) => void scripts.push(script) };
+    const app = mount(1, Fixture, fabric, {
+      providers: [{ provide: DomComponent.SOURCE, useValue: { baseUrl: 'www.bundle', functions } }],
+    });
+    app.applicationRef.tick();
+    const ios = 'file:///private/var/containers/Bundle/Application/A1/App.app/www.bundle/note.ts';
+    const data = JSON.stringify({ type: 'ready', outputs: ['sent'] });
+    fabric.emit(fabric.committed[0]!.children[0]!, 'topMessage', { data, url: ios });
+    app.applicationRef.tick();
+    assert.deepEqual(received(scripts, ios), [{ type: 'inputs', inputs: { label: 'Draft' } }]);
+    assert.deepEqual(received(scripts, 'file:///App.app/www.bundle/other.html'), []);
+    assert.deepEqual(
+      received(scripts, 'file:///App.app/www.bundle/xnote.ts'),
+      [],
+      'name ends alike',
+    );
+    assert.deepEqual(received(scripts, 'https://evil.example/www.bundle/note.ts'), []);
+    assert.deepEqual(received(scripts, 'file:///sdcard/Download/x.html', true), [], 'built-ins');
   });
 
   it('ignores any other page', async () => {

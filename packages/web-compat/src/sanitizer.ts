@@ -1,4 +1,4 @@
-import type { Engine, EngineNode } from '@ng-native/fabric';
+import { viewNameOf, type Engine, type EngineNode } from '@ng-native/fabric';
 import { inDocument } from './in-document.ts';
 import { contentIfAny, HTML_NAMESPACE, SVG_NAMESPACE } from './html-tree.ts';
 
@@ -145,6 +145,14 @@ function sanitizeAttributes(
   }
 }
 
+/**
+ * Whether an element commits as a web view, which loads and runs the page it is given: an iframe,
+ * by the engine's name for it alone, in a drawing or a formula too (see `frame.ts`), or any name
+ * an app registered for one, such as `<web-view>` or `<dom-component>`.
+ */
+const isWebView = (element: Dom): boolean =>
+  element.tag === 'iframe' || /WebView/.test(viewNameOf(element));
+
 /** What the configuration does with an element: keeps it, takes it out, or keeps what it holds. */
 function fateOf(
   element: Dom,
@@ -153,7 +161,7 @@ function fateOf(
 ): 'keep' | 'remove' | 'unwrap' {
   const name = element.localName ?? element.tag;
   const namespace = element.namespaceURI;
-  if (safe && named(UNSAFE, name, namespace)) return 'remove';
+  if (safe && (named(UNSAFE, name, namespace) || isWebView(element))) return 'remove';
   if (named(configuration.removeElements, name, namespace)) return 'remove';
   if (named(configuration.replaceWithChildrenElements, name, namespace)) return 'unwrap';
   const listed = named(configuration.elements, name, namespace);

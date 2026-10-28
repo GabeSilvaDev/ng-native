@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import { setFlagsFromString } from 'node:v8';
 import { runInNewContext } from 'node:vm';
 import { Component, DOCUMENT, inject } from '@angular/core';
+import { registerViewName } from '@ng-native/fabric';
 import { cleanup, render, settle, type FakeFabric, type FakeFabricNode } from '@ng-native/testing';
 import { provideWebCompat, type WebCompatOptions } from './index.ts';
 import { framesHeard } from './frame-view.ts';
@@ -558,6 +559,45 @@ describe('iframe as a web view', () => {
     iframe.setAttribute('loading', 'eager');
     assert.equal(warnings.filter((each) => each.includes('loading=')).length, 1);
     assert.equal(view(fabric).props['loading'], undefined);
+  });
+
+  it('is made by no safe setHTML, with the iframe in a drawing or a formula', async () => {
+    installWebView();
+    const { document, fabric } = await page();
+    const div = document.createElement('div');
+    document.body.appendChild(div);
+    div.setHTML('<svg><iframe srcdoc="<script>steal()</script>"></iframe></svg>');
+    div.appendHTML('<math><iframe src="https://evil.example/"></iframe></math>');
+    await settle();
+    assert.equal(div.innerHTML, '<svg></svg><math></math>');
+    assert.equal(fabric.find('RNCWebView'), undefined);
+    div.setHTMLUnsafe('<iframe srcdoc="<p>Hi</p>"></iframe>');
+    await settle();
+    assert.ok(fabric.find('RNCWebView'), 'an iframe of HTML is still a web view');
+  });
+
+  it('is made by no safe setHTML under any name registered for a web view', async () => {
+    installWebView();
+    const unregister = [
+      registerViewName('web-view', 'RNCWebView'),
+      registerViewName('dom-component', 'ViewManagerAdapter_ExpoDomWebViewModule'),
+    ];
+    try {
+      const { document, fabric } = await page();
+      const div = document.createElement('div');
+      document.body.appendChild(div);
+      div.setHTML('<web-view source="https://evil.example/"></web-view><b>Hi</b>');
+      div.appendHTML('<dom-component src="https://evil.example/"></dom-component>');
+      await settle();
+      assert.equal(div.innerHTML, '<b>Hi</b>');
+      assert.equal(fabric.find('RNCWebView'), undefined);
+      assert.equal(fabric.find('ViewManagerAdapter_ExpoDomWebViewModule'), undefined);
+      div.setHTMLUnsafe('<web-view></web-view>');
+      await settle();
+      assert.ok(fabric.find('RNCWebView'), 'the unsafe method still makes one');
+    } finally {
+      for (const each of unregister) each();
+    }
   });
 
   it('says a src page in a sandbox without allow-same-origin keeps its own origin', async () => {
