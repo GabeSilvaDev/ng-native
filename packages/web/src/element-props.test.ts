@@ -69,6 +69,42 @@ describe('image', () => {
     assert.equal(style.backgroundImage, '');
   });
 
+  it('paints with an img that sends no referrer where the source asks for none', () => {
+    const { el, style, set } = scene('image');
+    const probes: HTMLImageElement[] = [];
+    const host = window as unknown as { Image: typeof globalThis.Image };
+    const Image = host.Image;
+    host.Image = class extends Image {
+      constructor() {
+        super();
+        probes.push(this as HTMLImageElement);
+      }
+    };
+    try {
+      set('resizeMode', 'contain');
+      set('source', {
+        uri: 'https://example.com/a.png',
+        headers: { 'Referrer-Policy': 'no-referrer' },
+      });
+      // A background is fetched with the page's own policy, so it is not used.
+      assert.equal(style.backgroundImage, '');
+      const img = el.querySelector('img')!;
+      assert.equal(img.getAttribute('src'), 'https://example.com/a.png');
+      assert.equal(img.referrerPolicy, 'no-referrer');
+      assert.equal(img.style.objectFit, 'contain');
+      assert.equal(img.style.borderRadius, 'inherit', 'rounded as the image is');
+      assert.deepEqual(
+        probes.map((probe) => probe.referrerPolicy),
+        ['no-referrer'],
+      );
+      set('source', { uri: 'https://example.com/b.png' });
+      assert.equal(el.querySelector('img'), null);
+      assert.equal(style.backgroundImage, 'url("https://example.com/b.png")');
+    } finally {
+      host.Image = Image;
+    }
+  });
+
   it('escapes a quote in the uri rather than ending the url() early', () => {
     const { style, set } = scene('image');
     set('source', { uri: 'https://example.com/a"b.png' });

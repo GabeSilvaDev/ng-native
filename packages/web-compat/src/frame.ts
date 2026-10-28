@@ -9,6 +9,7 @@ import { dispatch, listen, newEvent, report, unlisten } from './events.ts';
 import { detached, treeOf } from './html-tree.ts';
 import { domError } from './dom-error.ts';
 import { webOrigin } from './page-address.ts';
+import { nameRecordOf, XHTML } from './qualified-name.ts';
 import { parseUrl } from './parse-url.ts';
 import { own, type Reflection } from './reflect.ts';
 import { descendants } from './in-document.ts';
@@ -77,6 +78,8 @@ interface Frame {
   /** Counted up by each navigation, so that a load that is no longer wanted is dropped. */
   navigation: number;
   live: boolean;
+  /** How many frames it is inside, the page's own being 1. */
+  readonly depth: number;
   /** Told when the element is given another `width` or `height`: its `matchMedia` lists. */
   readonly resized: Set<() => void>;
   /** What its `matchMedia` listeners are told by, each ended as the frame closes. */
@@ -84,6 +87,14 @@ interface Frame {
 }
 
 const frames = new WeakMap<EngineNode, Frame>();
+/** The depth of the frame each frame document is in. */
+const depths = new WeakMap<object, number>();
+/**
+ * Deeper than this, a frame stays blank: a page that frames itself, or a chain of pages that do,
+ * would otherwise load for ever.
+ * ponytail: a depth only, not a browser's count of frames in a page as well.
+ */
+const DEEPEST = 10;
 /** Each frame document's URL, which a fragment changes in place. */
 const addresses = new WeakMap<object, string>();
 /** Each frame's documents, as they are or were. */
@@ -181,6 +192,16 @@ const WATCHED = ['appendChild', 'insertBefore', 'removeChild'] as const;
 const watched = new WeakMap<Engine, () => void>();
 
 /**
+ * Whether an iframe is HTML's. Only it is one: an `<iframe>` in a drawing, MathML or another
+ * namespace is an element of no meaning, and its srcdoc is no page.
+ */
+const htmlFrame = (node: EngineNode): boolean => {
+  // A record of no namespace, as `createElementNS(null, ...)` makes, is none, not HTML's.
+  const record = nameRecordOf(node);
+  return !node.namespace && (record ? record.namespace : XHTML) === XHTML;
+};
+
+/**
  * An iframe has been made in an app that asked for the package: from then until the app is gone
  * its engine's children are watched, for an iframe coming into a page or going out of one. An
  * engine that never made one is never watched.
@@ -188,6 +209,7 @@ const watched = new WeakMap<Engine, () => void>();
 export function frameCreated(node: EngineNode, engine: Engine): void {
   // A web view is a page of its own: see `frame-view.ts`.
   if (node.tag !== 'iframe') return;
+  if (!htmlFrame(node)) return keepPlainFrame(node);
   if (!loaders.has(engine)) return keepPlainFrame(node);
   if (frameViewCreated(node, engine) || watched.has(engine)) return;
   const { appendChild, insertBefore, removeChild } = engine;
@@ -228,7 +250,7 @@ function* iframesIn(node: EngineNode): Generator<EngineNode> {
 function connected(node: EngineNode, engine: Engine): void {
   if (node.nodeKind !== 'element') return;
   for (const element of iframesIn(node)) {
-    if (isFrameView(element)) continue;
+    if (isFrameView(element) || !htmlFrame(element)) continue;
     // Once all a script puts in is in, each in its turn, still where it was put.
     afterTogether(() => {
       if (frames.has(element) || !windowedDocumentOf(element)) return;
@@ -263,11 +285,13 @@ function open(element: EngineNode, engine: Engine): void {
     url: 'about:blank',
     navigation: 0,
     live: true,
+    depth: (depths.get((element as Dom).ownerDocument ?? {}) ?? 0) + 1,
     resized: new Set(),
     watching: new Set(),
   } as unknown as Frame;
   (frame as { window: Members }).window = windowFor(frame);
   frame.document = blankDocument(frame);
+  depths.set(frame.document, frame.depth);
   frames.set(element, frame);
   attributesChanged(element, true);
 }
@@ -326,6 +350,7 @@ export function frameAttributeSet(node: EngineNode, name: string): void {
 
 /** Go somewhere: the document is replaced once what is there has been read, and `load` sent. */
 function navigate(frame: Frame, to: { url: string } | { srcdoc: string }): void {
+  if (frame.depth > DEEPEST) return;
   const navigation = ++frame.navigation;
   const settled = (async () => {
     let response: FrameResponse | undefined;
@@ -351,6 +376,7 @@ function navigate(frame: Frame, to: { url: string } | { srcdoc: string }): void 
     // What cannot be read is a blank page, and not the one the frame was at before.
     frame.url = response ? (response.url ?? url) : 'about:blank';
     frame.document = response ? documentOfResponse(frame, response) : blankDocument(frame);
+    depths.set(frame.document, frame.depth);
     loaded(frame);
   })();
   pending.add(settled);
