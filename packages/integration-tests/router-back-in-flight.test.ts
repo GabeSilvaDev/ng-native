@@ -48,7 +48,7 @@ it('stays on a page whose effect does not ask to leave', async () => {
   assert.deepEqual(await pushed('/effect'), { url: '/effect', screens: 2 });
 });
 
-for (const guard of ['allows', 'redirects'] as const) {
+for (const guard of ['allows', 'redirects', 'redirects home'] as const) {
   it(`goes back once the navigation it was asked in lands, where a guard ${guard}`, async () => {
     const routes: Routes = [
       { path: '', component: stack['Home'] as Type<unknown> },
@@ -59,7 +59,8 @@ for (const guard of ['allows', 'redirects'] as const) {
         canActivate: [
           () => {
             const router = inject(Router);
-            const to = guard === 'redirects' ? router.parseUrl('/login') : true;
+            const to =
+              guard === 'allows' ? true : router.parseUrl(guard === 'redirects' ? '/login' : '/');
             return new Promise((resolve) => setTimeout(() => resolve(to), 5));
           },
         ],
@@ -77,5 +78,9 @@ for (const guard of ['allows', 'redirects'] as const) {
     await new Promise((resolve) => setTimeout(resolve, 20));
     for (let turn = 0; turn < 8; turn++) await settle();
     assert.equal(app.componentRef.injector.get(Router).url, '/');
+    // A redirect to the url showing is skipped: the back ends with it, not with the next push.
+    await navigation.push('/login');
+    for (let turn = 0; turn < 8; turn++) await settle();
+    assert.equal(app.componentRef.injector.get(Router).url, '/login');
   });
 }
