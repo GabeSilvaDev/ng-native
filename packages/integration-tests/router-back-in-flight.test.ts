@@ -50,6 +50,8 @@ it('stays on a page whose effect does not ask to leave', async () => {
 
 for (const guard of ['allows', 'redirects', 'redirects home'] as const) {
   it(`goes back once the navigation it was asked in lands, where a guard ${guard}`, async () => {
+    // Held until the back is asked, so the back is asked mid-navigation however long settling takes.
+    let release!: () => void;
     const routes: Routes = [
       { path: '', component: stack['Home'] as Type<unknown> },
       { path: 'login', component: stack['Modal'] as Type<unknown> },
@@ -61,7 +63,7 @@ for (const guard of ['allows', 'redirects', 'redirects home'] as const) {
             const router = inject(Router);
             const to =
               guard === 'allows' ? true : router.parseUrl(guard === 'redirects' ? '/login' : '/');
-            return new Promise((resolve) => setTimeout(() => resolve(to), 5));
+            return new Promise((resolve) => (release = () => resolve(to)));
           },
         ],
       },
@@ -74,8 +76,8 @@ for (const guard of ['allows', 'redirects', 'redirects home'] as const) {
     const pushing = navigation.push('/admin');
     await settle();
     navigation.back();
+    release();
     await pushing;
-    await new Promise((resolve) => setTimeout(resolve, 20));
     for (let turn = 0; turn < 8; turn++) await settle();
     assert.equal(app.componentRef.injector.get(Router).url, '/');
     // A redirect to the url showing is skipped: the back ends with it, not with the next push.
